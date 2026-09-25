@@ -27,7 +27,8 @@ TOKEN       = os.environ.get("GITHUB_TOKEN")
 HEADERS     = {"Authorization": f"Bearer {TOKEN}"}
 
 MAX_ROUNDS               = 3
-MAX_CONNECTIONS_PER_SEED = 100  # followers + following per account per round
+MAX_CONNECTIONS_PER_SEED = 30   # followers + following per account per round
+CONNECTIONS_BATCH_SIZE   = 5    # accounts per GraphQL request
 
 # English and Arabic location terms — must match Stage 2a
 LOCATION_TERMS = [
@@ -40,14 +41,14 @@ LOCATION_TERMS = [
 # Network helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def graphql_post(query: str, variables: dict, max_retries: int = 4) -> dict:
+def graphql_post(query: str, max_retries: int = 4) -> dict:
     """POST to the GraphQL endpoint with retry on network errors and 403."""
     for attempt in range(1, max_retries + 1):
         try:
             resp = requests.post(
                 GRAPHQL_URL,
                 headers=HEADERS,
-                json={"query": query, "variables": variables},
+                json={"query": query},
                 timeout=15,
             )
             if resp.status_code == 403:
@@ -77,32 +78,49 @@ def graphql_post(query: str, variables: dict, max_retries: int = 4) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GraphQL: fetch followers + following in one query
+# GraphQL: batch-fetch followers + following for up to CONNECTIONS_BATCH_SIZE accounts
 # ─────────────────────────────────────────────────────────────────────────────
 
-CONNECTIONS_QUERY = """
-query($login: String!, $count: Int!) {
-  user(login: $login) {
-    followers(first: $count) {
-      nodes { login name location bio }
-    }
-    following(first: $count) {
-      nodes { login name location bio }
-    }
-  }
-}
-"""
+def build_connections_batch_query(logins: list, count: int) -> str:
+    """
+    Fetches followers and following for a batch of logins in one GraphQL request.
+    Uses aliases (user_0, user_1, …) so multiple users can be queried at once.
+    count = MAX_CONNECTIONS_PER_SEED (30) — keep low to avoid heavy node traversal.
+    """
+    fragments = []
+    for idx, login in enumerate(logins):
+        clean = login.replace('"', "")
+        fragments.append(f"""
+        user_{idx}: user(login: "{clean}") {{
+            login
+            followers(first: {count}) {{
+                nodes {{ login name location bio }}
+            }}
+            following(first: {count}) {{
+                nodes {{ login name location bio }}
+            }}
+        }}
+        """)
+    return "query { " + " ".join(fragments) + " }"
 
 
-def fetch_connections(login: str, max_connections: int = MAX_CONNECTIONS_PER_SEED):
-    """Returns (followers_list, following_list) for a given login."""
-    data = graphql_post(CONNECTIONS_QUERY, {"login": login, "count": max_connections})
-    user = data.get("user")
-    if not user:
-        return [], []
-    followers = (user.get("followers") or {}).get("nodes") or []
-    following = (user.get("following") or {}).get("nodes") or []
-    return followers, following
+def fetch_connections_batch(logins: list) -> dict:
+    """
+    Returns dict: login -> (followers_list, following_list)
+    for all logins in the batch.
+    """
+    query = build_connections_batch_query(logins, MAX_CONNECTIONS_PER_SEED)
+    data  = graphql_post(query)
+    result = {}
+    for idx, login in enumerate(logins):
+        user_data = data.get(f"user_{idx}")
+        if not user_data:
+            result[login] = ([], [])
+            continue
+        followers = (user_data.get("followers") or {}).get("nodes") or []
+        following = (user_data.get("following") or {}).get("nodes") or []
+        result[login] = (followers, following)
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -134,31 +152,38 @@ def main(seed_csv_path: str = "egypt_seed_candidates.csv"):
     all_discovered_rows = []
 
     for round_num in range(1, MAX_ROUNDS + 1):
-        print(f"\n=== Snowball Round {round_num} (frontier: {len(current_frontier)} accounts) ===")
+        frontier_list = list(current_frontier)
+        total_batches = (len(frontier_list) + CONNECTIONS_BATCH_SIZE - 1) // CONNECTIONS_BATCH_SIZE
+        print(f"\n=== Snowball Round {round_num} "
+              f"(frontier: {len(frontier_list)} accounts, {total_batches} batches) ===")
         new_this_round = {}
 
-        for i, login in enumerate(current_frontier):
-            print(f"  [{i+1}/{len(current_frontier)}] pulling connections for {login}...")
-            followers, following = fetch_connections(login)
+        for b_start in range(0, len(frontier_list), CONNECTIONS_BATCH_SIZE):
+            batch    = frontier_list[b_start : b_start + CONNECTIONS_BATCH_SIZE]
+            b_num    = b_start // CONNECTIONS_BATCH_SIZE + 1
+            print(f"  Batch {b_num}/{total_batches} ({len(batch)} accounts)...")
 
-            for acct in followers + following:
-                candidate_login = acct.get("login")
-                if not candidate_login:
-                    continue
-                if candidate_login in all_confirmed:
-                    continue  # already in our set
-                if location_matches_egypt(acct.get("location")):
-                    if candidate_login not in new_this_round:
-                        new_this_round[candidate_login] = {
-                            "login":           candidate_login,
-                            "name":            acct.get("name"),
-                            "location_raw":    acct.get("location"),
-                            "bio":             acct.get("bio"),
-                            "discovered_from": login,
-                            "round":           round_num,
-                        }
+            connections = fetch_connections_batch(batch)
 
-            time.sleep(0.5)
+            for login, (followers, following) in connections.items():
+                for acct in followers + following:
+                    candidate_login = acct.get("login")
+                    if not candidate_login:
+                        continue
+                    if candidate_login in all_confirmed:
+                        continue
+                    if location_matches_egypt(acct.get("location")):
+                        if candidate_login not in new_this_round:
+                            new_this_round[candidate_login] = {
+                                "login":           candidate_login,
+                                "name":            acct.get("name"),
+                                "location_raw":    acct.get("location"),
+                                "bio":             acct.get("bio"),
+                                "discovered_from": login,
+                                "round":           round_num,
+                            }
+
+            time.sleep(1)   # 1s between batches
 
         if not new_this_round:
             print(f"  No new accounts found in round {round_num}. Converged early.")

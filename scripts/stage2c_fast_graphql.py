@@ -41,7 +41,7 @@ HEADERS     = {
     "Accept":        "application/vnd.github.v3+json",
 }
 
-BATCH_SIZE = 10   # accounts per GraphQL request; keep small to avoid 502/504
+BATCH_SIZE = 20   # accounts per GraphQL request
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -53,9 +53,12 @@ def build_batch_query(batch_logins: list) -> str:
     Builds a single GraphQL query for a batch of accounts.
     For each repo we fetch:
       - Basic metadata (name, stars, pushedAt)
-      - primaryLanguage + full language byte distribution
+      - primaryLanguage + language byte distribution (top 5)
       - Whether package.json exists at HEAD (I-9)
-      - Total commit count via defaultBranchRef history (I-4)
+
+    NOTE: history { totalCount } is intentionally omitted — it forces GitHub
+    to scan the full commit history server-side and consumes the entire hourly
+    GraphQL quota. pushedAt >= MIN_LAST_PUSH is used as the activity proxy.
     """
     nodes = []
     for idx, login in enumerate(batch_logins):
@@ -76,14 +79,7 @@ def build_batch_query(batch_logins: list) -> str:
               pushedAt
               primaryLanguage {{ name }}
               packageJson: object(expression: "HEAD:package.json") {{ id }}
-              defaultBranchRef {{
-                target {{
-                  ... on Commit {{
-                    history {{ totalCount }}
-                  }}
-                }}
-              }}
-              languages(first: 10) {{
+              languages(first: 5) {{
                 edges {{
                   size
                   node {{ name }}
@@ -175,13 +171,6 @@ def process_batch_data(data: dict, all_rows: list):
             if not repo.get("packageJson"):
                 continue
 
-            # I-4: minimum commit count
-            default_ref  = repo.get("defaultBranchRef") or {}
-            target       = default_ref.get("target") or {}
-            commit_count = (target.get("history") or {}).get("totalCount") or 0
-            if commit_count < MIN_COMMITS:
-                continue
-
             # I-8: JS/TS byte-share
             lang_edges  = (repo.get("languages") or {}).get("edges") or []
             total_bytes = sum(e["size"] for e in lang_edges)
@@ -202,7 +191,8 @@ def process_batch_data(data: dict, all_rows: list):
                 "stars":            repo.get("stargazerCount"),
                 "pushed_at":        pushed_at,
                 "total_commits":    commit_count,
-                "has_manifest":     True,  # already checked above
+                "has_manifest":     True,   # already checked above
+                "total_commits":    None,   # not fetched (history scan too expensive)
                 "js_ts_byte_share": round(js_ts_share, 3),
                 "size_stratum":     compute_stratum(repo.get("stargazerCount", 0)),
                 "agent_adopted":    None,   # filled in Stage 4
