@@ -1,0 +1,549 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{cite}
+\usepackage[hidelinks,colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+
+% --- Custom Styling ---
+\definecolor{primary}{RGB}{30, 58, 138}   % Deep Navy
+\definecolor{secondary}{RGB}{15, 118, 110} % Dark Teal
+\definecolor{lightbg}{RGB}{243, 244, 246}  % Soft Light Gray
+
+\titleformat{\section}{\large\bfseries\color{primary}}{\thesection.}{0.5em}{}[\titlerule]
+\titleformat{\subsection}{\normalfont\bfseries\color{secondary}}{\thesubsection}{0.5em}{}
+
+\setlist[itemize]{noitemsep, topsep=3pt, leftmargin=1.5em}
+\setlist[enumerate]{noitemsep, topsep=3pt, leftmargin=1.5em}
+
+% --- Document Metadata ---
+\title{\textbf{\Large Coding Agent Adoption in JavaScript / TypeScript / npm\\}\\[0.5em]
+\Large\textbf{Interim Draft}}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+
+\section{Aim \& Motivation}
+
+\subsection{Background \& Context}
+Autonomous AI coding agents such as Claude Code, Cursor, GitHub Copilot, OpenAI Codex, Devin, and Aider are fundamentally altering software engineering practices. Unlike first-generation code completion assistants that offer inline suggestions, modern coding agents execute multi-step engineering tasks, navigate and modify multi-file codebases, execute test suites, and autonomously author Pull Requests (PRs).
+
+Recent empirical studies demonstrate that traces of agent adoption are expanding rapidly across open-source platforms like GitHub. However, most existing research evaluates agent activity across large, generic global datasets without accounting for specific programming language ecosystems, regional developer demographics, or project application domains.
+
+
+\subsection{Terminology \& Key Definitions}
+
+\begin{itemize}
+    \item \textbf{Coding Agent:} An AI-based tool that autonomously performs software development tasks (e.g., writing code, opening pull requests, fixing bugs) with limited human intervention, as opposed to simple autocomplete-style code suggestions.
+    \item \textbf{Agent Adoption:} The presence of detectable traces of coding agent usage within a repository's commit history or configuration files.
+    \item \textbf{Detection Signal:} A specific, observable indicator used to infer coding agent usage --- e.g., a bot account, a commit message pattern, an author-name suffix, or a configuration file.
+    \item \textbf{Multi-Method Detection:} An approach that combines multiple detection signals (rather than relying on a single one) to reduce the undercounting of actual agent usage.
+    \item \textbf{Configuration Artifact:} A repository file (e.g., \texttt{CLAUDE.md}, \texttt{AGENTS.md}, \texttt{.cursorrules}) used to provide persistent, project-level instructions to a coding agent.
+\end{itemize}
+\subsection{Problem Statement \& Research Gaps}
+Existing literature on coding agent adoption suffers from three critical limitations that this thesis directly addresses:
+
+\begin{enumerate}[leftmargin=1.5em, itemsep=6pt]
+    \item \textbf{The Scope Gap: From General GitHub to a Focused Stack and Community}
+    \begin{itemize}
+        \item \textbf{The Problem:} The original large-scale study covers 128,018 general GitHub projects with no ecosystem- or geography-specific breakdown, mixing all languages, countries, and project types together.
+        \item \textbf{Thesis Fix:} Funnel the same methodology to a specific stack (\textbf{JavaScript/TypeScript}), building a base corpus filtered by recent push activity, and cross-reference it with a specific developer community (\textbf{Egyptian developers}), identified via a seed list of known Egyptian developer organizations expanded through follower/following snowball sampling.
+    \end{itemize}
+
+    \item \textbf{The Undercounting Gap: Single-Signal vs. Multi-Method Detection}
+    \begin{itemize}
+        \item \textbf{The Problem:} Most studies only search for obvious bot accounts or explicit co-authorship trailers, missing a large share of real agent usage --- particularly from CLI-based or IDE-integrated tools (e.g., Codex, Cursor, Aider) that leave no trace at the Git level unless a developer manually opts into disclosure.
+        \item \textbf{Thesis Fix:} Implement a multi-signal detection framework combining bot-account lookups, commit-message/trailer patterns, PR body markers, author email domains, and --- as a lower-precision fallback for silent tools --- structural and statistical commit features, to reduce (though not eliminate) this undercount.
+    \end{itemize}
+
+    \item \textbf{The Community Comparison Gap: Fair Adoption Benchmarking Across Populations}
+    \begin{itemize}
+        \item \textbf{The Problem:} Reporting a single, overall adoption percentage can be misleading, since adoption typically differs sharply by project scale (e.g., solo-developer repositories may show much higher agent usage than large organizational repositories), and no existing study compares a specific national developer community against the general population on equal terms.
+        \item \textbf{Thesis Fix:} Stratify the corpus by repository size (small, medium, large) before comparing adoption rate and trend between the Egyptian sub-corpus and the general JS/TS population, avoiding a single blended statistic that could obscure this size effect.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Research Objectives \& Questions}
+This thesis addresses these gaps by conducting a multi-method empirical study on coding agent adoption within JavaScript/TypeScript GitHub repositories, with a focused comparison against Egyptian-maintained repositories. Consistent with the unified methodology agreed across all thesis topics in this theme, the study is guided by two primary Research Questions (RQs):
+
+\begin{itemize}
+    \item \textbf{RQ1 (Adoption Rate \& Trend):} What is the rate and trend of coding agent adoption among JavaScript/TypeScript GitHub repositories, and how much does relying on a single detection signal undercount adoption compared to a combined, multi-signal detection approach? \textbf{Addresses:} the Scope Gap (\#1) and the Undercounting Gap (\#2).
+    \item \textbf{RQ2 (Community Comparison):} How does coding agent adoption among Egyptian developers compare to the general JavaScript/TypeScript developer population, when adoption is stratified by repository size? \textbf{Addresses:} the Scope Gap (\#1) and the Community Comparison Gap (\#3).
+\end{itemize}
+\subsection{Scope of this Thesis}
+Following the unified methodology agreed across all thesis topics in this theme, this work addresses both \textbf{RQ1} and \textbf{RQ2} as core, mandatory objectives: establishing the rate and trend of coding agent adoption in JavaScript/TypeScript repositories using a multi-signal detection approach, and comparing this adoption between the Egyptian developer community and the general population, stratified by repository size.
+\newpage
+\subsection{Thesis Structure Outline}
+
+The remainder of this thesis is organized as follows: Section~2 (Related Work) reviews existing empirical studies on coding agent adoption and positions this thesis relative to them. Section~3 (Methodology) describes the repository sampling, detection, and validation pipeline. Section~4 (Results) presents the measured adoption rates and detection findings. Section~5 (Discussion) interprets these findings in light of the research questions and existing literature. Section~6 (Conclusion) summarizes the contributions and outlines directions for future work.
+
+
+\section{Methodology}
+This methodology addresses both RQ1 and RQ2 as required by the unified cross-cohort approach.
+
+\subsection{Stage 1: Base JavaScript/TypeScript Corpus Construction}
+The base corpus will be built using the GitHub Search API (\texttt{/search/repositories}), filtered to repositories with JavaScript or TypeScript as the primary language, excluding forks and vendored/generated code. To ensure relevance, repositories will be filtered by push recency (last 12--24 months). Repository metadata (language byte counts, topics, push date) will be retrieved via \texttt{/repos/\{owner\}/\{repo\}/languages} and stored as raw JSON for reproducibility.
+
+\subsection{Stage 2: Egyptian Sub-Corpus Construction}
+Rather than relying solely on self-reported profile location, the Egyptian sub-corpus will be built using a seed-and-snowball approach:
+\begin{enumerate}
+    \item A seed list of 50--100 known Egyptian developer organizations (excluding multinational companies' local branches) will be compiled as a starting point.
+    \item This seed list will be expanded via the GraphQL \texttt{User.followers} / \texttt{User.following} fields, snowballing outward through the seed accounts' social graph.
+    \item Candidates will be cross-checked against the GitHub Search API's \texttt{location:} user filter as a supporting signal, not the sole criterion.
+    \item An initial exploratory ``spike search'' will estimate the resulting sample size; if the Egypt-specific sub-corpus proves too small for meaningful comparison, the geographic scope will be widened to a broader region, per the unified cohort guidance.
+\end{enumerate}
+
+\subsection{Stage 3: Repository Size Stratification}
+Each repository in the corpus will be classified into small, medium, or large tiers (thresholds to be finalized based on the corpus's observed distribution, e.g. by commit count and/or contributor count). All adoption metrics will be reported per size tier as well as overall, since prior work suggests adoption can differ sharply by scale (e.g. solo-developer repositories versus large organizational projects), and a single blended statistic could obscure this effect.
+
+\subsection{Stage 4: Multi-Signal Agent Detection}
+Detection will focus on a unified set of agentic code-generation tools agreed across the cohort (e.g., Claude Code, Codex, Devin), excluding no-code/visual platforms. Each repository's commit and PR history will be scanned using the following signals, ordered by reliability:
+
+\begin{center}
+\textbf{Table: Agent-authorship detection signals}\\[4pt]
+\begin{tabularx}{\textwidth}{@{}p{3.2cm}Xl@{}}
+\toprule
+\textbf{Signal} & \textbf{Where Found} & \textbf{Reliability} \\
+\midrule
+Co-authored-by trailer & Commit message body (REST: \texttt{commits[].commit.message}) & High precision, moderate recall \\
+Bot account authorship & Author/committer \texttt{type} field equals \texttt{"Bot"} & High precision, limited coverage \\
+PR body marker & PR body text (REST: \texttt{pulls/\{n\}.body}) & High precision, PR-only \\
+Author/committer email domain & \texttt{commit.author.email} / \texttt{commit.committer.email} & Moderate precision \\
+Structural/statistical features & Diff shape, commit burstiness, message template-likeness & Lower precision; fallback only \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Adoption will be counted as the union of all applicable signals, following the multi-method approach of Khosravani and Mockus~\cite{khosravani2026detecting}, to reduce (though not eliminate) the undercounting inherent to any single signal.
+
+\subsection{Stage 5: Data Collection Infrastructure}
+Data will be collected using a combination of: the GitHub REST and GraphQL APIs for targeted per-repository pulls of commits, PRs, and reviews (preferred over sequential REST calls to conserve rate limits); GH Archive queried via Google BigQuery for commit-history mining at corpus scale; and, where relevant, the libraries.io/npm registry API for supplementary package metadata. All raw API responses will be stored as JSON to support reproducibility and further expansion.
+
+\subsection{Stage 6: Validation}
+A random sample of detected repositories will be manually reviewed to measure detection precision and recall per signal type, and to quantify how much single-signal detection undercounts adoption compared to the combined multi-signal approach directly answering the detection component of RQ1.
+
+\subsection{Stage 7: Metrics \& Analysis}
+The following metrics will be computed to answer RQ1 and RQ2:
+\begin{enumerate}
+    \item Monthly percentage of commits/PRs carrying an agent signal, split by repository size tier and by community (Egyptian vs. general population).
+    \item Time to first agent commit per repository owner (``author lag'').
+    \item Time to first agent commit per repository (``repo lag'').
+    \item Comparison of adoption-rate trend curves over time between the Egyptian sub-corpus and the general JS/TS population.
+\end{enumerate}
+\newpage
+\subsection{Tools \& Technologies}
+
+\begin{center}
+\textbf{Table 1: Tools and technologies used in this thesis}\label{tab:tools}\\[4pt]
+\begin{tabular}{@{}p{3.2cm}p{3.2cm}p{7cm}@{}}
+\toprule
+\textbf{Category} & \textbf{Tool} & \textbf{Purpose} \\
+\midrule
+Programming Language & Python & Data collection, cleaning, detection logic, analysis \\
+\addlinespace
+\multirow{2}{*}{Data Collection} & GitHub REST/GraphQL API & Fetching repository, commit, and file-tree data \\
+ & \texttt{requests} & HTTP calls to GitHub and npm APIs \\
+\addlinespace
+Bulk Querying & Google BigQuery + GH Archive & Large-scale commit/event scanning beyond API rate limits \\
+\addlinespace
+Package Metadata & npm Registry API & Resolving package-to-repository links \\
+\addlinespace
+Git History Analysis & \texttt{GitPython} / \texttt{git log} & Commit author, message, and trailer extraction \\
+\addlinespace
+Data Storage & SQLite & Storing collected repository/commit/detection data \\
+\addlinespace
+\multirow{2}{*}{Data Processing} & \texttt{pandas} & Cleaning, filtering, aggregating data \\
+ & \texttt{re} (regex) & Commit-message and author-pattern matching \\
+\addlinespace
+Detection Config & YAML & Versioned taxonomy of agent detection signals \\
+\addlinespace
+Statistical Analysis & \texttt{scipy.stats}, \texttt{statsmodels} & Non-parametric tests, confidence intervals \\
+\addlinespace
+Visualization & \texttt{matplotlib}, \texttt{seaborn} & Result plots and figures \\
+\addlinespace
+Development Environment & Jupyter Notebook & Exploratory analysis, iterative development \\
+\addlinespace
+Version Control & Git, GitHub & Managing the thesis codebase \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\newpage
+
+
+\subsection{Ethical Considerations}
+
+This study relies exclusively on publicly available data obtained through the GitHub API, the npm Registry API, and GH Archive. No private repositories, private user data, or authentication-gated content will be accessed. Developer-identifying information (e.g., GitHub usernames, profile locations) will be used only to determine repository-level geographic attribution and will not be published or reported at the individual level; all results will be presented as aggregated, repository-level statistics. No interaction with, or contact of, individual developers is planned as part of this study.
+
+
+\subsection{Threats to Validity}
+
+\textbf{Detection recall.} The multi-method detection framework, while more comprehensive than single-signal approaches, cannot guarantee full recall; reported adoption rates should be interpreted as a lower bound on true agent usage.
+
+\textbf{Geo-attribution accuracy.} Identifying Egyptian-linked repositories relies on self-reported profile locations, email domains, and commit timestamps, all of which are noisy signals. A manual validation pass on a sample of attributed repositories will be used to estimate the reliability of this attribution.
+
+
+\section{Expected Outcomes}
+This research is expected to deliver the following contributions:
+
+\begin{enumerate}
+    \item \textbf{Quantified Adoption Baseline:} An empirical measurement of coding agent adoption rates within the Egyptian npm/JS-TS developer community.
+    \item \textbf{Curated Detection Dataset:} A dataset of detected agent traces across sampled repositories, covering bot accounts, commit signatures, author patterns, and configuration files.
+    \item \textbf{Undercount Quantification:} A measured comparison showing how much single-signal detection methods miss relative to a combined, multi-method detection approach.
+\end{enumerate}
+
+
+\section{Work Plan \& Timeline}
+
+The timeline below follows the official university thesis schedule and the supervisor's guidance on process (identify the gap $\rightarrow$ proposal $\rightarrow$ expand literature review $\rightarrow$ methodology $\rightarrow$ implementation $\rightarrow$ results, with writing proceeding continuously throughout rather than only at the end). Each phase combines theoretical work (reading, writing, refining the proposal/report) with practical work (building and running the detection pipeline), since both proceed in parallel rather than sequentially.
+
+\newpage
+\begin{center}
+\textbf{Table 2: Work Plan aligned to official university deadlines}\label{tab:timeline}\\[4pt]
+\begin{tabularx}{\textwidth}{@{}l l X X@{}}
+\toprule
+\textbf{Phase} & \textbf{Dates} & \textbf{Theoretical Work} & \textbf{Practical Work} \\
+\midrule
+Phase 0 &
+Sep 12 -- Sep 20, 2026 &
+Explore background literature; identify the research gap; draft the project plan/strategy. &
+Set up GitHub API access, BigQuery/GH Archive access, and development environment. \\
+\addlinespace
+\textit{Milestone} & \textit{Sep 20, 2026} & \multicolumn{2}{l}{\textit{Submission of Project Plan / Strategy}} \\
+\addlinespace
+Phase 1 &
+Sep 21 -- Oct 13, 2026 &
+Expand the literature review; refine Research Questions and scope with supervisor. &
+Build GitHub/npm mining scripts; extract the Egyptian npm project pool; verify \texttt{package.json} and maintainer location metadata. \\
+\addlinespace
+\textit{Milestone} & \textit{Oct 13, 2026} & \multicolumn{2}{l}{\textit{Submission of First Interim Report}} \\
+\addlinespace
+Phase 2 &
+Oct 14 -- Nov 15, 2026 &
+Develop and write up the full detection methodology. &
+Implement Type A--D regex and file scanners; run repository mining across the sample; produce preliminary adoption results. \\
+\addlinespace
+\textit{Milestone} & \textit{Nov 15, 2026} & \multicolumn{2}{l}{\textit{Submission of Second Interim Report}} \\
+\addlinespace
+Phase 3 &
+Nov 16 -- Dec 10, 2026 &
+Write Results and Discussion chapters; consolidate all chapters into a full draft. &
+Validate detection via manual review; compute precision/recall and the single-signal-vs-multi-method undercount gap. \\
+\addlinespace
+\textit{Milestone} & \textit{Dec 10, 2026} & \multicolumn{2}{l}{\textit{Initial full thesis draft ready}} \\
+\addlinespace
+Phase 4 &
+Dec 11, 2026 -- Jan 18, 2027 &
+Incorporate supervisor feedback; polish writing; prepare presentation slides. &
+Finalize figures/tables; re-run any analysis affected by feedback. \\
+\addlinespace
+Phase 5 &
+Jan 19 -- Jan 27, 2027 &
+Deliver 20-minute presentation and 10-minute Q\&A with supervisor and reviewer. &
+--- \\
+\addlinespace
+Phase 6 &
+Jan 28 -- Jan 31, 2027 &
+Incorporate reviewer comments; finalize amended thesis. &
+--- \\
+\addlinespace
+\textit{Milestone} & \textit{Jan 31, 2027} & \multicolumn{2}{l}{\textit{Final submission: one hard copy + one digital copy}} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\newpage
+
+\subsection{Risk Management \& Contingencies}
+
+\begin{center}
+\textbf{Table 3: Anticipated risks and mitigation strategies}\label{tab:risks}\\[4pt]
+\begin{tabularx}{\textwidth}{@{}p{4.5cm}Xp{4.5cm}@{}}
+\toprule
+\textbf{Risk} & \textbf{Impact} & \textbf{Mitigation} \\
+\midrule
+Egyptian-linked sample too small for meaningful statistics & Limits the statistical power of adoption-rate findings & Widen geographic scope to the MENA region if the pilot sample falls below a pre-defined minimum size threshold \\
+\addlinespace
+GitHub API rate limits slow bulk data collection & Delays repository/commit mining at scale & Use Google BigQuery with the GH Archive dataset for bulk commit-message scanning instead of per-repository API calls \\
+\addlinespace
+Detection taxonomy becomes outdated as tools evolve & Newer agents or updated tool behavior may go undetected & Version-date the taxonomy explicitly and document its coverage limitations \\
+\addlinespace
+Timeline slippage ahead of the Dec.\ 10 draft deadline & Risk of an incomplete initial draft & Prioritize RQ1 completion over all other work; treat RQ2--RQ4 as strictly optional extensions \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Gathered Papers \& Quality Check}
+This section outlines the initial gathering of 20 core papers supporting this thesis. As the research progresses, additional literature may be integrated into this corpus.
+
+\subsection{Literature Search Process}
+
+The literature review was conducted through an iterative, citation-driven search process rather than a single database query. Starting from the primary paper provided by the supervisor, related work was identified via forward citation search (``Cited by'') and Google Scholar's ``Related articles'' feature, then expanded through targeted keyword searches (e.g., \textit{coding agent adoption}, \textit{AI-generated commits detection}, \textit{GitHub repository sampling}, \textit{geography of open source software}) across Google Scholar, arXiv, IEEE Xplore, and ScienceDirect. Each candidate paper was screened by title and abstract against the thesis's research questions before being retained. This process was repeated on newly discovered papers to capture additional related work, continuing until further searches returned mostly duplicate or clearly irrelevant results. A parallel search specifically targeting coding agent adoption within Egypt returned no directly relevant results, which was taken as supporting evidence for the research gap this thesis addresses.
+
+\subsection{Tiered Classification of Literature Corpus}
+The 20 papers are structured into five thematic tiers based on their methodological relevance to agent adoption, fingerprinting, context engineering, control matching, and research infrastructure:
+
+\begin{itemize}
+    \item \textbf{Tier 1: Core Methodology \& Detection (Highest Fit)}
+    \begin{itemize}
+        \item \textit{Paper 9:} Detecting AI Coding Agents in Open Source: A Validated Multi-Method Census of 180 Million Repositories (Khosravani \& Mockus)
+        \item \textit{Paper 10:} Fingerprinting AI Coding Agents on GitHub (Ghaleb)
+        \item \textit{Paper 16:} Promises, Perils, and (Timely) Heuristics for Mining Coding Agent Activity (Robbes et al.)
+        \item \textit{Paper 4:} Agentic Much? Adoption of Coding Agents on GitHub (Robbes et al. --- Baseline Study)
+        \item \textit{Paper 5:} Agentic Very Much! Adoption of Coding Agent in New GitHub Projects (Robbes et al. --- New Repos Study)
+        \item \textit{Paper 2:} A Large-Scale Comprehensive Measurement of AI-Generated Code in Real-World Repositories (Mao et al.)
+    \end{itemize}
+
+    \item \textbf{Tier 2: Configuration \& Ecosystem Scoping (Strong Fit)}
+    \begin{itemize}
+        \item \textit{Paper 1:} A Dataset of Agentic AI Coding Tool Configurations (Galster et al.)
+        \item \textit{Paper 8 \& 11:} Configuring Agentic AI Coding Tools \& Harness Engineering (Galster et al. / Baltes et al.)
+        \item \textit{Paper 3:} Agent READMEs: An Empirical Study of Context Files for Agentic Coding (Chatlatanagulchai et al.)
+    \end{itemize}
+
+    \item \textbf{Tier 3: PR Dynamics \& Code Quality Metrics (Moderate Fit)}
+    \begin{itemize}
+        \item \textit{Paper 12:} How AI Coding Agents Modify Code: A Large-Scale Study of GitHub Pull Requests (Ogenrwot \& Businge)
+        \item \textit{Paper 14:} Investigating Autonomous Agent Contributions in the Wild (Popescu et al.)
+        \item \textit{Paper 15:} On the Use of Agentic Coding: An Empirical Study of Pull Requests on GitHub (Watanabe et al.)
+        \item \textit{Paper 13:} How Do AI Coding Agents Contribute to Software Development? (Mazloomzadeh et al.)
+        \item \textit{Paper 17:} When AI Code Doesn't Stick: Reverted Changes Introduced by AI Coding Agents (Oukhay et al.)
+    \end{itemize}
+
+    \item \textbf{Tier 4: Specialized Deep-Dives (Contextual Fit)}
+    \begin{itemize}
+        \item \textit{Paper 6:} Are Coding Agents Generating Over-Mocked Tests? (Hora \& Robbes)
+        \item \textit{Paper 7:} Automation of Conversion from JavaScript Code to TypeScript Using LLMs (Markov\'{a})
+    \end{itemize}
+
+    \item \textbf{Tier 5: Research Infrastructure \& Ecosystem Context (Supporting)}
+    \begin{itemize}
+        \item \textit{Paper 18:} Sampling Projects in GitHub for MSR Studies --- GHS dataset and sampling tool (Dabi\'{c} et al.)
+        \item \textit{Paper 19:} The Geography of Open Source Software: Evidence from GitHub (Wachs et al.)
+        \item \textit{Paper 20:} GitHub Octoverse 2025 --- TypeScript overtakes Python as the \#1 language on GitHub (GitHub)
+    \end{itemize}
+\end{itemize}
+
+\subsection{Quality Check of Gathered Literature}
+A verification check confirms that the gathered literature meets peer-review and academic venue quality standards:
+
+\begin{enumerate}[leftmargin=1.5em, itemsep=3pt]
+    \item \textbf{Peer-Reviewed Conference \& Journal Papers:}
+    \begin{itemize}
+        \item \textbf{Paper 1:} ACM AIware '26 (July 2026; DOI: 10.1145/3805760.3814922).
+        \item \textbf{Paper 2:} Peer-reviewed empirical study formatted for IEEE/ACM venue track.
+        \item \textbf{Paper 3:} ACM Peer-Reviewed Track (precursor PROFES '25; formatted for ACM Transactions).
+        \item \textbf{Paper 4:} Baseline empirical adoption study on GitHub (\textit{arXiv preprint arXiv:2601.18341}).
+        \item \textbf{Paper 5:} Official companion study on new GitHub projects (\textit{arXiv preprint arXiv:2606.07448}).
+        \item \textbf{Paper 6:} ACM/IEEE MSR '26 (DOI: 10.1145/3793302.3793362).
+        \item \textbf{Paper 8 \& 11:} ACM AIware '26 (DOI: 10.1145/3805760.3814887) \& extended journal version.
+        \item \textbf{Paper 9:} Ecosystem census built on World of Code infrastructure (\textit{arXiv preprint arXiv:2606.24429}).
+        \item \textbf{Paper 10:} ACM/IEEE MSR '26.
+        \item \textbf{Paper 12:} ACM/IEEE MSR '26 Mining Challenge Track.
+        \item \textbf{Paper 13:} ACM Journal POMACS / SIGMETRICS (Vol. 37, No. 4, Art. 111, ISSN: 2476-1249).
+        \item \textbf{Paper 14:} ACM/IEEE MSR '26.
+        \item \textbf{Paper 15:} ACM Journal TOSEM (Vol. 34, Art. 189).
+        \item \textbf{Paper 16:} ACM/IEEE MSR '26 (DOI: 10.1145/3793302.3793375).
+        \item \textbf{Paper 17:} ACM/IEEE MSR '26 (DOI: 10.1145/3793302.3793587).
+        \item \textbf{Paper 18:} ACM/IEEE MSR '21 Data Showcase Track (peer-reviewed conference paper; Zenodo DOI: 10.5281/zenodo.4588464).
+        \item \textbf{Paper 19:} \textit{Technological Forecasting and Social Change}, Elsevier (Vol. 176, Art. 121478, 2022; ISSN: 0040-1625).
+    \end{itemize}
+    \item \textbf{Specialized Academic Works:}
+    \begin{itemize}
+        \item \textbf{Paper 7:} Academic Master's Thesis (University Repository).
+    \end{itemize}
+    \item \textbf{Industry Reports (cited for factual statistics only):}
+    \begin{itemize}
+        \item \textbf{Paper 20:} GitHub Octoverse Annual Report (2025). Cited exclusively for language-usage statistics and developer counts; methodology and raw data are not fully disclosed.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Structured Summaries of Literature Corpus}
+This subsection provides concise, structured summaries for each of the 20 core papers, formatted according to research group, objective, methodology, advantages, key findings, and limitations (Who $\rightarrow$ What $\rightarrow$ Method $\rightarrow$ Advantages $\rightarrow$ Results $\rightarrow$ Limitations):
+
+\begin{itemize}[leftmargin=1.5em, itemsep=8pt]
+
+    \item \textbf{Paper 1 (Galster et al., 2026 --- Dataset):}
+    Galster et al. (2026) curated a multi-tool dataset of agentic AI coding tool configurations across open-source GitHub repositories. They applied SEART GHS metadata filtering, GPT-5.2 LLM classification to isolate engineered software projects, and deterministic file-matching heuristics across 8 configuration mechanisms. This provides the first multi-tool dataset with raw configuration file text and commit metadata. They extracted 15,591 configuration artifacts across 4,738 repositories and 148,519 AI-co-authored commits, with TypeScript as the top language (24.5\%). Limitations include restriction to public GitHub repositories and potential LLM classification non-determinism.
+
+    \item \textbf{Paper 2 (Mao et al., 2026):}
+    Mao et al. (2026) measured code-level and commit-level differences between AI-generated and human-written code in real-world repositories. They used a multi-stage rule-based comment filter combined with a ChatGPT 5-mini classifier, alongside pre-AI stable human controls matched by repository, language, file path, and LOC. This evaluated 50+ code metrics across 44,616 files and 31,726 commits using non-parametric statistical hypothesis testing. They found that code-level differences are small ($d < 0.1$), but AI code is comment-heavy, exhibits less cross-file reuse, and has smaller commits with longer stabilization times ($0.66$ vs $0.04$ days). A key limitation is reliance on self-admitted code comments for attribution.
+
+    \item \textbf{Paper 3 (Chatlatanagulchai et al., 2025):}
+    Chatlatanagulchai et al. (2025) analyzed the structure, maintenance habits, and instructional content of agent context files (\texttt{CLAUDE.md}, \texttt{AGENTS.md}). They employed Grounded Theory qualitative coding (16 categories), Flesch Reading Ease (FRE) readability scoring, and automated GPT-5 multi-label classification. Their multi-agent dataset covers 2,303 context files across 1,925 repositories with high inter-rater agreement (80.3\%) and strong automated classification performance ($F1=0.79$). They found that context files are difficult to read (median FRE 42.4), actively maintained in short bursts ($59\%\text{--}67\%$ multi-commit), and prioritize testing (75.9\%) over security (14.8\%). Limitations include FRE scoring bias against technical command syntax.
+
+    \item \textbf{Paper 4 (Robbes et al., 2026 --- Agentic Much?):}
+    Robbes et al. (2026) conducted a large-scale empirical baseline study of coding agent adoption across GitHub repositories. They applied file-, author-, branch-, and PR-based heuristics to 128,018 repositories sampled via Dabi\'{c} et al.~\cite{dabic2021sampling} tools to trace agent participation. This establishes the foundational global benchmark for overall agent adoption, commit adoption ratios, and change types across project maturity tiers. They estimated an overall adoption rate of $22.20\%\text{--}28.66\%$ on GitHub, finding that agent commits are larger than human commits and heavily focused on features and bug fixes. Limitations include undercounting silent agent usage when developers strip co-authorship metadata.
+
+    \item \textbf{Paper 5 (Robbes et al., 2026 --- Agentic Very Much!):}
+    Robbes et al. (2026) evaluated coding agent adoption specifically in newly created GitHub projects created after August 2025. They applied Dabi\'{c} et al.~\cite{dabic2021sampling} sampling to select 13,000 non-fork repositories ($\ge 100$ commits, $\ge 5,000$ LOC) created after August 29, 2025, running the same multi-artifact heuristic pipeline. This provides a direct comparative analysis against older repositories to quantify temporal acceleration and adoption intensity in new projects. They found adoption in new projects was more than twice as high ($>22\%$ file-level adoption vs $12.08\%$ in older repos) with higher commit adoption ratios (median $\sim 30\%$) and larger line additions (median 42 vs 30 lines). Limitations stem from unobservable local CLI runs where AI traces are removed.
+
+    \item \textbf{Paper 6 (Hora \& Robbes, 2026):}
+    Hora \& Robbes (2026) investigated whether coding agents generate over-mocked unit test suites in open-source software repositories. They mined commit histories using PyDriller and GitEvo across 1,254,878 commits from 2,168 Python and JS/TS repositories. This provides an empirical evaluation of test generation quality and mock density across Claude Code, Copilot, and Cursor. They discovered that agents authored 9\% of all mock commits (rising to 19\% in 2025 repos) and exhibited a higher mock commit ratio (36\% vs 28\%) in highly agentic projects. A limitation is that static AST mock detection cannot assess whether mocked dependencies were logically necessary.
+
+    \item \textbf{Paper 7 (Markov\'{a}, 2025):}
+    Markov\'{a} (2025) evaluated automated JavaScript-to-TypeScript code refactoring using LLMs within enterprise SAP UI5 applications. She implemented prompt engineering (imperative vs. declarative) using GPT-4 via LangChain and SAP BTP across 4 developer experience tiers. This provided a practical workflow comparison of manual, LLM-assisted, and scripted refactoring time and developer edit effort. The study showed a reduction in average conversion time per file from 28 minutes (manual) to 16.25 minutes (LLM) and 8.3 minutes (scripted), significantly lowering manual edits. Limitations include a small sample size restricted to the SAP UI5 framework.
+
+    \item \textbf{Paper 8 (Galster et al., 2026, Exploratory):}
+    Galster et al. (2026) explored how developers configure agentic AI coding tools across open-source software projects. They classified 37,249 repositories via GPT-5.2 README evaluation and scanned default branches using deterministic multi-mechanism heuristics. This built a cross-tool taxonomy analyzing adoption, creation sequences, and reference networks across 2,853 configuring repositories. They found that Context Files dominate (90.6\% adoption; \texttt{CLAUDE.md} and \texttt{AGENTS.md} as standards), while advanced mechanisms like Skills (5.5\%) and Subagents (4.6\%) remain underutilized. Limitations are that heuristics confirm artifact presence but cannot verify active tool execution.
+
+    \item \textbf{Paper 9 (Khosravani \& Mockus, 2026):}
+    Khosravani \& Mockus (2026) conducted an ecosystem-wide multi-method census to detect 12 AI coding agents across 180M+ GitHub repositories. They executed ClickHouse SQL queries and WoC $O(1)$ hash map lookups on 3 WoC snapshots using a 4-Type taxonomy (Bot, Signature, Suffix, Config). Their dataset provides hand-validated precision across 495 cells with Wilson 95\% CIs, tracking over 320k AI commits/month. They proved single-signal bot lookups miss up to $30\times$ of actual agent commits (e.g., Claude Code), establishing multi-method recall baselines. A limitation is that Type D config detection may flag repos where agents were configured but never executed.
+
+    \item \textbf{Paper 10 (Ghaleb, 2026):}
+    Ghaleb (2026) fingerprinted 5 major AI coding agents to identify undisclosed agent-generated PRs submitted under personal human accounts. He trained XGBoost and Random Forest classifiers with 5-fold stratified CV on 41 reduced features across commit, PR, code, and temporal categories. This achieved high multi-class classification accuracy on 33,580 PRs from the AIDev-pop dataset without oversampling distortion. The classifier achieved a 97.2\% F1-score, identifying key fingerprints (Codex multiline commits 67.5\%, Copilot PR length 38.4\%, Cursor bullets 17.2\%, Claude Code conditional density 27.2\%). A limitation is that cross-sectional data cannot capture temporal signature drift as agent models evolve.
+
+    \item \textbf{Paper 11 (Baltes \& Galster et al., 2026 --- Harness Engineering):}
+    Baltes \& Galster et al. (2026) investigated harness engineering practices and configuration mechanism adoption across agentic AI tools. They applied an extended multi-mechanism heuristic scanner to 32,564 engineered GitHub projects classified via GPT-5.2. This provided a deep structural analysis of 8 harness mechanisms (Context Files, Skills, Subagents, Rules, Commands, Settings, Hooks, MCP) with Cliff's $\delta$ effect sizes. They identified TypeScript as the \#1 primary language (27.8\%) and found 85.5\% of Skills lack dynamic scripts, serving primarily as static documentation. A limitation is the exclusion of proprietary enterprise harness configurations.
+
+    \item \textbf{Paper 12 (Ogenrwot \& Businge, 2026):}
+    Ogenrwot \& Businge (2026) analyzed structural code modifications and description-to-diff alignment in Agentic vs. Human PRs. They measured change scope and text alignment using TF-IDF, Okapi BM25, CodeBERT, and GraphCodeBERT embeddings on 24,014 Agentic and 5,081 Human merged PRs from AIDev. This enabled a large-scale structural comparison of PR modifications and natural language description consistency. They found Agentic PRs differ significantly in commit count ($\delta = 0.5429$) and file spread, exhibiting equal or slightly higher semantic description-to-diff alignment ($0.9356$ vs $0.9285$). A limitation is that reconstructed Human PR patches may suffer from GitHub API diff truncation.
+
+    \item \textbf{Paper 13 (Mazloomzadeh et al., 2026):}
+    Mazloomzadeh et al. (2026) evaluated longitudinal mergeability, task taxonomy, and code quality of agentic PRs in open-source Python projects. They fitted binomial GLMMs with Estimated Marginal Means (EMMs) and BERTopic modeling (Gemini-embedding-001 + UMAP + K-Means, $C_V = 0.624$) on 9,428 agentic PRs across 539 repos. This established a 24-topic task taxonomy with Empirical Bayes normalization and SZZ bug-inducing commit tracking. They showed Claude Code achieved highest merge probability (84.3\%); agents excel in low-complexity tasks (Documentation 84.4\%, Dependencies 84.7\%) but exhibit higher comment density. A limitation is restriction to Python repositories with $\ge 100$ stars.
+
+    \item \textbf{Paper 14 (Popescu et al., 2026):}
+    Popescu et al. (2026) examined activity patterns, PR characteristics, and longitudinal code survival for 5 autonomous coding agents vs. humans. They mined $\sim$110,000 PRs via GraphQL API and estimated line-level survival and churn rates over time with Wilson 95\% CIs. This provided a multi-agent longitudinal evaluation tracking line survival rates over 3-week horizons. They observed high agent activity in 0-star repos ($51.7\%\text{--}75.7\%$) and found agent code exhibits lower 3-week survival ($25.6\%\text{--}30.4\%$) and higher churn ($38\%$ survival at 3 weeks) than human code. A limitation is that the 3-month sampling window restricts long-term decay analysis beyond initial post-merge stabilization.
+
+    \item \textbf{Paper 15 (Watanabe et al., 2025):}
+    Watanabe et al. (2025) studied change purposes, acceptance rates, rejection reasons, and revision effort for Claude Code PRs on GitHub. They conducted comparative manual classification (Zeng et al. framework) on 567 Claude Code PRs vs. matched Human PRs and performed Log-rank merge time tests. This provided a detailed qualitative thematic analysis of 92 rejected and 214 revised PRs. They found Agentic PR acceptance was 83.8\% (vs 91.0\% human), and 45.1\% of merged Agentic PRs required human revisions (mainly bug fixes 47.7\% and docs 29.0\%), often rejected due to project context or size. A limitation is restricting sampling to early Claude Code adopters (Feb--Apr 2025).
+
+    \item \textbf{Paper 16 (Robbes et al., 2026, Heuristics):}
+    Robbes et al. (2026) cataloged heuristics, promises, and perils for mining coding agent activity on GitHub. They performed multi-artifact heuristic discovery (scanning files, commit authors/emails, branch prefixes, PR descriptions, and labels) across major tools. This established an open, community-maintained heuristic repository (\texttt{agent-mining}) with period-of-validity tracking. They mapped millions of traces (e.g., 2.7M \texttt{noreply@anthropic.com} commits, 110k \texttt{CLAUDE.md} files, 2.1M \texttt{codex/} branches) and identified partial observability and agent multiplicity as key perils. A limitation is that rapidly changing agent conventions require continuous detector recalibration.
+
+    \item \textbf{Paper 17 (Oukhay et al., 2026):}
+    Oukhay et al. (2026) investigated the prevalence and underlying causes of reverted code changes introduced by AI coding agents. They detected Git and semantic revert commits across 33,580 PRs from the AIDev dataset and performed thematic qualitative coding on 500 stratified commits ($\kappa = 1.0$). This developed the first empirical taxonomy (8 categories, 25 themes) of AI agent code failure modes causing commit reverts. They found the overall PR revert rate was 2.66\%, with Copilot (7.6\%) and Claude Code (7.2\%) exhibiting higher revert rates than human baselines (4.7\%), driven by workflow/pipeline failures, overengineering, and dependency breaks. A limitation is that revert detection relies on explicit Git revert patterns, missing uncommitted local rewrites.
+
+    \item \textbf{Paper 18 (Dabi\'{c} et al., 2021 --- GHS Sampling):}
+    Dabi\'{c} et al. (2021) presented GHS (GitHub Search), a dataset of 25 pre-computed characteristics for 735,669 GitHub repositories across 10 programming languages, designed to support reproducible corpus construction in MSR studies. They collected repository metadata --- including commit count, contributor count, push date, license, and language byte share --- by querying the GitHub API over time, circumventing the 1,000-result search cap and per-minute rate limits that constrain live API queries. The dataset provides a reproducible sampling infrastructure that has been adopted by subsequent large-scale MSR studies, including Robbes et al. (Papers 4 and 5), and directly informs the corpus construction strategy of this thesis. A limitation is that GHS snapshots require periodic refreshing and do not support geographic or user-level filtering.
+
+    \item \textbf{Paper 19 (Wachs et al., 2022 --- Geography of OSS):}
+    Wachs et al. (2022) conducted a large-scale geographic analysis of open-source software contribution patterns on GitHub. They geolocated over 500,000 active GitHub contributors using self-reported profile location fields, email top-level domains, and commit timezone offsets, then modeled geographic variation in OSS activity against socioeconomic indicators across countries and regions. This established a systematic quantitative framework for geography-based GitHub developer identification, confirming that profile location self-reporting provides a practical basis for geographic attribution when combined with supplementary signals. They found OSS contribution remains highly clustered in North America and Western Europe, with significant growth in Asia and Latin America. A key limitation is that developers who leave location fields blank are systematically undercounted --- a challenge this thesis addresses through snowball network expansion.
+
+    \item \textbf{Paper 20 (GitHub, 2025 --- Octoverse):}
+    GitHub's annual Octoverse 2025 report measured the language preferences and activity patterns of 180+ million registered developers. The 2025 edition documented TypeScript overtaking Python and JavaScript to become the most-used language on GitHub for the first time in August 2025, with 2,636,006 monthly contributors (+66.6\% year-over-year). The report directly attributes TypeScript's rise to AI coding agent adoption, noting that TypeScript's strict type system produces more reliable code when paired with AI assistants. This provides industry-authoritative evidence for the JS/TS ecosystem's centrality to the AI coding agent adoption phenomenon, justifying the ecosystem choice of this thesis. A limitation of industry reports is that methodology and raw contributor-count data are not fully disclosed.
+
+\end{itemize}
+
+
+\newpage
+
+
+\begin{thebibliography}{99}
+
+\bibitem{galster2026dataset}
+M. Galster, S. Mohsenimofidi, L. B\"{o}hme, J. L. Lulla, M. A. Abubakar, C. Treude, and S. Baltes,
+``A Dataset of Agentic AI Coding Tool Configurations,''
+in \textit{Proc. 3rd ACM Int. Conf. on AI-Powered Software (AIware '26)}, 2026.
+
+\bibitem{khosravani2026detecting}
+A. Khosravani and A. Mockus,
+``Detecting AI Coding Agents in Open Source: A Validated Multi-Method Census of 180 Million Repositories,''
+\textit{arXiv preprint arXiv:2606.24429}, 2026.
+
+\bibitem{ghaleb2026fingerprinting}
+T. A. Ghaleb,
+``Fingerprinting AI Coding Agents on GitHub,''
+in \textit{Proc. 23rd IEEE/ACM Int. Conf. on Mining Software Repositories (MSR '26)}, 2026.
+
+\bibitem{robbes2026promises}
+R. Robbes, T. Matricon, T. Degueule, A. Hora, and S. Zacchiroli,
+``Promises, Perils, and (Timely) Heuristics for Mining Coding Agent Activity,''
+in \textit{Proc. 23rd IEEE/ACM Int. Conf. on Mining Software Repositories (MSR '26)}, 2026.
+
+\bibitem{robbes2026agenticmuch}
+R. Robbes, T. Matricon, T. Degueule, A. Hora, and S. Zacchiroli,
+``Agentic Much? Adoption of Coding Agents on GitHub,''
+\textit{arXiv preprint arXiv:2601.18341}, 2026.
+
+\bibitem{robbes2026agenticverymuch}
+R. Robbes, T. Matricon, T. Degueule, A. Hora, and S. Zacchiroli,
+``Agentic Very Much! Adoption of Coding Agent in New GitHub Projects,''
+\textit{arXiv preprint arXiv:2606.07448}, 2026.
+
+\bibitem{mao2026measurement}
+J. Mao et al.,
+``A Large-Scale Comprehensive Measurement of AI-Generated Code in Real-World Repositories,''
+2026.
+
+\bibitem{chatlatanagulchai2025agent}
+W. Chatlatanagulchai et al.,
+``Agent READMEs: An Empirical Study of Context Files for Agentic Coding,''
+\textit{arXiv preprint arXiv:2511.12884}, 2025.
+
+\bibitem{ogenrwot2026how}
+D. Ogenrwot and J. Businge,
+``How AI Coding Agents Modify Code: A Large-Scale Study of GitHub Pull Requests,''
+in \textit{Proc. 23rd IEEE/ACM Int. Conf. on Mining Software Repositories (MSR '26 Mining Challenge Track)}, 2026.
+
+\bibitem{mazloomzadeh2026how}
+I. Mazloomzadeh, M. M. Morovati, and F. Khomh,
+``How Do AI Coding Agents Contribute to Software Development? An Empirical Study of Agentic Pull Requests,''
+\textit{Proc. ACM Meas. Anal. Comput. Syst. (POMACS / SIGMETRICS)}, vol. 37, no. 4, art. 111, 2026.
+
+\bibitem{popescu2026investigating}
+R. M. Popescu, D. Gros, A. Botocan, R. Pandita, P. Devanbu, and M. Izadi,
+``Investigating Autonomous Agent Contributions in the Wild: Activity Patterns and Code Change over Time,''
+in \textit{Proc. 23rd IEEE/ACM Int. Conf. on Mining Software Repositories (MSR '26)}, 2026.
+
+\bibitem{watanabe2025use}
+M. Watanabe, H. Li, Y. Kashiwa, B. Reid, H. Iida, and A. E. Hassan,
+``On the Use of Agentic Coding: An Empirical Study of Pull Requests on GitHub,''
+\textit{ACM Trans. Softw. Eng. Methodol. (TOSEM)}, 2025.
+
+\bibitem{oukhay2026when}
+I. Oukhay, M. Begoug, M. Chouchen, and A. Ouni,
+``When AI Code Doesn't Stick: An Empirical Study on Reverted Changes Introduced by AI Coding Agents,''
+in \textit{Proc. 23rd IEEE/ACM Int. Conf. on Mining Software Repositories (MSR '26)}, 2026.
+
+\bibitem{hora2026are}
+A. Hora and R. Robbes,
+``Are Coding Agents Generating Over-Mocked Tests? An Empirical Study,''
+in \textit{Proc. 23rd IEEE/ACM Int. Conf. on Mining Software Repositories (MSR '26)}, 2026.
+
+\bibitem{galster2026configuring}
+M. Galster, S. Mohsenimofidi, J. L. Lulla, M. A. Abubakar, C. Treude, and S. Baltes,
+``Configuring Agentic AI Coding Tools: An Exploratory Study,''
+in \textit{Proc. 3rd ACM Int. Conf. on AI-Powered Software (AIware '26)}, 2026.
+
+\bibitem{galster2026harness}
+M. Galster, S. Mohsenimofidi, J. L. Lulla, M. A. Abubakar, C. Treude, and S. Baltes,
+``Harness Engineering for Agentic AI Coding Tools: An Exploratory Study,'' 2026.
+
+\bibitem{markova2025automation}
+M. Markov\'{a},
+``Automation of conversion from JavaScript code to TypeScript using large language models,''
+Master's thesis, 2025.
+
+\bibitem{dabic2021sampling}
+M. Dabi\'{c}, E. Aghajani, G. Bavota, M. Lanza, M. Mondini, R. Oliveto, and S. Vidal,
+``Sampling Projects in GitHub for MSR Studies,''
+in \textit{Proc. 18th IEEE/ACM Int. Conf. on Mining Software Repositories (MSR '21 -- Data Showcase)}, 2021.
+
+\bibitem{wachs2022geography}
+J. Wachs, M. Nitecki, W. Schueller, and A. Polleres,
+``The Geography of Open Source Software: Evidence from GitHub,''
+\textit{Technological Forecasting and Social Change}, vol. 176, art. 121478, 2022.
+
+\bibitem{github2025octoverse}
+GitHub,
+``Octoverse 2025: A new developer joins GitHub every second as AI leads TypeScript to \#1,''
+GitHub Blog, Nov. 2025.
+[Online]. Available: \url{https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/}
+
+\end{thebibliography}
+
+
+\end{document}
