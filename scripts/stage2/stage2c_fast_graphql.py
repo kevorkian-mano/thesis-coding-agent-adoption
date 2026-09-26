@@ -41,7 +41,7 @@ HEADERS     = {
     "Accept":        "application/vnd.github.v3+json",
 }
 
-BATCH_SIZE = 20   # accounts per GraphQL request
+BATCH_SIZE = 5    # accounts per GraphQL request (10+ caused 502 timeouts)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -51,14 +51,16 @@ BATCH_SIZE = 20   # accounts per GraphQL request
 def build_batch_query(batch_logins: list) -> str:
     """
     Builds a single GraphQL query for a batch of accounts.
-    For each repo we fetch:
-      - Basic metadata (name, stars, pushedAt)
-      - primaryLanguage + language byte distribution (top 5)
-      - Whether package.json exists at HEAD (I-9)
+    For each repo we fetch: basic metadata, primaryLanguage, pushedAt.
 
-    NOTE: history { totalCount } is intentionally omitted — it forces GitHub
-    to scan the full commit history server-side and consumes the entire hourly
-    GraphQL quota. pushedAt >= MIN_LAST_PUSH is used as the activity proxy.
+    Intentionally omitted (too expensive in bulk):
+      - history { totalCount } : scans full commit history, exhausts quota
+      - object(expression:"HEAD:package.json") : git tree lookup per repo × 50 = 502 timeouts
+      - languages { edges } : byte-share distribution per repo (replaced by primaryLanguage check)
+
+    Activity proxy: pushedAt >= MIN_LAST_PUSH (replaces commit count check).
+    Language proxy: primaryLanguage in JS/TS (replaces byte-share check).
+    I-9 (package.json) is skipped for the Egypt corpus — documented limitation.
     """
     nodes = []
     for idx, login in enumerate(batch_logins):
@@ -67,7 +69,7 @@ def build_batch_query(batch_logins: list) -> str:
         owner_{idx}: repositoryOwner(login: "{clean}") {{
           login
           repositories(
-            first: 100,
+            first: 50,
             isFork: false,
             privacy: PUBLIC,
             orderBy: {{field: PUSHED_AT, direction: DESC}}
@@ -78,13 +80,6 @@ def build_batch_query(batch_logins: list) -> str:
               stargazerCount
               pushedAt
               primaryLanguage {{ name }}
-              packageJson: object(expression: "HEAD:package.json") {{ id }}
-              languages(first: 5) {{
-                edges {{
-                  size
-                  node {{ name }}
-                }}
-              }}
             }}
           }}
         }}
@@ -167,19 +162,9 @@ def process_batch_data(data: dict, all_rows: list):
             if pushed_at[:10] > STUDY_SNAPSHOT_DATE:
                 continue
 
-            # I-9: package.json must exist
-            if not repo.get("packageJson"):
-                continue
-
-            # I-8: JS/TS byte-share
-            lang_edges  = (repo.get("languages") or {}).get("edges") or []
-            total_bytes = sum(e["size"] for e in lang_edges)
-            js_ts_bytes = sum(
-                e["size"] for e in lang_edges
-                if e["node"]["name"] in ("JavaScript", "TypeScript")
-            )
-            js_ts_share = (js_ts_bytes / total_bytes) if total_bytes > 0 else 0.0
-            if js_ts_share < MIN_JS_TS_SHARE:
+            # I-8 (proxy): primary language must be JS or TS
+            primary_lang = (repo.get("primaryLanguage") or {}).get("name")
+            if primary_lang not in ("JavaScript", "TypeScript"):
                 continue
 
             all_rows.append({
@@ -187,13 +172,12 @@ def process_batch_data(data: dict, all_rows: list):
                 "owner_login":      owner_login,
                 "repo_name":        repo["name"],
                 "full_name":        repo["nameWithOwner"],
-                "primary_language": (repo.get("primaryLanguage") or {}).get("name"),
+                "primary_language": primary_lang,
                 "stars":            repo.get("stargazerCount"),
                 "pushed_at":        pushed_at,
-                "total_commits":    commit_count,
-                "has_manifest":     True,   # already checked above
+                "has_manifest":     None,   # I-9 not checked (git tree lookup too expensive)
                 "total_commits":    None,   # not fetched (history scan too expensive)
-                "js_ts_byte_share": round(js_ts_share, 3),
+                "js_ts_byte_share": None,   # not fetched (languages edges removed)
                 "size_stratum":     compute_stratum(repo.get("stargazerCount", 0)),
                 "agent_adopted":    None,   # filled in Stage 4
                 "topic_id":         TOPIC_ID,
@@ -217,10 +201,13 @@ def main(seed_csv_path: str = "egypt_combined_accounts.csv",
     print(f"Loaded {len(logins)} unique accounts. "
           f"Starting batched GraphQL pull (batch size={BATCH_SIZE})...")
 
-    all_rows = []
+    all_rows      = []
+    total_batches = (len(logins) + BATCH_SIZE - 1) // BATCH_SIZE
+    SAVE_EVERY    = 100   # write progress every N batches
 
     for i in range(0, len(logins), BATCH_SIZE):
         batch = logins[i : i + BATCH_SIZE]
+        b_num = i // BATCH_SIZE + 1
         query = build_batch_query(batch)
         data  = post_graphql(query)
 
@@ -228,16 +215,19 @@ def main(seed_csv_path: str = "egypt_combined_accounts.csv",
             process_batch_data(data, all_rows)
         else:
             # Fallback: process accounts individually if batch fails entirely
-            print(f"  Batch [{i}:{i+BATCH_SIZE}] returned no data — falling back to individual requests...")
+            print(f"  Batch {b_num} returned no data — retrying individually...")
             for single_login in batch:
                 single_data = post_graphql(build_batch_query([single_login]))
                 if single_data:
                     process_batch_data(single_data, all_rows)
                 time.sleep(0.2)
 
-        processed = min(i + BATCH_SIZE, len(logins))
-        print(f"[{processed}/{len(logins)}] accounts processed. "
-              f"Valid JS/TS repos so far: {len(all_rows)}")
+        if b_num % SAVE_EVERY == 0:
+            pd.DataFrame(all_rows).drop_duplicates(subset=["full_name"]).to_csv(output_csv, index=False)
+            print(f"  [{b_num}/{total_batches}] Progress saved. Repos so far: {len(all_rows)}")
+        else:
+            print(f"  [{b_num}/{total_batches}] Repos so far: {len(all_rows)}")
+
         time.sleep(0.3)
 
     df = pd.DataFrame(all_rows).drop_duplicates(subset=["full_name"])
