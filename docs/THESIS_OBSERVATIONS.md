@@ -176,6 +176,64 @@ Papers 2, 6, 7, 10, 12, 13, 14, 15, 17 all belong in Chapters 3–4 and provide 
 
 ---
 
+## OBS-012 — AI-Assisted vs. Agentic Contribution Are Not the Same Thing
+**Stage:** Stage 4 design / Analysis framing
+**Date added:** 2026-09-30
+
+A critical conceptual distinction that must be drawn explicitly in the thesis: not every AI-touched repository is "agentic." The presence of a single commit trailer or a co-authored commit does not make a project agentic — it may simply mean the developer used an AI assistant for one task. The thesis must distinguish two adoption levels:
+
+- **AI-assisted:** The developer used an AI tool occasionally. Signals are sparse (1–2 signal occurrences, single signal type). The tool was not systematically integrated into the project workflow.
+- **Agentic:** The AI tool is actively driving or co-driving the project. Signals are consistent across multiple types (e.g., config file present *and* repeated commit trailers) or high-frequency within commits/PRs. The tool is a persistent participant, not a one-off helper.
+
+**Operationalization for Stage 4:**
+- `adoption_level = "none"`: zero signals
+- `adoption_level = "ai_assisted"`: ≥1 signal but fewer than 2 distinct signal types AND signal_count < threshold (TBD, ~3)
+- `adoption_level = "agentic"`: config file present OR ≥2 distinct signal types OR signal_count ≥ threshold
+
+**Why this matters:** Reporting only binary adoption (yes/no) overstates the depth of AI integration. The thesis should report both the rate of any AI signal (broad adoption) and the rate of systematic agentic use (deep adoption). These will likely differ significantly — and the gap between them is itself a finding.
+
+**Draft thesis sentence:** *"We distinguish between AI-assisted repositories, where isolated signals suggest occasional tool use, and agentic repositories, where multiple signal types or config file presence indicate systematic integration of a coding agent into the development workflow. This two-level classification acknowledges that not every AI-touched commit reflects the autonomous, workflow-integrated usage that defines agentic software engineering."*
+
+---
+
+## OBS-013 — Code Size Must Exclude Documentation and Markdown Files
+**Stage:** Stage 4/5 design / Metrics
+**Date added:** 2026-09-30
+
+When computing repository size as a secondary sizing dimension, documentation and markdown files must be excluded. A repository's `.md` files, `docs/` directory, `README`, `CHANGELOG`, `LICENSE`, and similar non-code assets can dwarf the actual codebase in line count — especially in well-documented open source projects. Including them would distort code-size comparisons between projects with varying documentation practices.
+
+**Primary size metric:** Star count (stratum: small 0–50, medium 51–500, large >500) — unchanged, for consistency with reference papers.
+
+**Secondary size metric:** Lines of actual code, defined as lines in files with extensions `.js`, `.ts`, `.jsx`, `.tsx`, `.mjs`, `.cjs`, `.vue`, `.svelte` — explicitly excluding `.md`, `.txt`, `.rst`, `.html` (doc pages), `docs/`, `__tests__/`, `*.test.*`, `*.spec.*`.
+
+**Why both metrics matter:** Stars measure social visibility; code lines measure project substance. A repo with 10,000 lines and 5 stars (a private enterprise tool made public) and a repo with 50 lines and 5,000 stars (a viral utility snippet) fall in the same star stratum but are fundamentally different in scope. Reporting both allows the thesis to surface cases where the two measures diverge — and to check whether adoption rates differ by codebase substance independent of visibility.
+
+**Implementation note for Stage 4/5:** Fetch file tree via GraphQL (`object(expression:"HEAD:") { ... on Tree { entries { name extension } } }`) and count lines only for qualifying extensions. Or use the GitHub language byte statistics (already fetched) as a proxy for code volume.
+
+**Draft thesis sentence:** *"Repository size was measured on two dimensions: star count, used for stratum assignment following prior work, and lines of code computed over production code files only (`.js`, `.ts`, `.jsx`, `.tsx` and related extensions), explicitly excluding Markdown, documentation, and test files. This dual measure allows adoption rates to be examined both by project visibility and by project substance."*
+
+---
+
+## OBS-014 — JS/TS/npm Must Be the Primary Ecosystem, Not Just Present
+**Stage:** Stage 1 redesign
+**Date added:** 2026-09-30
+
+The thesis targets repositories where JavaScript, TypeScript, and npm are the **primary** development ecosystem — not repos where these languages merely appear alongside a dominant language (e.g., a Python ML project with a small JavaScript dashboard, or a Java backend with a TypeScript frontend). The current Stage 1 filters (package.json presence + JS/TS byte share ≥ 50%) are a good start but can be strengthened.
+
+**Signals that confirm JS/TS/npm as the primary ecosystem:**
+- `package.json` at the root (already implemented) — the definitive npm project marker
+- `yarn.lock`, `package-lock.json`, or `pnpm-lock.yaml` at the root — confirms active npm dependency management (not just a stale package.json)
+- Primary language reported by GitHub is JavaScript or TypeScript (already implemented)
+- JS/TS byte share ≥ 50% across all repository languages (already implemented)
+
+**The distinction matters because:** GitHub classifies repos by the dominant language, but a repo with 49% TypeScript and 51% Python would pass the current language filter but fail the spirit of the study. Similarly, a monorepo where the JS component is one of five sub-packages should not be counted as a JS/TS/npm repo. The `package.json` + lockfile combination is the most reliable proxy for "this is genuinely an npm project."
+
+**Implementation for new Stage 1:** In the GraphQL batch query, add checks for `yarn.lock`, `package-lock.json`, and `pnpm-lock.yaml` alongside `package.json`. Require at least `package.json` (mandatory) + one lockfile (preferred, flag if absent). Record which lockfile type was found in the corpus output for potential subgroup analysis.
+
+**Draft thesis sentence:** *"To ensure that selected repositories treat JavaScript/TypeScript/npm as their primary ecosystem rather than as a secondary component, inclusion required both a root-level `package.json` and at least one npm lockfile (`package-lock.json`, `yarn.lock`, or `pnpm-lock.yaml`), in addition to JavaScript or TypeScript representing the majority of repository byte content. This compound filter excludes polyglot monorepos and stub configurations where npm is incidental to the project's primary language."*
+
+---
+
 ## OBS-011 — Three Additional Papers Added to Fill Methodology Gaps
 **Stage:** Literature review expansion
 **Date added:** 2026-09-26
