@@ -234,6 +234,70 @@ The thesis targets repositories where JavaScript, TypeScript, and npm are the **
 
 ---
 
+## OBS-015 — Mixed Contributor Teams May Drive Higher Adoption Rates
+**Stage:** Stage 5 design / RQ2 enrichment
+**Date added:** 2026-10-05
+
+Contributor location analysis may reveal that Egyptian repos with **mixed teams** (Egyptian + non-Egyptian contributors) show higher agent adoption rates than repos where all contributors are Egyptian. If confirmed, this would suggest that exposure to international developer culture — through collaboration, code review, and shared tooling norms — accelerates AI coding agent adoption independently of geography.
+
+This is a publishable finding beyond the headline result of "Egyptians adopt less." It shifts the narrative from a simple national gap to a network-effect explanation: adoption spreads through collaboration, and developers embedded in international networks adopt faster regardless of where they are located.
+
+**Why this matters for RQ2:** It provides a mechanism, not just a rate. A bare adoption gap (28.1% global vs 10.2% Egyptian) describes *what* is happening. Mixed-team analysis explains *why* — isolation from international developer networks slows adoption, while cross-border collaboration accelerates it.
+
+**Implementation:** For each repo in the corpus, fetch contributor list via GitHub API, map each contributor's location to a country, classify the repo team as: purely Egyptian, majority Egyptian, mixed, or majority non-Egyptian. Compare adoption rates across these four team types.
+
+**Draft thesis sentence:** *"Preliminary evidence suggests that Egyptian repositories with internationally mixed contributor teams exhibit higher agent adoption rates than purely Egyptian teams, consistent with a network-diffusion model in which adoption spreads through cross-border collaboration rather than being determined solely by developer nationality."*
+
+---
+
+## OBS-017 — Framework-Level Analysis as a Potential Secondary Finding
+**Stage:** To be discussed — post Stage 1c
+**Date added:** 2026-10-08
+
+The current pipeline categorises repos at the **ecosystem level** (npm, pnpm, yarn, bun). A deeper level of analysis is possible: **framework detection** within the npm ecosystem — identifying whether a repo uses React, Next.js, Express, Nest.js, Vue, Angular, etc. by reading `package.json` dependency content.
+
+**Why this matters:** A React developer or an Express developer reading the thesis wants adoption rates specific to their framework, not just "npm repos in general." Framework-level results are more actionable for practitioners.
+
+**How it would be implemented:** A small Stage 1b.5 script that fetches `package.json` content for each sampled repo and adds a `framework` column. Detection is simple — check for known package names in `dependencies` and `devDependencies`.
+
+**Recommended treatment:** Secondary finding, not a new RQ. Report as an additional breakdown table in Chapter 4 (Results) alongside the ecosystem table.
+
+**Decision needed:** Confirm with supervisor whether framework-level analysis is in scope. If yes, write Stage 1b.5 after Stage 1c is confirmed.
+
+---
+
+## OBS-016 — Global Owner Location Coverage as a Research Finding
+**Stage:** Stage 2 redesign / RQ3 expansion
+**Date added:** 2026-10-08
+
+The professor's direction is to analyse **all unique repo owners** from the global corpus — not just Egyptian ones — and measure how many have a location set on their GitHub profile versus how many do not, and explore *why* so many developers leave the field blank.
+
+**What this adds:** This becomes a standalone finding before any Egyptian comparison. It establishes the data quality ceiling for any geographic analysis on GitHub and is itself a contribution:
+
+- What % of active JS/TS developers disclose location? (expected: ~30–40% based on Wachs et al.)
+- Is blank-location rate correlated with region? (expected: lower-income-country developers fill in location less often — Wachs et al. predict this)
+- Do location-disclosing developers differ systematically in repo characteristics (stars, adoption rates) from non-disclosing developers?
+
+**Why developers leave location blank (hypotheses to test):**
+1. Privacy preference — especially common in authoritarian contexts or for developers working on sensitive projects
+2. Profile incompleteness — many GitHub accounts are created quickly and never maintained
+3. Freelancer/contractor norm — location irrelevant to professional identity
+4. Systematic under-representation of Global South — developers in lower-income countries may see less professional value in location disclosure
+
+**Implementation:** After Stage 1c sampling, fetch GitHub user profiles for all unique `owner_login` values. Record: location string (raw), inferred country (if parseable), blank/not-blank flag. Compute coverage rates overall and by size stratum. Report as a methodology subsection before the Egyptian comparison.
+
+**Stage 2a results (2026-10-08):**
+- Total unique owners in sample: **4,374**
+- Owners with location set (S1 fired): **1,725 (39.5%)**
+  - of which not Egyptian (hard negative): **1,720 (39.3%)**
+  - of which Egyptian confirmed/probable: **6 (0.14%)**
+- Owners with NO location set (unclassified): **2,649 (60.5%)**
+- Owners needing further signals (Stage 2b): **2,649**
+
+**Draft thesis sentence:** *"Of 4,374 unique repository owners in the global JS/TS/npm sample, 39.5% (n=1,725) provided a parseable location in their GitHub profile — consistent with the 30–40% disclosure rate documented by Wachs et al. [wachs2022]. Of location-disclosing owners, 0.35% (n=6) were identified as Egyptian via explicit profile signals (S1–S4). The remaining 60.5% (n=2,649) required social and repo-level signal inference (Stages 2b, 3a)."*
+
+---
+
 ## OBS-011 — Three Additional Papers Added to Fill Methodology Gaps
 **Stage:** Literature review expansion
 **Date added:** 2026-09-26

@@ -1,0 +1,493 @@
+% ============================================================
+% Chapter 2: Literature Review
+% ============================================================
+
+\chapter{Literature Review}
+\label{chap:litrev}
+
+This chapter surveys the body of work that contextualises, motivates, and
+directly informs the present study. The review is organised into six thematic
+sections: the emergence and definition of AI coding agents
+(Section~\ref{sec:lr:agents}); empirical studies of adoption rates and trends
+on GitHub (Section~\ref{sec:lr:adoption}); detection methodology and the
+multi-signal challenge (Section~\ref{sec:lr:detection}); how developers
+interact with and adopt AI tools (Section~\ref{sec:lr:interaction}); the
+JavaScript, TypeScript, and npm ecosystem as a research subject
+(Section~\ref{sec:lr:ecosystem}); and geographic dimensions of open-source
+software development (Section~\ref{sec:lr:geography}). The chapter concludes
+by synthesising the identified research gaps that this thesis addresses
+(Section~\ref{sec:lr:gaps}).
+
+% ------------------------------------------------------------
+\section{AI Coding Agents: Emergence and Definitions}
+\label{sec:lr:agents}
+% ------------------------------------------------------------
+
+The term \emph{coding agent} refers to an AI system embedded in an autonomous
+loop that plans a sub-task, executes an action (writing or modifying code,
+running tests, reading documentation), observes the result, and iterates
+until a goal is reached~\cite{robbesAgenticMuch2026}. This distinguishes
+agents from earlier AI coding \emph{assistants}, which provide
+suggestions inline but require the human to accept each change individually.
+The distinction is operationally significant: an assistant leaves a trace
+only when the developer accepts a suggestion, whereas an agent may author
+entire functions, write tests, and open pull requests autonomously, leaving
+a richer and more diverse set of observable artefacts.
+
+The practical frontier between assistants and agents is blurred by how tools
+are configured. GitHub Copilot, for example, operates as an autocomplete
+assistant in its default IDE mode but transitions to an agentic mode when
+given access to a terminal or a repository via Copilot Workspace. Similarly,
+Cursor and Windsurf expose both completion and multi-step agentic modes
+within the same interface. Chatlatanagulchai et al.~\cite{chatlatanagulchai2025}
+document the growth of \emph{context files}---configuration artefacts such as
+\texttt{CLAUDE.md}, \texttt{.cursorrules}, and \texttt{AGENTS.md}---which
+signal that a developer has configured an agent to operate with project-level
+instructions rather than just accepting inline suggestions. The presence of
+such files is the most reliable publicly observable signal that agentic (as
+opposed to merely AI-assisted) development is taking place.
+
+The key tools covered by this study and their approximate launch dates are
+listed in Table~\ref{tab:tools}. The most consequential for the npm ecosystem
+is Claude Code (launched March 2025), which targets command-line-first
+developers and stamps every commit it authors with a
+\texttt{Co-Authored-By: Claude <noreply@anthropic.com>} trailer by
+default~\cite{robbesHeuristics2026}. This default behaviour makes Claude Code
+the most detectable agent in repository mining studies.
+
+\begin{table}[h]
+\centering
+\caption{Key AI coding tools and their approximate launch dates.}
+\label{tab:tools}
+\begin{tabular}{llll}
+\hline
+\textbf{Tool} & \textbf{Vendor} & \textbf{Mode} & \textbf{Launch} \\
+\hline
+GitHub Copilot       & GitHub/Microsoft & Assistant + Agent & Jun 2021 \\
+Cursor               & Anysphere        & Assistant + Agent & 2023 \\
+Aider                & Paul Gauthier    & Agent (CLI)       & 2023 \\
+Devin                & Cognition AI     & Agent (full)      & Mar 2024 \\
+Claude Code          & Anthropic        & Agent (CLI)       & Mar 2025 \\
+Windsurf             & Codeium          & Assistant + Agent & Nov 2024 \\
+Gemini Code Assist   & Google           & Assistant + Agent & 2024 \\
+\hline
+\end{tabular}
+\end{table}
+
+Galster et al.~\cite{galsterConfig2026} conducted a large-scale empirical
+analysis of configuration artefacts across 4,738 repositories, finding
+148,519 AI-co-authored commits and 15,591 configuration artefact files.
+TypeScript was the most represented primary language (24.5\% of repos in their
+sample), providing early evidence that the npm ecosystem is a particularly
+active site of AI agent adoption. A companion study by the same group
+\cite{galsterHarness2026} characterised the structure of agent harness files,
+finding that 85.5\% of skill definitions lack dynamic scripts, revealing that
+much agentic configuration is declarative rather than programmatic.
+
+% ------------------------------------------------------------
+\section{Empirical Studies of Coding Agent Adoption}
+\label{sec:lr:adoption}
+% ------------------------------------------------------------
+
+The two most comprehensive empirical studies of coding agent adoption on
+GitHub are the \emph{Agentic Much?}~\cite{robbesAgenticMuch2026} and
+\emph{Agentic Very Much!}~\cite{robbesAgenticVery2026} papers by Robbes
+et al., which together establish the baseline adoption rates against which
+this thesis measures the JavaScript/TypeScript ecosystem specifically.
+
+\subsection{Adoption in Established Repositories}
+
+Robbes et al.~\cite{robbesAgenticMuch2026} studied 128,018 GitHub repositories
+across all languages using a snapshot dated 21 February 2026. Applying a
+taxonomy of 196 heuristics covering 63 agents, they found an overall adoption
+rate of \textbf{22.20\%--28.66\%}, depending on which heuristic set is used.
+The 6.46 percentage-point gap between these bounds represents repositories
+that are missed when a narrower signal set is applied---the \emph{undercounting
+delta} that this thesis explicitly quantifies for the JS/TS ecosystem.
+
+Beyond the headline rate, Robbes et al. identified several patterns that
+motivate the design of the present study. First, adoption is positively
+correlated with repository size, activity, and star count, which justifies
+the size-stratified sampling strategy adopted in Stage~1 of this thesis.
+Second, AI-generated commits are \textbf{3$\times$ larger} than human commits
+(median 31 vs.\ 11 added lines), suggesting that agents introduce code in
+larger blocks than individual autocomplete acceptances. Third, the most common
+task type for AI-authored commits is feature work (35.7\%), followed by bug
+fixing (29.9\%). Fourth, temporal analysis reveals a rapid acceleration of
+adoption from mid-2025 onwards, coinciding with the release of Claude Code
+and the wider availability of agentic modes in Cursor and Copilot.
+
+A crucial limitation of this study, acknowledged by the authors, is that the
+cross-language aggregation conceals ecosystem-specific patterns. The 22--28\%
+figure pools together low-adoption ecosystems (e.g.\ legacy C repositories
+maintained by researchers) with potentially high-adoption ecosystems such as
+npm. This aggregation gap is the primary scope motivation for the present
+thesis.
+
+\subsection{Adoption in New Repositories}
+
+A companion study by the same group~\cite{robbesAgenticVery2026} restricted
+the analysis to 12,794 repositories \emph{created} after 29 August 2025---the
+point at which the researchers consider the agentic AI era to have matured.
+This design choice directly parallels the corpus construction approach of the
+present thesis, which requires \texttt{created:>=2025-02-24}.
+
+The results are striking: adoption in new repositories reaches
+\textbf{71.83\%--76.15\%}, roughly three times the rate in older
+repositories. The median commit agent ratio (fraction of commits authored or
+co-authored by an agent) is approximately 30\% in new repositories versus
+10\% in older ones. The proportion of repositories in the ``pervasive
+adoption'' category---where agents contribute to more than 50\% of
+commits---rises from 21.1\% in older repositories to 41.2\% in new ones.
+Claude Code accounts for approximately three times more signals than Copilot
+in new repositories, consistent with its more aggressive default attribution
+behaviour and its CLI-first design that integrates naturally with terminal
+workflows.
+
+These findings motivate the creation date filter applied in Stage~1 of this
+thesis. Repositories created before the agentic era were built without agents
+from day one; including them in a study of agent adoption conflates
+non-adoption with \emph{pre-adoption}, inflating the apparent non-adoption
+rate. By focusing on repositories created on or after 24 February 2025,
+the present study measures adoption among projects that had access to
+mature agentic tools throughout their entire development lifecycle.
+
+\subsection{A Census-Scale Study}
+
+Khosravani and Mockus~\cite{khosravani2026} provide the largest-scale
+analysis to date, surveying over 180 million GitHub repositories using
+four signal types: bot account authorship (Type~A), commit message trailers
+(Type~B), author email patterns (Type~C), and configuration file presence
+(Type~D). Their central finding is that single-signal bot-account detection
+misses \textbf{up to 30$\times$} the volume of Claude Code commits detected
+by the full multi-signal approach---the strongest empirical evidence for why
+any single-signal detection methodology produces a severe lower bound.
+Their study also documents 320,000+ AI-authored commits per month as of early
+2026, confirming that agent adoption has crossed from an experimental to an
+industrial phenomenon.
+
+% ------------------------------------------------------------
+\section{Detection Methodology and the Multi-Signal Challenge}
+\label{sec:lr:detection}
+% ------------------------------------------------------------
+
+Translating the conceptual question ``does this repository use AI coding
+agents?'' into an operational answer requires observable signals. The
+literature converges on four families of signals~\cite{robbesHeuristics2026,
+galsterConfig2026, khosravani2026}:
+
+\begin{enumerate}
+    \item \textbf{Configuration artefacts:} Files at the repository root that
+    configure an agent's behaviour---\texttt{CLAUDE.md}, \texttt{AGENTS.md},
+    \texttt{.cursorrules}, \texttt{.aider.conf.yml}, \texttt{.roomodes}, and
+    others. Galster et al.~\cite{galsterConfig2026} catalogue 15,591 such files
+    across their corpus. These signals have high precision (a \texttt{CLAUDE.md}
+    file is nearly unambiguous evidence of intentional Claude Code use) but
+    limited recall (many teams use agents without creating configuration files).
+
+    \item \textbf{Commit message trailers:} The \texttt{Co-Authored-By:}
+    trailer is injected by several agents by default, most notably Claude Code
+    (\texttt{noreply@anthropic.com}). Robbes et al.~\cite{robbesHeuristics2026}
+    document 2.7 million commits carrying this email address and catalogue the
+    full set of trailer patterns used by 63 agents. Trailer-based detection
+    has high precision but is easily suppressed by developers who clean their
+    commit history.
+
+    \item \textbf{Pull request markers:} Agents that operate in PR-creation
+    mode (Copilot, Devin, Codex) leave markers in PR bodies, branch names
+    (\texttt{copilot/fix-*}, \texttt{codex/*}), and PR labels. Robbes
+    et al.~\cite{robbesHeuristics2026} document 2.1 million branches with the
+    \texttt{codex/} prefix. These signals are PR-scope only and miss
+    commit-level agent usage.
+
+    \item \textbf{Bot account authorship:} Some agents operate as registered
+    GitHub apps (e.g.\ \texttt{github-copilot[bot]},
+    \texttt{devin-ai-integration[bot]}), making their commits attributable
+    directly via the author login. This is the highest-precision signal but
+    covers only a minority of agent types.
+\end{enumerate}
+
+Ghaleb~\cite{ghaleb2026} approaches detection from a machine-learning
+perspective, training an XGBoost/Random Forest classifier on 33,580 pull
+requests with 97.2\% F1-score. The classifier's key features include
+multiline commit density (Codex: 67.5\%), PR description length (Copilot:
+38.4\%), bullet-point formatting (Cursor: 17.2\%), and conditional statement
+density (Claude Code: 27.2\%). While achieving high accuracy, this approach
+requires labelled training data and is therefore complementary rather than
+a direct substitute for heuristic-based detection in a new ecosystem.
+
+The relationship between signal types has direct methodological implications.
+Mao et al.~\cite{mao2026} demonstrate that restricting detection to a single
+signal type---the approach of most pre-2025 studies---systematically
+undercounts adoption. The present thesis operationalises this insight by
+reporting both a \emph{single-signal} rate (commit trailers only, for
+comparability with prior work) and a \emph{multi-signal} rate (all signal
+types), treating the gap between them as an estimate of the undercounting
+delta.
+
+The study also distinguishes between two adoption levels, following the
+conceptual framework implicit in Galster et al.~\cite{galsterConfig2026}
+and Chatlatanagulchai et al.~\cite{chatlatanagulchai2025}. Repositories with
+sparse, isolated signals (a single commit trailer, no configuration file) are
+classified as \emph{AI-assisted}---the developer may have used the tool
+occasionally without integrating it into their workflow. Repositories where
+a configuration file is present, or where multiple signal types co-occur, or
+where signals appear with high frequency, are classified as
+\emph{agentic}---indicating systematic integration of the agent into the
+development process.
+
+% ------------------------------------------------------------
+\section{Developer Interaction with AI Coding Tools}
+\label{sec:lr:interaction}
+% ------------------------------------------------------------
+
+Understanding why some repositories produce observable agent signals while
+others do not requires insight into how developers interact with these tools
+in practice.
+
+\subsection{Bimodal Interaction Patterns}
+
+Barke et al.~\cite{barke2023} conducted a grounded theory study of 20
+programmers using GitHub Copilot on structured coding tasks, producing the
+first theoretically grounded account of developer--AI interaction. They
+identified a stable bimodal pattern: \emph{acceleration mode}, in which
+developers know what to write and use Copilot to get there faster (code
+prompts dominant: 71.4\%), and \emph{exploration mode}, in which developers
+are uncertain and use Copilot to discover API usage and problem structure
+(comment prompts dominant: 57.2\%). Exploration interactions take more than
+twice as long as acceleration interactions (248.6 vs.\ 104.7 minutes total
+across participants). The dominant determinant of which mode a developer
+enters is task familiarity: familiar logic drives acceleration, unfamiliar
+APIs drive exploration.
+
+This bimodal model has two implications for the present study. First,
+exploration-mode interactions---where developers write natural-language
+comments as prompts and accept large generated blocks---are more likely to
+leave detectable traces in commit diffs and PR descriptions. Second, the
+model explains why adoption rates may differ across developer communities:
+developers who work predominantly in unfamiliar territory (e.g.\ students
+or developers in a new ecosystem) may produce richer agent traces than
+experienced developers in acceleration mode, complicating the interpretation
+of raw signal counts.
+
+\subsection{Productivity and Acceptance Rates}
+
+Ziegler et al.~\cite{ziegler2022} conducted the largest empirical study of
+AI coding tool productivity to date, matching survey responses from 2,631
+GitHub Copilot users to four weeks of IDE telemetry. The overall acceptance
+rate was \textbf{27\%}, with users accepting more than 31 suggestions per
+active day on average. Acceptance rate (\texttt{accepted\_per\_shown}) was
+the strongest single predictor of self-reported productivity ($r = 0.24$,
+$p < 0.0001$), though the correlation left substantial unexplained variance,
+underscoring that productivity is a multidimensional construct.
+
+Two language-specific findings are directly relevant to this thesis.
+JavaScript achieved a higher acceptance rate (30.8\%) than TypeScript
+(26.3\%)---consistent with JavaScript's looser type system reducing the
+frequency of suggestion rejection due to type mismatches. This difference
+implies that a JS/TS-focused study should expect somewhat more AI-generated
+code per active user in JavaScript repositories than TypeScript repositories,
+all else equal. Acceptance rates also varied with coding context: during
+typical working hours they were 21.2\%, rising to 23.5\% on weekends---a
+reminder that repository-level signals integrate across heterogeneous
+developer time regimes.
+
+Subsequent work by Mazloomzadeh et al.~\cite{mazloomzadeh2026} and
+Ogenrwot and Businge~\cite{ogenrwot2026} extended the productivity and quality
+evidence to the pull-request level, finding that AI-assisted PRs are accepted
+at rates comparable to human PRs (83.8\% vs.\ 91.0\%) but that AI-authored
+commits are reverted more frequently (Copilot: 7.6\%, Claude Code: 7.2\%) than
+human-authored commits (4.7\%)~\cite{oukhay2026}. Watanabe et al.\
+\cite{watanabe2025} found that AI assistance increases the volume of code
+review comments without proportionally increasing review quality, suggesting
+that reviewers apply additional scrutiny to suspected AI-generated code.
+
+% ------------------------------------------------------------
+\section{The JavaScript, TypeScript, and npm Ecosystem}
+\label{sec:lr:ecosystem}
+% ------------------------------------------------------------
+
+The selection of the JavaScript/TypeScript/npm ecosystem as the unit of
+analysis is motivated by three converging lines of evidence: ecosystem scale,
+tool affinity, and research gap.
+
+\subsection{Ecosystem Scale and Growth}
+
+The GitHub Octoverse 2025 report~\cite{octoverse2025} documents that
+TypeScript overtook Python as the most widely used programming language on
+GitHub in August 2025, with 2,636,006 monthly contributors---a year-on-year
+increase of 66.6\%. The report explicitly attributes this growth to AI coding
+agent adoption, noting that TypeScript's strict typing and comprehensive IDE
+tooling make it particularly well-suited for agentic code generation, which
+benefits from type information to avoid runtime errors. JavaScript remains
+the largest language by raw repository count; together, JavaScript and
+TypeScript account for the plurality of active GitHub repositories.
+
+The npm registry, which serves as the package management infrastructure for
+both languages, is the world's largest software package registry.
+Chatzidimitriou et al.~\cite{chatzidimitriou2018} characterised the npm
+ecosystem through the npm-miner infrastructure, analysing 598,862 packages
+and finding that quality metrics---including cyclomatic complexity, code
+duplication, and security vulnerabilities---follow heavily skewed power-law
+distributions, with extreme outliers driven by the registry's openness. The
+mean npm package has 4.01 direct dependencies and 1,577 lines of code,
+providing a quantitative baseline for what a ``typical'' npm repository looks
+like. These characteristics motivate the lockfile filter applied in this
+thesis: a repository containing \texttt{package.json} alongside a lockfile
+(\texttt{package-lock.json}, \texttt{yarn.lock}, or \texttt{pnpm-lock.yaml})
+demonstrates active npm dependency management, distinguishing it from
+repositories where npm is incidental to the project's primary language.
+
+\subsection{Ecosystem Affinity with AI Coding Agents}
+
+Evidence from configuration artefact studies confirms that the npm ecosystem
+has disproportionate affinity with AI coding agents. Galster et al.\
+\cite{galsterConfig2026} found TypeScript to be the most common primary
+language (24.5\%) in repositories containing agent configuration files, while
+a companion harness engineering study~\cite{galsterHarness2026} found
+TypeScript to be the top language (27.8\%) in repositories with agent skill
+definitions. Robbes et al.~\cite{robbesAgenticVery2026} found Claude Code to
+be dominant in new-project repositories by a factor of 3$\times$ over
+Copilot---Claude Code's CLI-first design integrates naturally with the npm
+toolchain, which is itself terminal-centric.
+
+Markov\'{a}~\cite{markova2025} documents a migration trend from JavaScript
+to TypeScript in existing repositories, driven partly by the desire to
+improve AI coding tool performance: typed codebases produce fewer incorrect
+suggestions and require less correction. This migration pattern means that
+the JS/TS corpus is not static---some repositories in the study window will
+be mid-migration, which the \texttt{primary\_language} column in the corpus
+captures.
+
+\subsection{GitHub as a Data Source}
+
+Constructing a JS/TS/npm corpus from GitHub requires careful attention to
+the data quality issues documented by Kalliamvakou et al.\
+\cite{kalliamvakou2016} in their landmark study of the promises and perils of
+mining GitHub. Analysing 6.8 million public repositories, they found that
+67\% have only a single committer, the median project lifespan is 9.9 days,
+and only 12.5\% were active in the preceding month. Furthermore, 63.4\% of
+projects in a random sample were genuine software development efforts, while
+the remainder were experimental, storage, or academic repositories. Only
+10\% of collaborative repositories ever used pull requests, and approximately
+40\% of pull requests that are truly merged appear as non-merged in the GitHub
+API due to direct-push merges.
+
+These findings directly inform the corpus construction strategy of the present
+thesis. The requirements of at least four stars (visibility filter), at least
+50 commits (activity filter), creation after 24 February 2025 (temporal
+filter), and non-fork status (originality filter) together operationalise the
+recommendations of Kalliamvakou et al.\ for constructing a corpus of
+active, original software development repositories. Dabić et al.\
+\cite{dabic2021} provide additional methodological grounding: the SEART GHS
+sampling tool, which underpins several prior MSR studies, applies similar
+filters and confirms that star-based stratification produces corpora with
+stable cross-study comparability properties.
+
+% ------------------------------------------------------------
+\section{Geographic Dimensions of Open-Source Software Development}
+\label{sec:lr:geography}
+% ------------------------------------------------------------
+
+The geographic comparison between Egyptian and global JS/TS developers
+constitutes the second research question of this thesis. The relevant
+literature spans geography of contribution, geographic attribution
+methodology, and the absence of prior community-specific adoption studies.
+
+\subsection{Geographic Distribution of OSS Contribution}
+
+Wachs et al.~\cite{wachs2022} conducted the most comprehensive empirical
+study of geographic patterns in open-source software on GitHub, analysing
+contributor location data for millions of repositories. Their central finding
+is that OSS contribution is strongly concentrated in North America and Western
+Europe, with developers in these regions contributing to disproportionately
+high-visibility repositories. They document a measurable correlation between
+a country's GDP per capita and the visibility of its developers' OSS
+contributions.
+
+Crucially for the methodology of this thesis, Wachs et al.\ validate GitHub
+profile location self-reporting as a practical (if imperfect) basis for
+geographic attribution. They find that self-reported location is broadly
+consistent with other geographic signals (employer IP addresses, conference
+attendance records) for the population of developers who fill in their
+location field, though they caution that the blank-location population---who
+cannot be attributed---introduces systematic undercoverage of
+lower-income-country developers. This limitation directly motivates the
+snowball expansion component of Stage~2 of this thesis, which recovers
+Egyptian developers who are socially connected to location-tagged Egyptian
+accounts but do not themselves report a location.
+
+\subsection{The Egyptian Developer Community}
+
+Egypt is the most populous Arabic-speaking country and has a rapidly growing
+technology sector, with several universities (Cairo University, the American
+University in Cairo, and the German University in Cairo, among others)
+producing large annual cohorts of software engineering graduates. Egyptian
+developers represent a case of particular interest for AI adoption studies
+because they combine:
+(a) a predominantly English-language professional coding environment
+(reducing language-barrier confounds that would complicate studies of, e.g.,
+Chinese-language developers);
+(b) an active GitHub presence documented by the Stage~2a location search,
+which identified 1,876 seed accounts through explicit self-reported
+Egyptian location strings in both English (\textit{Egypt}, \textit{Cairo},
+\textit{Alexandria}, \textit{Giza}) and Arabic (\textit{مصر},
+\textit{القاهرة}, \textit{الإسكندرية}, \textit{الجيزة}); and
+(c) a development context characterised predominantly by personal, academic,
+and small-scale commercial projects rather than high-visibility open-source
+libraries, as evidenced by the strong skew of the Egyptian sub-corpus toward
+low-star repositories (OBS-001).
+
+No prior study has examined AI coding agent adoption specifically within the
+Egyptian or MENA developer community. The closest work is Wachs
+et al.~\cite{wachs2022}, which documents the geographic distribution of OSS
+contribution but does not address tool adoption. This thesis is therefore the
+first to test whether the 22--76\% adoption range documented at the global
+level holds within a specific national developer community, and to investigate
+the mechanisms---including team composition and international collaboration
+exposure---that might explain community-level differences.
+
+% ------------------------------------------------------------
+\section{Research Gaps}
+\label{sec:lr:gaps}
+% ------------------------------------------------------------
+
+The foregoing review identifies three research gaps that the present thesis
+directly addresses.
+
+\textbf{Gap 1 --- The Ecosystem Scope Gap.}
+All major empirical studies of coding agent adoption (Robbes et al.\
+\cite{robbesAgenticMuch2026,robbesAgenticVery2026}, Khosravani and Mockus
+\cite{khosravani2026}) report cross-language aggregate rates. No study has
+measured adoption specifically within the JavaScript/TypeScript/npm ecosystem,
+despite this ecosystem being the most active site of agent adoption according
+to configuration artefact evidence~\cite{galsterConfig2026,octoverse2025}.
+The aggregate rates therefore provide a lower bound for what should be
+expected within npm, but cannot answer whether JS/TS developers adopt
+more, less, or differently than the general GitHub population.
+
+\textbf{Gap 2 --- The Undercounting Gap.}
+The 6.46 percentage-point gap between the narrow and broad heuristic sets in
+Robbes et al.~\cite{robbesAgenticMuch2026}, and the 30$\times$ undercounting
+factor documented by Khosravani and Mockus~\cite{khosravani2026}, establish
+that single-signal detection severely misrepresents true adoption. However,
+no study has quantified this undercounting delta specifically for the
+JavaScript/TypeScript ecosystem, where the package manager infrastructure
+(npm dependencies as signals) provides a fifth signal type not applicable to
+other ecosystems.
+
+\textbf{Gap 3 --- The Community Comparison Gap.}
+Prior adoption studies report blended figures that obscure community-level
+variation. The geography of OSS contribution is well-documented
+\cite{wachs2022}, but the intersection of geographic community membership
+and AI coding agent adoption has not been studied. In particular, no prior
+work has investigated whether the adoption gap between high-income and
+lower-income developer communities---predicted by the Wachs et al.\ framework
+and motivated by the cost and discoverability of agentic tools---is observable
+in repository-level adoption signals.
+
+Together, these gaps frame the contributions of the present thesis, which
+quantifies adoption within the JS/TS/npm ecosystem (addressing Gap~1), reports
+both single-signal and multi-signal rates to estimate the undercounting delta
+(Gap~2), and compares Egyptian and global adoption rates stratified by
+repository size (Gap~3).

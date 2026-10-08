@@ -45,13 +45,13 @@ from pathlib import Path
 # ── Paths ─────────────────────────────────────────────────────────────────────
 SCRIPT_DIR  = Path(__file__).parent
 DATA_DIR    = SCRIPT_DIR / "../../data"
-CORPUS_IN   = DATA_DIR / "unified_corpus.csv"
-CORPUS_OUT  = DATA_DIR / "unified_corpus_detected.csv"
-SIGNALS_OUT = DATA_DIR / "signals.csv"
+CORPUS_IN   = DATA_DIR / "stage1/sample_corpus.csv"
+CORPUS_OUT  = DATA_DIR / "stage4/sample_corpus_detected.csv"
+SIGNALS_OUT = DATA_DIR / "stage4/signals_global.csv"
 
 # ── Shared constants ──────────────────────────────────────────────────────────
-STUDY_SNAPSHOT_DATE = "2026-09-01"
-MIN_LAST_PUSH       = "2023-01-01"
+STUDY_SNAPSHOT_DATE = "2026-10-01"   # approximate date Stage 1a collection ran
+MIN_LAST_PUSH       = "2025-01-01"   # all corpus repos created >= 2025-02-24
 
 # ── API ───────────────────────────────────────────────────────────────────────
 GITHUB_API  = "https://api.github.com"
@@ -147,11 +147,13 @@ PR_LABEL_PATTERNS = [
 ]
 
 # ── npm AI dependency signals (Topic 2 specific) ─────────────────────────────
+# NOTE: generic "openai" package removed — it is used by millions of developers
+# for API calls (not coding agent use) and inflates adoption rate artificially.
+# See stage4_reaggregate.py for the previous analysis of this decision.
 NPM_AI_PACKAGES = {
-    "@anthropic-ai/sdk":         "claude_code",
-    "@anthropic-ai/claude-code": "claude_code",
-    "openai":                    "openai",
-    "@openai/agents":            "openai",
+    "@anthropic-ai/sdk":              "claude_code",
+    "@anthropic-ai/claude-code":      "claude_code",
+    "@openai/agents":                 "openai",
     "@github/copilot-language-server": "copilot",
 }
 
@@ -568,6 +570,32 @@ def run_pass2_deep_scan(base_repos: pd.DataFrame,
 # Aggregate signals → per-repo detection columns
 # ─────────────────────────────────────────────────────────────────────────────
 
+def classify_adoption_level(has_config_file: bool,
+                             distinct_types: int,
+                             signal_occurrences: int) -> str:
+    """
+    Three-tier adoption classification (OBS-012):
+      none        — no signals at all
+      ai_assisted — signals detected, but weak evidence (could be autocomplete,
+                    snippet tools, or one-off AI usage, not a configured agent)
+      agentic     — strong evidence of a configured, recurring agent workflow
+
+    Rules:
+      agentic     if: config file present
+                  OR  distinct signal types >= 2
+                  OR  total signal occurrences >= 3
+      ai_assisted if: any signals but none of the agentic conditions apply
+      none        if: no signals
+    """
+    if signal_occurrences == 0:
+        return "none"
+    if (has_config_file
+            or distinct_types >= 2
+            or signal_occurrences >= 3):
+        return "agentic"
+    return "ai_assisted"
+
+
 def aggregate_repo_signals(signals_df: pd.DataFrame,
                             corpus_df: pd.DataFrame,
                             dep_counts: dict) -> pd.DataFrame:
@@ -576,9 +604,11 @@ def aggregate_repo_signals(signals_df: pd.DataFrame,
       agent_adopted_single  — commit trailer signals only (for undercounting RQ)
       agent_adopted_multi   — any signal type
       agent_adopted         — same as multi (canonical label)
+      adoption_level        — 'none' / 'ai_assisted' / 'agentic' (OBS-012)
       first_detected_at     — earliest dated signal
       agent_name            — most common detected agent
       signal_count          — number of distinct signal types
+      signal_occurrences    — total raw signal rows for this repo
       multi_agent           — >1 distinct agent detected
       time_to_adoption      — days from created_at to first_detected_at
       adoption_month        — calendar month of first_detected_at
@@ -591,9 +621,11 @@ def aggregate_repo_signals(signals_df: pd.DataFrame,
     df["agent_adopted_single"] = False
     df["agent_adopted_multi"]  = False
     df["agent_adopted"]        = False
+    df["adoption_level"]       = "none"
     df["first_detected_at"]    = None
     df["agent_name"]           = None
     df["signal_count"]         = 0
+    df["signal_occurrences"]   = 0
     df["multi_agent"]          = False
     df["time_to_adoption"]     = None
     df["adoption_month"]       = None
@@ -616,9 +648,18 @@ def aggregate_repo_signals(signals_df: pd.DataFrame,
         df.loc[mask, "agent_adopted_multi"] = True
         df.loc[mask, "agent_adopted"]       = True
 
-        # Distinct signal types
-        distinct_types = grp["signal_type"].nunique()
-        df.loc[mask, "signal_count"] = distinct_types
+        # Distinct signal types and total occurrences
+        distinct_types      = grp["signal_type"].nunique()
+        signal_occurrences  = len(grp)
+        has_config_file     = "config_file" in grp["signal_type"].values
+
+        df.loc[mask, "signal_count"]       = distinct_types
+        df.loc[mask, "signal_occurrences"] = signal_occurrences
+
+        # Adoption level (OBS-012)
+        df.loc[mask, "adoption_level"] = classify_adoption_level(
+            has_config_file, distinct_types, signal_occurrences
+        )
 
         # Agent name (most frequent)
         agent_counts = grp["agent_name"].value_counts()
@@ -664,13 +705,14 @@ def main():
         print("WARNING: no GITHUB_TOKEN — unauthenticated limit is 60 req/hr.")
 
     if not CORPUS_IN.exists():
-        print(f"Error: {CORPUS_IN} not found. Run Stage 3 first.")
+        print(f"Error: {CORPUS_IN} not found. Run Stage 1 first.")
         return
 
+    # Create output directory if it doesn't exist
+    CORPUS_OUT.parent.mkdir(parents=True, exist_ok=True)
+
     corpus_df = pd.read_csv(CORPUS_IN)
-    print(f"Loaded {len(corpus_df)} repos from unified_corpus.csv")
-    print(f"  Base corpus : {(corpus_df['corpus_source'] != 'egypt').sum()}")
-    print(f"  Egypt corpus: {(corpus_df['corpus_source'] == 'egypt').sum()}")
+    print(f"Loaded {len(corpus_df)} repos from sample_corpus.csv")
 
     # ── Resume support ────────────────────────────────────────────────────────
     if SIGNALS_OUT.exists():
@@ -696,9 +738,8 @@ def main():
     pd.DataFrame(all_signals).to_csv(SIGNALS_OUT, index=False)
     print(f"Pass 1 saved. Total signals: {len(all_signals)}")
 
-    # ── Pass 2: Deep scan (base corpus only) ─────────────────────────────────
-    base_corpus = corpus_df[corpus_df["corpus_source"] != "egypt"].copy()
-    pass2_signals, dep_counts = run_pass2_deep_scan(base_corpus, all_signals)
+    # ── Pass 2: Deep scan (all repos in global corpus) ───────────────────────
+    pass2_signals, dep_counts = run_pass2_deep_scan(corpus_df.copy(), all_signals)
 
     all_signals += pass2_signals
     pd.DataFrame(all_signals).to_csv(SIGNALS_OUT, index=False)
@@ -714,9 +755,6 @@ def main():
     adopted_multi  = corpus_final["agent_adopted_multi"].sum()
     total          = len(corpus_final)
 
-    base_mask  = corpus_final["corpus_source"] != "egypt"
-    egypt_mask = corpus_final["corpus_source"] == "egypt"
-
     print(f"\n─── Stage 4 Summary ──────────────────────────────────────────")
     print(f"Total repos scanned            : {total}")
     print(f"")
@@ -727,12 +765,8 @@ def main():
     print(f"Undercounting delta                   : "
           f"{(adopted_multi-adopted_single)/total*100:.1f} pp")
     print(f"")
-    print(f"Base corpus adopted  : "
-          f"{corpus_final.loc[base_mask,  'agent_adopted'].sum()} / "
-          f"{base_mask.sum()}")
-    print(f"Egypt corpus adopted : "
-          f"{corpus_final.loc[egypt_mask, 'agent_adopted'].sum()} / "
-          f"{egypt_mask.sum()}")
+    print(f"Adoption level breakdown (OBS-012):")
+    print(corpus_final["adoption_level"].value_counts().to_string())
     print(f"")
     if not signals_df.empty:
         print(f"Signal type breakdown:")
@@ -741,7 +775,6 @@ def main():
         print(signals_df["agent_name"].value_counts().head(10).to_string())
     print(f"\nSaved: {CORPUS_OUT}")
     print(f"       {SIGNALS_OUT}")
-    print("NEXT: run Stage 5 to load into SQLite and compute metrics.")
 
 
 if __name__ == "__main__":

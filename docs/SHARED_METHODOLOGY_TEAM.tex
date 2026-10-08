@@ -1,0 +1,561 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{tcolorbox}
+\usepackage{parskip}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    urlcolor=blue!70!black,
+}
+
+\definecolor{noteblue}{RGB}{220,235,252}
+\definecolor{noteborder}{RGB}{70,130,200}
+\definecolor{warnbg}{RGB}{255,243,220}
+\definecolor{warnborder}{RGB}{200,140,0}
+\definecolor{codebg}{RGB}{245,245,245}
+
+\tcbuselibrary{skins,breakable}
+
+\newtcolorbox{notebox}{
+    colback=noteblue, colframe=noteborder,
+    boxrule=1pt, arc=4pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+    breakable
+}
+
+\newtcolorbox{warnbox}{
+    colback=warnbg, colframe=warnborder,
+    boxrule=1pt, arc=4pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+    breakable
+}
+
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    framerule=0.4pt,
+    rulecolor=\color{gray!50},
+    xleftmargin=8pt, xrightmargin=8pt,
+    aboveskip=8pt, belowskip=8pt,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Shared Methodology — Research Cluster}
+\lhead{Agentic Adoption \& Hotfix/Revert Themes}
+\cfoot{\thepage}
+
+\title{
+    \textbf{Shared Methodology Reference} \\[0.5em]
+    \large GitHub Repository Corpus Construction, Filtering, and Detection \\[0.3em]
+    \normalsize For the Agentic Adoption and Hotfix/Revert Research Clusters
+}
+\author{
+    Prepared by: Manuel Youssef Haik Kevorkian \\
+    \small Topic 2 — JavaScript / TypeScript / npm (Agentic Adoption Theme)
+}
+\date{October 2026}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Overview and Team Structure}
+% ─────────────────────────────────────────────────────────────────────────────
+
+This document defines the shared methodology for all 12 members of the research cluster. It covers how to pull repositories from GitHub, what filters to apply, how to build the Egyptian developer sub-corpus, and how to size and label repositories. All members must follow the shared rules in this document, then add their own stack-specific or theme-specific extensions on top.
+
+\subsection{Team Structure}
+
+The 12 members are divided into two themes, each with 6 students studying the same research questions but across different programming language stacks:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Theme} & \textbf{Focus} & \textbf{Members} \\
+\midrule
+Theme A & Agentic AI adoption in GitHub repositories & 6 students \\
+Theme B & Hotfix and reverted commits in GitHub repositories & 6 students \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Each student in Theme A has a paired counterpart in Theme B studying the \textbf{same stack}. For example, the JS/TS/npm student in Theme A and the JS/TS/npm student in Theme B must align on corpus construction so that their repositories are drawn from the same population. This alignment is essential because Theme B's hotfix analysis and Theme A's agentic adoption analysis may be combined or compared in the cluster's synthesis paper.
+
+\begin{notebox}
+\textbf{Cross-theme alignment:} If you are in Theme A, coordinate with your Theme B pair on the corpus before running detection. You should ideally be working from the same \texttt{unified\_corpus.csv} file, or at minimum from corpora built with identical filters.
+\end{notebox}
+
+\subsection{Shared Constants}
+
+The following constants must be used \textbf{identically} by all 12 members. Do not change these values without cluster-wide agreement.
+
+\begin{lstlisting}
+STUDY_SNAPSHOT_DATE = "2026-09-01"   # No data after this date
+MIN_COMMITS         = 10              # Minimum commits in default branch
+MIN_CONTRIBUTORS    = 2               # Minimum distinct commit authors
+MIN_LAST_PUSH       = "2023-01-01"   # Repo must have been pushed since this date
+MIN_ACTIVE_DATE     = "2025-01-01"   # Final corpus: only repos active in AI era
+STRATA              = {"small": (0, 50), "medium": (51, 500), "large": (501+)}
+ALPHA               = 0.05
+\end{lstlisting}
+
+\textbf{Why \texttt{MIN\_ACTIVE\_DATE = 2025-01-01}?} The mainstream agentic AI tools (Claude Code: March 2025, Devin: March 2024 general availability, Cursor agentic mode: 2024) did not exist at scale before 2025. Repositories that were last pushed before 2025 almost certainly have no agentic AI signals. Including them inflates the denominator and makes adoption rates look artificially low. The \texttt{MIN\_LAST\_PUSH = 2023-01-01} filter is applied during the initial pull; the \texttt{MIN\_ACTIVE\_DATE = 2025-01-01} filter is applied as a final cleaning step before analysis.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Repository Corpus Construction}
+% ─────────────────────────────────────────────────────────────────────────────
+
+The corpus is built in three stages:
+
+\begin{enumerate}
+    \item \textbf{Stage 1} — Pull a global corpus of repositories for your stack from GitHub Search.
+    \item \textbf{Stage 2} — Pull a separate Egyptian developer corpus (people-first approach).
+    \item \textbf{Stage 3} — Unify both corpora, clean overlaps, and produce the final labelled dataset.
+\end{enumerate}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Stage 1 — Global Corpus: Filtering Criteria}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{General Filtering (Universal — All Stacks)}
+
+These rules apply to every student regardless of stack. A repository must pass \textbf{all} inclusion criteria and must not trigger any exclusion rule to enter the corpus.
+
+\subsubsection{Inclusion Criteria}
+
+\begin{longtable}{lp{8cm}p{4.5cm}}
+\toprule
+\textbf{Rule} & \textbf{Condition} & \textbf{Rationale} \\
+\midrule
+\endhead
+I-1 & Repository is \textbf{not a fork} & Forks inherit the parent's commit history, which would double-count agent signals \\
+I-2 & Repository is \textbf{not archived} & Archived repos receive no new commits; trend analysis would be skewed \\
+I-3 & Repository is \textbf{not disabled} & Disabled repos are inaccessible for full data pull \\
+I-4 & \textbf{At least 10 commits} in the default branch & Filters trivially small or test repositories \\
+I-5 & \textbf{At least 2 distinct commit authors} & Filters single-developer throw-away repos and bot-only repos \\
+I-6 & \textbf{Last push date $\geq$ 2023-01-01} & Ensures the repo was active during the modern AI era \\
+I-7 & \textbf{Created date $\leq$ 2026-09-01} (snapshot date) & Repo must exist before the study window closes \\
+I-8 & Primary language matches your stack's ecosystem & Scopes the corpus to the target ecosystem \\
+I-9 & Package manager manifest file present at repository root & Confirms the repo actually uses the target package manager \\
+\bottomrule
+\caption{Universal inclusion criteria (all stacks)}
+\end{longtable}
+
+\subsubsection{Exclusion Criteria}
+
+\begin{longtable}{lp{8cm}p{4.5cm}}
+\toprule
+\textbf{Rule} & \textbf{Condition} & \textbf{Rationale} \\
+\midrule
+\endhead
+E-1 & Repository name or description matches tutorial/course patterns: \texttt{awesome-*}, \texttt{*-tutorial}, \texttt{*-course}, \texttt{*-bootcamp}, \texttt{*-exercises}, \texttt{*-solutions} & These are curated collections, not real development projects \\
+E-2 & Repository has 0 stars AND 0 forks AND $<5$ commits & Extremely low-signal stub repos \\
+E-3 & More than 95\% of commits are by a single bot account & Bot-only pipelines are not developer-adopting-agent repos \\
+E-4 & Repository name matches the pattern \texttt{[a-z0-9]+-[a-z0-9]+-[a-z0-9]+} with a generic description $<20$ chars & Common pattern for auto-generated repos \\
+\bottomrule
+\caption{Universal exclusion criteria (all stacks)}
+\end{longtable}
+
+\begin{warnbox}
+\textbf{Important:} Apply exclusion rules \textbf{after} pulling, not during the search query. Collect first, clean second. This keeps the pull auditable — you can show exactly how many repos were rejected and why using the \texttt{filter\_audit.csv} file.
+\end{warnbox}
+
+\subsection{Stack-Specific Filtering}
+
+In addition to the general rules above, each student adds filters specific to their ecosystem. These confirm that the repository genuinely uses the target stack as its \textbf{primary} ecosystem — not as a minor component of a project primarily written in another language.
+
+\subsubsection{Template (fill in for your stack)}
+
+\begin{lstlisting}
+primary_languages:    # GitHub Linguist language names
+  - "<Language1>"
+  - "<Language2>"     # if applicable
+manifest_filename:    # File that must exist at repo root
+  - "<filename>"
+lockfile_filenames:   # Confirms the package manager is actively used
+  - "<lockfile1>"
+  - "<lockfile2>"
+min_language_share:   # Minimum % of codebase in primary language(s)
+  0.50                # 50% is the recommended threshold
+\end{lstlisting}
+
+\subsubsection{Example — JavaScript / TypeScript / npm (Topic 2)}
+
+\begin{lstlisting}
+primary_languages:
+  - "JavaScript"
+  - "TypeScript"
+manifest_filename:
+  - "package.json"       # REQUIRED — confirms npm project
+lockfile_filenames:
+  - "package-lock.json"  # npm default lockfile
+  - "yarn.lock"          # Yarn package manager
+  - "pnpm-lock.yaml"     # pnpm package manager
+min_language_share: 0.50
+\end{lstlisting}
+
+\textbf{Why the lockfile check?} A \texttt{package.json} file alone is not sufficient — many polyglot projects include a stub \texttt{package.json} for a small frontend component while the primary language is Python or Java. Requiring at least one lockfile confirms that npm dependencies are actively managed, making JS/TS/npm the genuine primary ecosystem. The \texttt{lockfile\_type} is recorded in the corpus output for potential subgroup analysis.
+
+\textbf{Why the 50\% byte share?} GitHub's language detection reports the primary language, but a repo where TypeScript is 30\% and Python is 70\% would pass the primary language filter. The byte share threshold ($\geq50\%$) enforces that JS/TS dominates the codebase by actual code volume, not just file count.
+
+\begin{notebox}
+\textbf{For other stacks:} Replace the manifest with the relevant file for your ecosystem (e.g. \texttt{pom.xml} for Maven/Java, \texttt{requirements.txt} or \texttt{pyproject.toml} for Python/pip, \texttt{Cargo.toml} for Rust/Cargo, \texttt{go.mod} for Go modules). The lockfile concept translates directly — use whatever your package manager generates as a dependency lock.
+\end{notebox}
+
+\subsection{Sampling Strategy (Star Bands)}
+
+GitHub Search returns at most 1,000 results per query. To get a balanced corpus across strata, run \textbf{separate searches per star band}:
+
+\begin{lstlisting}
+# Run one query per language x star band combination
+queries = [
+    "language:javascript stars:0..50   fork:false pushed:>2023-01-01",
+    "language:javascript stars:51..500 fork:false pushed:>2023-01-01",
+    "language:javascript stars:>500    fork:false pushed:>2023-01-01",
+    "language:typescript stars:0..50   fork:false pushed:>2023-01-01",
+    # ... etc.
+]
+\end{lstlisting}
+
+This gives up to 1,000 repos per stratum per language — a total of up to 6,000 candidates before filtering for the JS/TS/npm example. After applying all filters, a typical yield is 1,500–3,000 repos. Each student should aim for \textbf{at least 500 repos per stratum} for adequate statistical power.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Stage 2 — Egyptian Developer Sub-Corpus}
+% ─────────────────────────────────────────────────────────────────────────────
+
+The Egyptian developer sub-corpus is built using a \textbf{people-first} approach: identify Egyptian developer accounts first, then collect their repositories. This is the only correct way to operationalise RQ2, which asks about \textbf{developer communities}, not repository topics.
+
+\begin{warnbox}
+\textbf{Critical distinction:} The Egyptian sub-corpus is about \textbf{developer nationality}, not repository subject matter. A repository named \texttt{react-todo-app} owned by an Egyptian developer is \textbf{included}. A repository named \texttt{egypt-tourism-api} owned by a German developer is \textbf{excluded}. Searching for the word ``Egypt'' in repository names is the \textbf{wrong approach}.
+\end{warnbox}
+
+\subsection{Stage 2a — Egyptian Seed Account Discovery}
+
+Search GitHub for user accounts whose \texttt{location} field contains Egyptian city or country names. Use \textbf{both English and Arabic} location strings — omitting Arabic would significantly undercount Egyptian developers, many of whom write their profile in Arabic.
+
+\textbf{Search terms used:}
+\begin{itemize}
+    \item English: \texttt{Egypt}, \texttt{Cairo}, \texttt{Alexandria}, \texttt{Giza}
+    \item Arabic: \texttt{مصر}, \texttt{القاهرة}, \texttt{الإسكندرية}, \texttt{الجيزة}
+\end{itemize}
+
+\textbf{Activity filter:} Only keep accounts with $\geq10$ followers OR $\geq5$ public repositories. This filters out recently-created or spam accounts.
+
+\textbf{Output:} \texttt{egypt\_seed\_candidates.csv} — approximately 1,876 seed accounts.
+
+\subsection{Stage 2b — Snowball Expansion}
+
+The seed list from Stage 2a only captures developers who explicitly set an Egyptian location in their GitHub profile. Many Egyptian developers leave the location field blank. To reach them, expand the seed list through the \textbf{social graph} (followers and following relationships).
+
+\textbf{Process:}
+\begin{enumerate}
+    \item For each seed account, fetch their followers and following lists.
+    \item Add any new accounts discovered to the expanded list.
+    \item Repeat for up to 3 rounds, or until no new accounts are found (convergence).
+\end{enumerate}
+
+\textbf{Why this works:} Egyptian developers tend to follow other Egyptian developers. An account without a location set but socially connected to multiple location-tagged Egyptian accounts is very likely Egyptian.
+
+\textbf{Output:} \texttt{egypt\_snowball\_candidates.csv} — approximately 19,347 additional accounts.
+
+\textbf{Known limitation:} The expansion did not converge within 3 rounds (Round 1: 5,267; Round 2: 8,653; Round 3: 5,427 new accounts). Round 2 actually discovered \textit{more} accounts than Round 1, suggesting a densely connected sub-network was reached. A 4th round would likely find more accounts — this is documented as a boundary of the methodology.
+
+\textbf{Combine:} Merge seeds + snowball, deduplicate on login.\\
+\textbf{Output:} \texttt{egypt\_combined\_accounts.csv} — approximately 21,223 unique accounts.
+
+\subsection{Stage 2c — Repository Pull from Egyptian Accounts}
+
+For each of the 21,223 Egyptian accounts, pull their public non-fork repositories. Apply the \textbf{exact same filters} as Stage 1.
+
+\begin{notebox}
+\textbf{This is the most important point in Stage 2c:} The Egyptian corpus and the global corpus must use \textbf{identical filter criteria}. If the filters differ, you are comparing populations selected by different standards, which invalidates the RQ2 comparison. Every filter from Section 3 (general + stack-specific) must be applied here as well.
+\end{notebox}
+
+\textbf{Implementation note:} Use a two-pass GraphQL approach:
+\begin{itemize}
+    \item \textbf{Pass 1:} Fetch repos per account (basic metadata), apply date and language pre-filters.
+    \item \textbf{Pass 2:} For repos surviving Pass 1, run the same GraphQL batch query as Stage 1 to verify manifest, lockfile, and byte share.
+\end{itemize}
+
+\textbf{Output:} \texttt{egyptian\_corpus.csv} — approximately 6,642 repos (before date filter), 3,094 repos (after \texttt{MIN\_ACTIVE\_DATE = 2025-01-01} filter).
+
+\textbf{Expected distribution:} Egyptian developer repos are overwhelmingly low-star (small stratum): approximately 99\% of Egyptian repos have $\leq50$ stars. This reflects the reality that Egyptian developers predominantly work on personal, academic, and local-scale projects rather than widely-adopted open source libraries. This skew must be acknowledged in the thesis when comparing strata.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Stage 3 — Corpus Unification}
+% ─────────────────────────────────────────────────────────────────────────────
+
+Stage 3 merges the global corpus (Stage 1) and the Egyptian corpus (Stage 2c) into a single unified corpus. It performs two operations:
+
+\subsection{Step 1 — Clean the Global Corpus}
+
+Some repositories in the global corpus (found via GitHub Search) may be owned by Egyptian developers who happen to have popular, high-star repositories. These repos must be \textbf{removed from the global corpus} — they belong to the Egyptian group.
+
+\textbf{Process:} For each repo in the global corpus, check if its \texttt{owner\_login} appears in the Egyptian accounts list (\texttt{egypt\_combined\_accounts.csv}).
+\begin{itemize}
+    \item If yes: remove from global corpus.
+    \item If the removed repo is already in the Egyptian corpus: no action needed.
+    \item If the removed repo is \textit{not} in the Egyptian corpus: add it to the Egyptian corpus so it is not lost.
+\end{itemize}
+
+\subsection{Step 2 — Merge and Label}
+
+Combine both cleaned corpora into one file. Every repository receives a \texttt{corpus\_source} label:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Label} & \textbf{Meaning} \\
+\midrule
+\texttt{global} & Non-Egyptian repo (from global search) \\
+\texttt{egyptian} & Repo owned by an identified Egyptian developer \\
+\texttt{both} & Appears in both corpora (counted once, very rare) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Output:} \texttt{unified\_corpus.csv} — the final corpus for detection and analysis.
+
+\textbf{Why this is methodologically valid:} Both groups were discovered using different sampling mechanisms, but they passed \textbf{identical filters}. The only variable distinguishing a \texttt{global} repo from an \texttt{egyptian} repo is the owner's nationality. This is what makes the RQ2 comparison valid.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Repository Sizing}
+% ─────────────────────────────────────────────────────────────────────────────
+
+Repository size is measured on \textbf{two dimensions}:
+
+\subsection{Primary: Star Count (Stratum Assignment)}
+
+Star count is the primary size metric, following the convention established in the baseline papers (``Agentic Much?''). It is used to assign every repository to a size stratum:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Stratum} & \textbf{Star Count} & \textbf{Column value} \\
+\midrule
+Small & 0--50 & \texttt{small} \\
+Medium & 51--500 & \texttt{medium} \\
+Large & $>500$ & \texttt{large} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{warnbox}
+\textbf{Important nuance:} Stars measure \textbf{community visibility}, not codebase size. A single-file npm utility can have thousands of stars; a large enterprise project may have zero. When interpreting stratum-level differences, describe strata as ``low/medium/high visibility'' rather than ``small/medium/large''. Adoption rate differences across strata may reflect social pressure or community norms more than technical complexity.
+\end{warnbox}
+
+\subsection{Secondary: Lines of Code (Excluding Documentation)}
+
+As a secondary measure, compute the \textbf{lines of actual code}, excluding documentation and non-code files. This is computed in Stage 5 (metrics) after detection.
+
+\textbf{Files to count} (production code only):
+\begin{itemize}
+    \item JS/TS/npm example: \texttt{.js}, \texttt{.ts}, \texttt{.jsx}, \texttt{.tsx}, \texttt{.mjs}, \texttt{.cjs}, \texttt{.vue}, \texttt{.svelte}
+    \item Adapt for your stack (e.g. \texttt{.py} for Python, \texttt{.java} for Java, \texttt{.go} for Go)
+\end{itemize}
+
+\textbf{Files to exclude:}
+\begin{itemize}
+    \item \texttt{.md}, \texttt{.txt}, \texttt{.rst} (documentation)
+    \item \texttt{docs/}, \texttt{README*}, \texttt{CHANGELOG*}, \texttt{LICENSE*}
+    \item \texttt{*.test.*}, \texttt{*.spec.*}, \texttt{\_\_tests\_\_/} (test files)
+\end{itemize}
+
+\textbf{Why exclude documentation?} A well-documented open source project may have 10,000 lines of Markdown and 2,000 lines of actual code. Including documentation in the line count would make documentation-heavy repos appear larger than repos that actually contain more code. This distortion is especially pronounced when comparing Egyptian (often minimal docs) vs. global (often extensive docs) corpora.
+
+\textbf{Practical proxy:} If fetching exact line counts is too expensive (requires reading all file contents), use the formula:
+\[
+\text{code\_size\_proxy} = \text{size\_kb} \times \text{js\_ts\_byte\_share}
+\]
+This uses the GitHub language byte statistics (already fetched in Stage 1) as a proxy for JS/TS code volume. Note this in your methodology as an approximation.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Stage 4 — Detection}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{What is Detected}
+
+Stage 4 scans every repository in the unified corpus for \textbf{signals} that a coding agent was involved in its development. Six signal types are used:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Signal Type} & \textbf{What it checks} & \textbf{Example evidence} \\
+\midrule
+\texttt{config\_file} & Agent config files at repo root & \texttt{CLAUDE.md}, \texttt{.cursorrules} \\
+\texttt{commit\_trailer} & Co-authored-by patterns in commit messages & \texttt{Co-authored-by: Claude} \\
+\texttt{bot\_author} & Known bot account logins & \texttt{github-copilot[bot]} \\
+\texttt{author\_email} & AI tool email addresses & \texttt{noreply@anthropic.com} \\
+\texttt{pr\_body} & Markers in pull request descriptions & ``Generated with Claude Code'' \\
+\texttt{pr\_branch} & AI tool branch name prefixes & \texttt{codex/}, \texttt{copilot/} \\
+\texttt{npm\_dependency} & AI SDK packages in \texttt{package.json} & \texttt{@anthropic-ai/sdk} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{notebox}
+\textbf{Note for Theme B (Hotfix/Revert):} You use the same signal detection to flag AI-authored commits. The difference is that Theme B then further classifies those commits as hotfixes or reverted commits. The detection step itself is shared — you can reuse the same Stage 4 script or its outputs.
+\end{notebox}
+
+\subsection{AI-Assisted vs.\ Agentic — A Critical Distinction}
+
+Not every AI-touched repository is ``agentic.'' The presence of a single co-authored commit does not mean AI is systematically integrated into the project. The thesis must distinguish:
+
+\begin{description}
+    \item[AI-assisted] The developer used an AI tool occasionally. Signals are sparse (1--2 occurrences, single signal type). The tool is not embedded in the workflow.
+    \item[Agentic] The AI tool is actively driving or co-driving development. Signals are consistent (multiple types of evidence, or high frequency within commits/PRs). The tool is a persistent participant, not a one-off helper.
+\end{description}
+
+\textbf{Operationalization:} After Stage 4 runs and you see the actual signal distribution in your data, define the threshold based on observed values. The recommended starting rule is:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Condition} & \textbf{Adoption level} \\
+\midrule
+Zero signals & \texttt{none} \\
+Config file present & \texttt{agentic} (tool is deliberately configured) \\
+$\geq2$ distinct signal types & \texttt{agentic} (multiple independent evidence) \\
+Signal count $\geq3$ (single type) & \texttt{agentic} (repeated, not one-off) \\
+All other cases with $\geq1$ signal & \texttt{ai\_assisted} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Why this matters for reporting:} Report \textbf{both} rates in your results:
+\begin{itemize}
+    \item Broad adoption rate: any AI signal present (includes ai\_assisted + agentic)
+    \item Deep adoption rate: agentic only
+    \item The gap between the two is itself a finding — it tells you how much surface-level AI use exists versus genuine workflow integration.
+\end{itemize}
+
+\subsection{Single-Signal vs.\ Multi-Signal (Undercounting)}
+
+A key sub-question in RQ1 is: \textit{by how much does single-signal detection undercount actual adoption?}
+
+\begin{description}
+    \item[\texttt{agent\_adopted\_single}] True if the repo has \textbf{commit trailer signals only} (the most commonly reported signal type in prior work).
+    \item[\texttt{agent\_adopted\_multi}] True if the repo has \textbf{any signal type} (the full multi-signal approach).
+\end{description}
+
+\[
+\text{undercounting\_delta} = \text{adoption\_rate}_{\text{multi}} - \text{adoption\_rate}_{\text{single}}
+\]
+
+Report this delta in percentage points (pp). In the JS/TS/npm corpus, the observed delta was \textbf{12.1 pp} (single: 17.5\%, multi: 29.6\%), meaning single-signal detection missed nearly half of adopted repositories.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Pipeline Summary — Stage by Stage}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\begin{longtable}{lp{3.5cm}p{5cm}p{4cm}}
+\toprule
+\textbf{Stage} & \textbf{Name} & \textbf{What happens} & \textbf{Output} \\
+\midrule
+\endhead
+1 & Global Corpus & Search GitHub by stack + star bands. Apply all filters. & \texttt{global\_corpus.csv} \\
+\midrule
+2a & Egyptian Seeds & Search GitHub for Egyptian-location accounts (EN + AR). & \texttt{egypt\_seed\_candidates.csv} \\
+\midrule
+2b & Snowball & Expand seeds via follower/following graph (3 rounds). & \texttt{egypt\_snowball\_candidates.csv} \\
+\midrule
+2c & Egyptian Repos & Pull repos from all Egyptian accounts. Apply same filters as Stage 1. & \texttt{egyptian\_corpus.csv} \\
+\midrule
+3 & Unify & Remove Egyptian-owned repos from global. Merge and label both. & \texttt{unified\_corpus.csv} \\
+\midrule
+4 & Detection & Scan all repos for 6 signal types. Classify: none / ai\_assisted / agentic. & \texttt{signals.csv}, \texttt{corpus\_detected.csv} \\
+\midrule
+5 & Metrics & Load into SQLite. Compute M1--M8 (adoption rate, trend, tool distribution, commit size, etc.). & \texttt{metrics.db} \\
+\midrule
+6 & Validation & Manual precision check on random sample of adopted repos ($n \approx 50$). Cohen's $\kappa$ on subset. & \texttt{validation.csv} \\
+\midrule
+7 & Analysis & Statistical tests (Fisher's exact for RQ2, Mann-Whitney U for size comparisons). Visualizations. Write up. & Thesis chapters 3--4 \\
+\bottomrule
+\caption{Pipeline overview — all stages}
+\end{longtable}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Reproducibility Requirements}
+% ─────────────────────────────────────────────────────────────────────────────
+
+Every student must produce and commit the following audit files alongside their corpus:
+
+\begin{description}
+    \item[\texttt{filter\_audit.csv}] Every repository that was considered, with a \texttt{passed\_all} flag and the specific \texttt{failed\_rule} code (e.g. \texttt{I-1}, \texttt{E-2}) for rejected repos. This allows anyone to verify that the corpus was built correctly.
+    \item[\texttt{pull\_log.jsonl}] Every GitHub API call, timestamped, with endpoint, parameters, and HTTP status. This documents the exact data collection process.
+\end{description}
+
+These files are non-negotiable. Without them, the corpus construction is not reproducible and cannot be defended in the thesis.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Key Reminders and Common Mistakes}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\begin{enumerate}
+    \item \textbf{Never skip the lockfile check.} A \texttt{package.json} (or equivalent) without a lockfile is a weak signal that the package manager is actively used. Always check for the lockfile.
+
+    \item \textbf{Stage 2c must use identical filters to Stage 1.} If you relax filters for the Egyptian corpus (e.g. skipping the manifest check), you are comparing populations selected by different standards, which invalidates RQ2.
+
+    \item \textbf{Apply the \texttt{MIN\_ACTIVE\_DATE = 2025-01-01} filter as a final step.} Do not use it during the API pull — pull with \texttt{MIN\_LAST\_PUSH = 2023-01-01}, then filter to 2025 afterwards. This way you keep the original data and the filtering is visible and reversible.
+
+    \item \textbf{Stars are visibility, not size.} Do not describe strata as ``small/large projects.'' Use ``low/medium/high visibility'' or ``low/medium/high star count'' in your writing.
+
+    \item \textbf{Exclude documentation from LOC counts.} When computing lines of code for the secondary size metric, exclude all \texttt{.md}, docs, and test files. Count only production code files in your stack's primary extensions.
+
+    \item \textbf{Report both adoption levels.} Always report broad adoption (any signal) AND deep adoption (agentic only). Never report only one.
+
+    \item \textbf{The Egyptian corpus will be $\sim$99\% small-stratum repos.} This is expected and reflects the structure of Egyptian GitHub activity. Acknowledge it explicitly when presenting RQ2 stratum-level comparisons.
+
+    \item \textbf{Coordinate with your Theme B pair} before finalizing your corpus. You should ideally share the same \texttt{unified\_corpus.csv}.
+\end{enumerate}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{Appendix — Empirical Results from JS/TS/npm (Reference)}
+% ─────────────────────────────────────────────────────────────────────────────
+
+These numbers are from the JS/TS/npm corpus (Topic 2) and are provided as a reference point for calibration. Your numbers will differ by stack.
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Global corpus size (after 2025 filter) & 1,492 repos \\
+Egyptian corpus size (after 2025 filter) & 3,094 repos \\
+Single-signal adoption rate & 17.5\% \\
+Multi-signal adoption rate & 29.6\% \\
+Undercounting delta & 12.1 pp \\
+\midrule
+Most common signal type & Commit trailer (77\%) \\
+Dominant agent & Claude Code (75\% of all signals) \\
+\midrule
+Egyptian corpus stratum distribution & 99.2\% small, 0.7\% medium, 0.1\% large \\
+Global corpus stratum distribution & 40\% small, 35\% medium, 25\% large \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{2em}
+\hrule
+\vspace{0.5em}
+\small\textit{Document prepared by Manuel Youssef Haik Kevorkian, Topic 2 (JS/TS/npm — Agentic Adoption). For questions or corrections, contact the author. Last updated: October 2026.}
+
+\end{document}

@@ -1,0 +1,376 @@
+% ============================================================
+% main.tex — Bachelor Thesis
+% Title:   Coding Agent Adoption in JavaScript/TypeScript/npm
+%          Repositories on GitHub
+% Student: Manuel Youssef Haik Kevorkian
+% Year:    2026/2027
+% ============================================================
+
+\documentclass[12pt, a4paper]{book}%, oneside
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Packages
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\usepackage[headings]{fullpage}
+\usepackage{setspace}
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{subfig}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{appendix}
+\usepackage[pdfborder={0 0 0}, colorlinks=true, linkcolor=black, citecolor=blue]{hyperref}
+\usepackage[printonlyused]{acronym}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{ifpdf}
+
+% Additional packages for this thesis
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{url}
+
+% Bibliography (biblatex/biber)
+\usepackage[
+  backend=biber,
+  style=numeric,
+  sorting=none,
+  maxnames=3,
+  minnames=1
+]{biblatex}
+\addbibresource{references.bib}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Thesis Information
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\newcommand{\submissionDay}{XX}
+\newcommand{\submissionMonth}{July}
+\newcommand{\submissionYear}{2027}
+\newcommand{\submissionDate}{\submissionDay~\submissionMonth,~\submissionYear}
+
+\newcommand{\typeOfThesis}{Bachelor Thesis}
+
+\newcommand{\titleOfThesisOne}{Coding Agent Adoption in JavaScript/TypeScript/npm Repositories on GitHub}
+
+\newcommand{\authorOfThesis}{Manuel Youssef Haik Kevorkian}
+
+\newcommand{\supervisorOne}{Sup 1}
+\newcommand{\supervisorTwo}{Sup 2}
+\newcommand{\supervisorThree}{Sup 3}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Custom Commands
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\newcommand{\ie}{\textit{i.e.}}
+\newcommand{\eg}{\textit{e.g.}}
+
+\newcommand{\includefig}[4]{
+    \begin{figure}[ht]
+        \centering
+        \includegraphics[width=#1\textwidth]{figures/#2}
+        \caption{#3}
+        \label{#4}
+    \end{figure}
+}
+
+\newcommand{\includefigWSC}[5]{
+    \begin{figure}[ht]
+        \centering
+        \includegraphics[width=#1\textwidth]{figures/#2}
+        \caption[#3]{#4}
+        \label{#5}
+    \end{figure}
+}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% PDF Metadata
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\ifpdf
+\pdfinfo {
+    /Author (\authorOfThesis)
+    /Title (\titleOfThesisOne)
+    /Subject (\typeOfThesis)
+    /Keywords (AI coding agents, GitHub, JavaScript, TypeScript, npm, adoption)
+}
+\fi
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Title Page Command
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\newcommand{\titlePage}{
+
+\thispagestyle{empty}
+
+\begin{center}
+
+    \includegraphics[width=3.5cm]{figures/giu_logo.png}\\[2mm]
+
+    \textbf{German International University}\\[2mm]
+
+    \textbf{Faculty of Engineering and Applied Sciences}\\[1mm]
+
+    \vspace{2cm}
+
+    \doublespacing
+
+    {\Huge \textbf{\titleOfThesisOne}}\\
+
+    \singlespacing
+
+    \vspace{2cm}
+
+    {\large \textbf{\typeOfThesis}}\\
+
+    \vfill
+
+    \parbox{1cm}{
+        \begin{large}
+            \begin{tabbing}
+
+                Author: \hspace{2cm}
+                \=\authorOfThesis\\[2mm]
+
+                Supervisors:
+                \>\supervisorOne\\[2mm]
+
+                \>\supervisorTwo\\[2mm]
+
+                \>\supervisorThree\\[2mm]
+
+                Submission Date:
+                \>\submissionDate\\
+
+            \end{tabbing}
+        \end{large}
+    }\\
+
+\end{center}
+
+\clearpage
+}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Document
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\begin{document}
+
+\pagestyle{plain}
+
+\pagenumbering{Roman}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Title Page
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\titlePage
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Declaration
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\thispagestyle{empty}
+
+This is to certify that:
+
+\begin{itemize}
+
+    \item[(i)] the thesis comprises only my original work toward the Bachelor Degree
+
+    \item[(ii)] due acknowledgement has been made in the text to all other material used
+
+\end{itemize}
+
+\vspace{2cm}
+
+\begin{flushright}
+
+    \rule[0mm]{6cm}{0.2mm}\\
+
+    \authorOfThesis\\
+
+    \submissionDay~\submissionMonth,~\submissionYear\\
+
+\end{flushright}
+
+\clearpage
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Acknowledgments
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\chapter*{Acknowledgments}
+
+\addcontentsline{toc}{chapter}{Acknowledgments}
+
+\label{chap:ack}
+
+% TODO: Write acknowledgments
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Abstract
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\chapter*{Abstract}
+
+\label{chap:abstract}
+
+% TODO: Write abstract
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Table of Contents
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\tableofcontents
+
+\clearpage
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Main Matter
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\pagestyle{headings}
+
+\pagenumbering{arabic}
+
+\setlength{\parskip}{.5\baselineskip plus .2\baselineskip
+    minus .4\baselineskip}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Chapter 1 — Introduction
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\input{chapters/intro}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Chapter 2 — Literature Review
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\input{chapters/litrev}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Chapter 3 — Methodology (to be written)
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+% \input{chapters/methodology}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Chapter 4 — Results (to be written)
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+% \input{chapters/results}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Chapter 5 — Discussion (to be written)
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+% \input{chapters/discussion}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Chapter 6 — Conclusion (to be written)
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+% \input{chapters/conclusion}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Appendix
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\appendix
+
+\renewcommand{\appendixtocname}{Appendix}
+
+\renewcommand{\appendixpagename}{\appendixtocname}
+
+\addappheadtotoc
+
+\setboolean{@twoside}{false}
+
+\appendixpage
+
+
+\chapter{Lists}
+
+\addcontentsline{toc}{section}{List of Abbreviations}
+
+\begin{acronym}[\hspace{3cm}]
+
+    \acro{ai}[AI]{Artificial Intelligence}
+    \acro{llm}[LLM]{Large Language Model}
+    \acro{api}[API]{Application Programming Interface}
+    \acro{msr}[MSR]{Mining Software Repositories}
+    \acro{ci}[CI]{Continuous Integration}
+    \acro{pr}[PR]{Pull Request}
+    \acro{npm}[npm]{Node Package Manager}
+    \acro{js}[JS]{JavaScript}
+    \acro{ts}[TS]{TypeScript}
+    \acro{rq}[RQ]{Research Question}
+    \acro{oss}[OSS]{Open-Source Software}
+
+\end{acronym}
+
+\clearpage
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% List of Figures
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\listoffigures
+
+\addcontentsline{toc}{section}{List of Figures}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% List of Tables
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\listoftables
+
+\addcontentsline{toc}{section}{List of Tables}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Bibliography
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\printbibliography[heading=bibintoc, title={References}]
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% End of Document
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\end{document}
