@@ -34,20 +34,27 @@ Set GITHUB_TOKEN as an environment variable first.
 
 import os
 import re
+import sys
 import time
 import base64
 import json
+import argparse
 import requests
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
-SCRIPT_DIR  = Path(__file__).parent
-DATA_DIR    = SCRIPT_DIR / "../../data"
-CORPUS_IN   = DATA_DIR / "stage1/sample_corpus.csv"
-CORPUS_OUT  = DATA_DIR / "stage4/sample_corpus_detected.csv"
-SIGNALS_OUT = DATA_DIR / "stage4/signals_global.csv"
+# ── Paths (defaults — overridden by --corpus flag for Egyptian corpus run) ─────
+SCRIPT_DIR       = Path(__file__).parent
+DATA_DIR         = SCRIPT_DIR / "../../data"
+DEFAULT_CORPUS   = DATA_DIR / "stage1/sample_corpus.csv"
+DEFAULT_OUT      = DATA_DIR / "stage4/sample_corpus_detected.csv"
+DEFAULT_SIGNALS  = DATA_DIR / "stage4/signals_global.csv"
+
+# Resolved at startup in main() after parsing args
+CORPUS_IN   = DEFAULT_CORPUS
+CORPUS_OUT  = DEFAULT_OUT
+SIGNALS_OUT = DEFAULT_SIGNALS
 
 # ── Shared constants ──────────────────────────────────────────────────────────
 STUDY_SNAPSHOT_DATE = "2026-10-01"   # approximate date Stage 1a collection ran
@@ -701,18 +708,39 @@ def aggregate_repo_signals(signals_df: pd.DataFrame,
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
+    global CORPUS_IN, CORPUS_OUT, SIGNALS_OUT
+
+    parser = argparse.ArgumentParser(description="Stage 4: AI agent adoption detection")
+    parser.add_argument(
+        "--corpus",
+        type=Path,
+        default=None,
+        help="Path to input corpus CSV. Defaults to data/stage1/sample_corpus.csv. "
+             "Use data/stage4/egypt_corpus_input.csv for the Egyptian targeted corpus.",
+    )
+    args = parser.parse_args()
+
+    if args.corpus:
+        CORPUS_IN   = args.corpus
+        stem        = args.corpus.stem   # e.g. "egypt_corpus_input"
+        CORPUS_OUT  = DATA_DIR / f"stage4/{stem}_detected.csv"
+        SIGNALS_OUT = DATA_DIR / f"stage4/signals_{stem}.csv"
+        print(f"[Egyptian corpus mode]")
+        print(f"  Input  : {CORPUS_IN}")
+        print(f"  Output : {CORPUS_OUT}")
+        print(f"  Signals: {SIGNALS_OUT}")
+
     if not TOKEN:
         print("WARNING: no GITHUB_TOKEN — unauthenticated limit is 60 req/hr.")
 
     if not CORPUS_IN.exists():
-        print(f"Error: {CORPUS_IN} not found. Run Stage 1 first.")
+        print(f"Error: {CORPUS_IN} not found.")
         return
 
-    # Create output directory if it doesn't exist
     CORPUS_OUT.parent.mkdir(parents=True, exist_ok=True)
 
     corpus_df = pd.read_csv(CORPUS_IN)
-    print(f"Loaded {len(corpus_df)} repos from sample_corpus.csv")
+    print(f"Loaded {len(corpus_df)} repos from {CORPUS_IN.name}")
 
     # ── Resume support ────────────────────────────────────────────────────────
     if SIGNALS_OUT.exists():

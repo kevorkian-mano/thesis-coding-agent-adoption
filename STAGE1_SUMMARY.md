@@ -219,12 +219,18 @@ The only potential correlation is if Egyptian developers systematically prefer o
 
 ## Next steps
 
-Stage 1 is complete. Two parallel paths:
+Stage 1 is complete. See PIPELINE.md for the full pipeline.
 
-```bash
-# Path A — AI signal detection (Stage 4, ~2–4 hours)
-python3 scripts/stage4/stage4_detection.py
+```
+Stage 2 (owner identity) — ✅ Complete
+  stage2a → stage2b → stage2c → stage2d
 
-# Path B — Owner location identification (Stage 2, scripts to be written)
-# stage2a → stage2b → stage2c → stage2d
+Stage 3 (Egyptian targeted corpus) — ⏳ Run stage3b to filter
+  stage3a (discovery) → stage3b (corpus pull + filter)
+
+Stage 4 (AI detection) — 🔄 Running
+  python3 scripts/stage4/stage4_detection.py                                   # global
+  python3 scripts/stage4/stage4_detection.py --corpus data/stage3/egypt_corpus_input.csv  # Egyptian
+
+Stage 5 (analysis) — ⏳ Not started
 ```

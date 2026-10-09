@@ -10,50 +10,45 @@
 \label{sec:intro:background}
 % ------------------------------------------------------------
 
-Software development is undergoing one of its most significant productivity
-transformations in decades. Since the public release of GitHub Copilot in
-October 2021, AI-powered tools have progressed rapidly from inline
-autocomplete assistants to fully autonomous coding agents capable of planning
-multi-step tasks, writing and executing code, running test suites, and opening
-pull requests without continuous human supervision. Tools such as Anthropic's
-Claude Code, Cursor, Windsurf, OpenAI Codex CLI, and Amazon Q Developer now
-occupy production workflows across a wide spectrum of open-source and
-commercial projects.
+Software development has changed rapidly in recent years. Since GitHub Copilot
+launched in October 2021, AI tools have moved well beyond simple code
+suggestions. Today's coding agents can plan tasks, write and run code, execute
+tests, and open pull requests with little human input. Tools such as
+Anthropic's Claude Code, Cursor, Windsurf, OpenAI Codex CLI, and Amazon Q
+Developer are now actively used in both open-source and commercial projects.
 
-The pace of this adoption is remarkable. GitHub's Octoverse 2025 report
-recorded TypeScript as the most-used language on the platform for the first
-time, with the JavaScript and TypeScript ecosystem collectively representing
-the single largest segment of public activity~\cite{octoverse2025}. This
-makes the \emph{npm} ecosystem—the package registry that underpins both
-languages—a natural and practically important lens through which to study
-AI-driven development patterns. Repositories that depend on npm packages leave
-observable, structured artefacts: lockfiles, dependency declarations,
-configuration files, and commit histories that can be analysed at scale.
+The pace of adoption is striking. GitHub's Octoverse 2025 report recorded
+TypeScript as the most-used language on the platform for the first time, with
+the JavaScript and TypeScript ecosystem making up the single largest share of
+public activity~\cite{octoverse2025}. This makes the \emph{npm}
+ecosystem---the package registry behind both languages---a natural place to
+study how AI coding tools are being adopted. npm repositories leave behind
+observable traces: lockfiles, dependency declarations, configuration files,
+and commit histories that can all be analysed at scale.
 
-Despite the velocity of tool adoption, the empirical picture of \emph{how
-much} and \emph{among whom} AI coding agents are actually being used in
-open-source development remains incomplete. Robbes and colleagues produced the
-first large-scale estimates—22–28\% adoption globally in established projects,
-rising to 71–76\% in newly created repositories~\cite{robbesAgenticMuch2026,
-robbesAgenticVery2026}—but their studies span all GitHub languages and do not
-isolate the JS/TS/npm ecosystem. Similarly, Khosravani and
-Mockus~\cite{khosravani2026} identify a potential 30-fold undercounting in
-earlier single-signal studies but do not disaggregate by language or registry.
-No prior work focuses specifically on the npm ecosystem as a unit of analysis,
-despite it being the world's largest package registry with more than two
-million packages and tens of billions of weekly downloads~\cite{chatzidimitriou2018}.
+Despite how fast these tools are spreading, we still do not have a clear
+picture of how many developers actually use them or who those developers are.
+Robbes and colleagues produced the first large-scale estimates---22--28\%
+adoption globally in established projects, rising to 71--76\% in newly
+created repositories~\cite{robbesAgenticMuch2026, robbesAgenticVery2026}---but
+their studies cover all GitHub languages and do not focus specifically on
+JS/TS or npm. Khosravani and Mockus~\cite{khosravani2026} found that earlier
+studies using only one detection signal may miss up to 30 times more usage
+than they report, but they also do not break results down by language or
+registry. No prior study focuses on the npm ecosystem specifically, even
+though it is the world's largest package registry with more than two million
+packages and tens of billions of weekly downloads~\cite{chatzidimitriou2018}.
 
-A second gap concerns the geographic distribution of AI coding agent adoption.
-Prior work has documented substantial cross-national variation in open-source
-participation~\cite{wachs2022}, yet no study has compared AI adoption rates
+A second gap is about where in the world developers are using these tools.
+Prior work has shown that open-source participation varies significantly across
+countries~\cite{wachs2022}, yet no study has compared AI coding agent adoption
 between developer communities in the Global North and the Global South.
-Egypt represents a particularly interesting case: it hosts one of the
-fastest-growing developer communities on GitHub in the Middle East and Africa
-region, yet its developers face different infrastructure constraints, different
-access conditions to premium AI tools, and different cultural norms around
-automation than developers in, say, the United States or Germany. Whether
-these structural differences translate into lower AI coding agent adoption—and
-by how much—is an open empirical question.
+Egypt is a particularly interesting case. It has one of the fastest-growing
+developer communities on GitHub in the Middle East and Africa, but Egyptian
+developers face different conditions than developers in, say, the United
+States---different infrastructure, different access to paid AI tools, and
+different norms around automation. Whether these differences lead to lower AI
+adoption---and by how much---is an open question that this thesis addresses.
 
 % ------------------------------------------------------------
 \section{Research Questions}
@@ -78,50 +73,49 @@ This thesis is structured around three research questions (RQs):
   \item[RQ3] \textbf{Community comparison.}
     Do repositories with Egyptian-affiliated contributors show significantly
     different AI coding agent adoption rates than the global JS/TS/npm
-    baseline, and what factors—tool accessibility, repository size, community
-    type—correlate with any observed difference?
+    baseline, and what factors---tool accessibility, repository size, community
+    type---correlate with any observed difference?
 \end{description}
 
-These three questions address, respectively, the scope, the measurement
-reliability, and the geographic dimension of AI coding agent adoption—the
-three gaps identified in the literature review (Chapter~\ref{chap:litrev}).
+These three questions address the scope, the measurement reliability, and the
+geographic dimension of AI coding agent adoption---the three gaps identified
+in the literature review (Chapter~\ref{chap:litrev}).
 
 % ------------------------------------------------------------
 \section{Scope and Delimitations}
 \label{sec:intro:scope}
 % ------------------------------------------------------------
 
-The study targets \emph{public} GitHub repositories that satisfy all of the
-following criteria: created on or after 24 February 2025 (the approximate
-start of the high-growth agentic era); at least four stars (excluding toy
-repositories and forks of popular projects); at least fifty commits (ensuring
-a meaningful development history); not themselves forks; and with at least
-175\,000 bytes of combined JavaScript and TypeScript source code (ensuring the
-repository is genuinely a JS/TS project rather than a polyglot project in
-which JS/TS is incidental).
+The study targets \emph{public} GitHub repositories that meet all of the
+following criteria: created on or after 24 February 2025 (the start of the
+high-growth agentic era); at least four stars (to exclude toy repositories
+and forks of popular projects); at least fifty commits (to ensure a meaningful
+development history); not themselves forks; and with at least 175\,000 bytes
+of combined JavaScript and TypeScript source code (to confirm that JS/TS is
+the primary language of the project).
 
-\emph{Ecosystem} is operationalised via the lockfile present at the repository
+\emph{Ecosystem} is determined by the lockfile present at the repository
 root: \texttt{package-lock.json} (npm), \texttt{yarn.lock} (Yarn),
 \texttt{pnpm-lock.yaml} (pnpm), \texttt{bun.lockb} (Bun). Repositories with
 \texttt{package.json} but no lockfile are classified as \texttt{npm\_no\_lock};
 repositories with \texttt{deno.json} are classified as \texttt{deno};
 repositories with neither are classified as \texttt{vanilla}. The thesis
 focuses on the four lockfile-confirmed ecosystems and \texttt{npm\_no\_lock},
-which together represent the canonical npm dependency surface.
+which together represent the main npm dependency surface.
 
-\emph{AI coding agent adoption} is detected via four families of signals
-adapted from the multi-signal taxonomy of Robbes et al.~\cite{robbesHeuristics2026}
-and Galster et al.~\cite{galsterConfig2026}: (1) configuration files
-(\texttt{CLAUDE.md}, \texttt{.cursorrules}, \texttt{AGENTS.md}, etc.);
-(2) commit message patterns indicative of agent-generated commits
-(\texttt{Co-authored-by: Claude}, \texttt{Generated with Claude Code}, etc.);
-(3) pull request body patterns; and (4) AI-specific npm dependency declarations
-(e.g., \texttt{@anthropic-ai/claude-code}, \texttt{@cursor/agent}). Repositories
-are classified as \emph{agentic} if they exhibit at least two distinct signal
-types, \emph{AI-assisted} if they exhibit exactly one type, and \emph{none}
+\emph{AI coding agent adoption} is detected using four families of signals
+adapted from Robbes et al.~\cite{robbesHeuristics2026} and Galster et al.\
+\cite{galsterConfig2026}: (1) configuration files (\texttt{CLAUDE.md},
+\texttt{.cursorrules}, \texttt{AGENTS.md}, etc.); (2) commit message patterns
+left by agents (\texttt{Co-authored-by: Claude},
+\texttt{Generated with Claude Code}, etc.); (3) pull request body patterns;
+and (4) AI-specific npm dependency declarations (e.g.\
+\texttt{@anthropic-ai/claude-code}, \texttt{@cursor/agent}). Repositories
+are classified as \emph{agentic} if they show at least two distinct signal
+types, \emph{AI-assisted} if they show exactly one type, and \emph{none}
 otherwise.
 
-The Egyptian corpus is constructed by mapping contributor GitHub profiles to
+The Egyptian corpus is built by matching contributor GitHub profiles to
 Egypt using location fields, biography text, and organisational affiliations.
 The comparison is observational; no causal claims are made.
 
@@ -134,21 +128,20 @@ The study follows a seven-stage pipeline:
 
 \begin{enumerate}
   \item \textbf{Global corpus collection} (Stage 1a): collect all JS/TS
-    repositories on GitHub that satisfy the inclusion criteria using the
-    GitHub GraphQL Search API with date-windowed pagination to respect the
-    1{,}000-result-per-query cap.
+    repositories on GitHub that meet the inclusion criteria using the
+    GitHub GraphQL Search API with date-windowed pagination to stay within the
+    1{,}000-result-per-query limit.
 
   \item \textbf{Ecosystem categorisation} (Stage 1b): classify each repository
-    by its package manager via root-level lockfile detection.
+    by its package manager using root-level lockfile detection.
 
   \item \textbf{Stratified sampling} (Stage 1c): draw a stratified random
     sample proportional to ecosystem × language × size stratum, targeting
-    approximately 3{,}500–5{,}000 repositories for Stage 4 analysis.
+    approximately 3{,}500--5{,}000 repositories for Stage 4 analysis.
 
-  \item \textbf{Egyptian corpus construction} (Stage 2): identify the subset of
-    repositories whose contributors include at least one developer with a
-    verifiable Egyptian affiliation, using an eight-signal location inference
-    pipeline.
+  \item \textbf{Egyptian corpus construction} (Stage 2): identify repositories
+    whose contributors include at least one developer with a confirmed
+    Egyptian affiliation, using a nine-signal location inference pipeline.
 
   \item \textbf{Signal detection} (Stage 4): scan each sampled repository for
     the four families of AI coding agent signals; output per-repository signal
@@ -160,7 +153,7 @@ The study follows a seven-stage pipeline:
     correction for multiple comparisons.
 
   \item \textbf{Synthesis} (Stage 6): interpret quantitative results in the
-    context of the literature; surface qualitative patterns by inspecting
+    context of the literature; identify qualitative patterns by inspecting
     configuration file content and commit message phrasing.
 \end{enumerate}
 
@@ -177,23 +170,23 @@ This thesis makes three contributions to the empirical software engineering
 literature:
 
 \begin{enumerate}
-  \item \textbf{First ecosystem-scoped adoption estimate.} By restricting the
-    corpus to the JS/TS/npm ecosystem and classifying repositories by package
+  \item \textbf{First ecosystem-scoped adoption estimate.} By focusing the
+    corpus on the JS/TS/npm ecosystem and classifying repositories by package
     manager, this study provides adoption estimates that practitioners and
     tool vendors can map directly to a specific technical community, rather
     than averaging across all GitHub languages.
 
   \item \textbf{Multi-signal undercounting quantification.} By comparing
     single-signal and four-signal detection on the same corpus, the study
-    provides a concrete estimate of the coverage gap that afflicts studies
-    relying on a single heuristic—directly addressing the measurement concern
+    provides a concrete estimate of how much adoption is missed when only
+    one detection signal is used---directly addressing the measurement concern
     raised by Khosravani and Mockus~\cite{khosravani2026}.
 
   \item \textbf{Cross-community comparison.} The Egyptian-versus-global
     comparison provides the first empirical data point on AI coding agent
     adoption in a Middle Eastern/African developer community, contributing
-    evidence relevant to questions about equitable access to AI development
-    tools across the Global South.
+    evidence on equitable access to AI development tools across the Global
+    South.
 \end{enumerate}
 
 % ------------------------------------------------------------
