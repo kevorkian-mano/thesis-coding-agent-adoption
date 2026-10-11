@@ -6,7 +6,7 @@ Reads sample_corpus.csv, extracts unique repo owners, batch-fetches their
 GitHub profiles via GraphQL, and applies the first four location signals.
 
 Every owner gets a score sheet. Signals are not binary — each signal that
-fires adds points. Final classification happens in Stage 3b after all 9
+fires adds points. Final classification happens in Stage 2d after all 9
 signals are collected. This script outputs preliminary scores so that
 Stage 2b and Stage 3a only process owners who still need more evidence.
 
@@ -18,7 +18,7 @@ Signals applied here
   S3 ( 5 pts) — Company field has Egyptian org name or .eg domain
   S4 ( 8 pts) — Email has .eg TLD or Egyptian university domain
 
-Score interpretation (preliminary — final thresholds applied in Stage 3b)
+Score interpretation (preliminary — final thresholds applied in Stage 2d)
 --------------------------------------------------------------------------
   ≥ 10  →  egyptian_confirmed   (no further signals needed)
    5–9  →  egyptian_probable    (pass to Stage 2b for social signals)
@@ -247,7 +247,7 @@ def classify_preliminary(total_score: int, hard_negative: bool,
     """
     Preliminary classification based on S1–S4 only.
     Used to decide which owners need further signals (Stage 2b, Stage 3a).
-    Final classification with full thresholds is applied in Stage 3b.
+    Final classification with full thresholds is applied in Stage 2d.
 
     Thresholds:
       egyptian_confirmed  — score ≥ 10

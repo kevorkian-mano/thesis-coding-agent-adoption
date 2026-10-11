@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Stage 3b — Finalize Egyptian Corpus
-=====================================
+Stage 2d — Finalize Owner Classification & Egyptian Sub-corpus
+===============================================================
 Reads owner_signals_full.csv (all 9 signals applied) and sample_corpus.csv.
 No API calls — pure computation. Runs in seconds.
 

@@ -191,24 +191,20 @@ def main():
         profiles_df.to_csv(PROFILES_CSV, index=False)
         print(f"Profiles saved: {len(profiles_df)} owners → {PROFILES_CSV}")
 
-    # Merge with adoption data (one row per repo, keep owner profile)
-    merged = egypt_df.merge(profiles_df, on="login" if "login" in profiles_df.columns
-                            else egypt_df.merge(
-                                profiles_df.rename(columns={"login": "owner_login"}),
-                                on="owner_login", how="left"
-                            ) and None,
-                            how="left", left_on="owner_login", right_on="login")
+    # Rename profiles created_at to avoid clash with repo created_at
+    profiles_df = profiles_df.rename(columns={"created_at": "account_created_at"})
 
-    # Fallback safe merge
-    if "followers" not in merged.columns:
-        merged = egypt_df.merge(
-            profiles_df.rename(columns={"login": "owner_login"}),
-            on="owner_login", how="left"
-        )
+    # Merge with adoption data (one row per repo, keep owner profile)
+    merged = egypt_df.merge(
+        profiles_df,
+        how="left",
+        left_on="owner_login",
+        right_on="login"
+    )
 
     merged["follower_bucket"] = merged["followers"].fillna(0).astype(int).map(bucket_followers)
     merged["repos_bucket"]    = merged["public_repos"].fillna(0).astype(int).map(bucket_repos)
-    merged["account_age"]     = merged["created_at"].fillna("").map(account_age_bucket)
+    merged["account_age"]     = merged["account_created_at"].fillna("").map(account_age_bucket)
     merged["has_company"]     = merged["company"].fillna("").map(lambda x: bool(x.strip()))
 
     rows = []

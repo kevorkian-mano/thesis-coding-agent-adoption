@@ -284,10 +284,14 @@ egypt_accounts.csv  (Phase 1 — skipped if egyptian_corpus_raw.csv exists)
     - JS+TS bytes ≥ 50% of total language bytes
     - has package.json (verified via GraphQL)
 
+  Phase 1.5 — Commit count enrichment:
+    Fetch commit count for repos that passed Phase 1.
+    Drop repos with commits < 50.
+
   Phase 2 — Quality filter (always runs):
-    stars ≥ 4  |  last push ≥ 2025-01-01  |  deduplicate
+    stars ≥ 4  |  created ≥ 2025-02-24  |  commits ≥ 50  |  deduplicate
         ↓
-  data/stage3/egyptian_corpus_raw.csv   ← all repos pulled (6,642 — already exists)
+  data/stage3/egyptian_corpus_raw.csv   ← all repos pulled before quality filter
   data/stage3/egypt_corpus_input.csv    ← filtered, ready for Stage 4
 ```
 

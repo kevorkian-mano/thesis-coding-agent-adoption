@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Stage 2d — Egyptian Corpus Construction & Quality Filtering
+Stage 3b — Egyptian Corpus Construction & Quality Filtering
 ============================================================
 Builds the targeted Egyptian repository corpus in two phases:
 
@@ -16,20 +16,24 @@ Builds the targeted Egyptian repository corpus in two phases:
     difference could be explained by selection differences rather
     than developer location. Identical filters eliminate this confound.
 
+  Phase 1.5 — Commit count enrichment (runs after Phase 1)
+    Fetches commit counts for repos that passed Phase 1 inclusion filters.
+    Filters out repos with commits < 50 (same threshold as Stage 1).
+
   Phase 2 — Quality filtering (always runs)
     Takes the raw corpus (already-pulled or freshly built) and applies
     the same quality thresholds used in Stage 1 sampling:
       - stars >= 4
-      - last push >= 2025-01-01
+      - created >= 2025-02-24  (repos born in the AI agent era)
+      - commits >= 50
       - deduplicate by full_name
     Outputs the final corpus ready as input for Stage 4 detection.
 
-STATUS: Phase 1 already ran — data/stage3/egyptian_corpus_raw.csv exists.
-        Phase 2 (filtering) must still be run to produce egypt_corpus_input.csv.
+STATUS: Re-run from scratch with creation date filter applied in Phase 1.
 
 INPUTS
 ------
-  data/stage3/egypt_accounts.csv        — from Stage 2c  (Phase 1 only)
+  data/stage3/egypt_accounts.csv        — from Stage 3a  (Phase 1 only)
   data/stage3/egyptian_corpus_raw.csv   — Phase 1 output / Phase 2 input
 
 OUTPUTS
@@ -66,7 +70,7 @@ MIN_JS_TS_SHARE    = 0.5   # JS+TS must be >= 50% of language bytes
 
 # Phase 2 — quality filter settings (must match Stage 1)
 MIN_STARS         = 4
-MIN_LAST_PUSH     = "2025-01-01"
+MIN_CREATED_AT    = "2025-02-24"   # must match Stage 1a creation date filter
 MIN_COMMITS       = 50
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -151,6 +155,7 @@ def build_account_repos_query(logins: list) -> str:
                     name
                     primaryLanguage {{ name }}
                     stargazerCount
+                    createdAt
                     pushedAt
                     isArchived
                     description
@@ -256,6 +261,7 @@ def pull_repos_from_accounts(accounts_df: pd.DataFrame) -> list:
                 full_name = repo.get("nameWithOwner") or ""
                 lang      = (repo.get("primaryLanguage") or {}).get("name", "")
                 stars     = repo.get("stargazerCount", 0)
+                created   = repo.get("createdAt", "") or ""
                 pushed    = repo.get("pushedAt", "") or ""
                 archived  = repo.get("isArchived", False)
                 name      = repo.get("name", "")
@@ -269,6 +275,11 @@ def pull_repos_from_accounts(accounts_df: pd.DataFrame) -> list:
                 # Archived
                 if archived:
                     add_audit(full_name, False, "archived")
+                    continue
+
+                # Creation date filter — must match Stage 1a
+                if created[:10] < MIN_CREATED_AT:
+                    add_audit(full_name, False, "created_before_agent_era")
                     continue
 
                 # Tutorial/auto-gen name patterns
@@ -294,6 +305,7 @@ def pull_repos_from_accounts(accounts_df: pd.DataFrame) -> list:
                     "repo_name":        name,
                     "primary_language": lang,
                     "stars":            stars,
+                    "created_at":       created,
                     "pushed_at":        pushed,
                     "js_ts_byte_share": round(share, 3),
                     "size_stratum":     compute_stratum(stars),
@@ -351,12 +363,12 @@ def apply_quality_filters(df: pd.DataFrame) -> pd.DataFrame:
         df = df[df["commit_count"] >= MIN_COMMITS]
         print(f"  After commits >= {MIN_COMMITS}     : {len(df):,}  (removed {n_pre - len(df):,})")
 
-    # Last push date
+    # Creation date filter (matches Stage 1a exactly)
     n1 = len(df)
-    df["pushed_at"] = pd.to_datetime(df["pushed_at"], errors="coerce", utc=True)
-    df = df[df["pushed_at"] >= pd.Timestamp(MIN_LAST_PUSH, tz="UTC")]
-    df["pushed_at"] = df["pushed_at"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-    print(f"  After pushed >= {MIN_LAST_PUSH}: {len(df):,}  (removed {n1 - len(df):,})")
+    df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce", utc=True)
+    df = df[df["created_at"] >= pd.Timestamp(MIN_CREATED_AT, tz="UTC")]
+    df["created_at"] = df["created_at"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    print(f"  After created >= {MIN_CREATED_AT}: {len(df):,}  (removed {n1 - len(df):,})")
 
     # Ensure ecosystem_type column exists
     if "ecosystem_type" not in df.columns and "ecosystem" in df.columns:

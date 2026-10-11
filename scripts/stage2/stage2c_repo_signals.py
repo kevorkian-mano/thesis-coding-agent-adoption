@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Stage 3a — Repo-Level Signals (S7, S8, S9)
+Stage 2c — Repo-Level Signals (S7, S8, S9)
 ===========================================
 Reads owner_signals.csv from Stage 2b and processes only owners who still
 need more evidence (needs_more = True, i.e. total_score < 10 and not

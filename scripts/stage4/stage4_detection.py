@@ -1,32 +1,36 @@
 """
-Stage 4: Multi-Signal Agent Adoption Detection
+Stage 4 — Multi-Signal AI Adoption Detection
+=============================================
+Scans each corpus for coding agent adoption signals in two passes.
+Run once for the global corpus (default) and once for the Egyptian corpus
+(--corpus flag). Both runs use identical detection logic.
 
-Scans the unified corpus for coding agent adoption signals in two passes:
+  Pass 1 — Root file check (GraphQL batch)
+    Checks for agent config files at repo root:
+      CLAUDE.md, AGENTS.md, .cursorrules, .aider.conf.yml, .roomodes,
+      .windsurfrules, GEMINI.md, .github/copilot-instructions.md
+    10 repos per GraphQL request.
 
-  Pass 1 — Root file tree check (GraphQL batch, ALL 77,315 repos)
-    Checks for agent config files at repo root (CLAUDE.md, .cursorrules, etc.)
-    and for .github/copilot-instructions.md.
-    5 repos per GraphQL request. No commit history traversal — fast and safe.
+  Pass 2 — Deep scan (REST)
+    a) Commit message scan  — co-authored-by trailers + bot author emails
+                               (up to 300 commits per repo)
+    b) PR body + label scan — agent attribution patterns in PR descriptions
+    c) package.json scan    — AI SDK npm dependencies (JS/TS specific)
 
-  Pass 2 — Deep scan (REST, base corpus only: ~4,372 repos)
-    a) Commit message scan  — trailers + bot author logins (up to 300 commits)
-    b) PR body + label scan — agent markers in PR descriptions and labels
-    c) package.json check   — AI SDK npm packages (Topic 2 specific)
-
-Rationale for the split:
-  The Egypt corpus (72,943 repos) is too large for full commit/PR scanning
-  within GitHub's API rate limits. Config file detection gives a conservative
-  lower bound for Egypt repos. The base corpus gets full multi-signal detection.
-  This asymmetry is documented as a known limitation.
-
-Single vs. Multi-Signal labelling (for RQ1 undercounting analysis):
+Adoption classification
   agent_adopted_single  = True if ANY commit trailer signal found
   agent_adopted_multi   = True if ANY signal type found (all passes)
-  The delta = multi_rate - single_rate = the undercounting estimate.
+  The delta = multi_rate − single_rate = undercounting estimate (RQ2).
 
-Outputs (written to ../../data/):
-  signals.csv               — one row per detected signal instance
-  unified_corpus_detected.csv — unified_corpus.csv with detection columns filled
+Run on global corpus (default — reads sample_corpus.csv):
+  python3 scripts/stage4/stage4_detection.py
+  → data/stage4/sample_corpus_detected.csv
+  → data/stage4/signals_global.csv
+
+Run on Egyptian corpus:
+  python3 scripts/stage4/stage4_detection.py --corpus data/stage3/egypt_corpus_input.csv
+  → data/stage4/egypt_corpus_input_detected.csv
+  → data/stage4/signals_egypt_corpus_input.csv
 
 Requires: pip install requests pandas
 Set GITHUB_TOKEN as an environment variable first.

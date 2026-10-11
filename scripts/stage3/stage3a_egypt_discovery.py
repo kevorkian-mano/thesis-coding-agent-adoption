@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Stage 2c — Egyptian Developer Account Discovery
+Stage 3a — Egyptian Developer Account Discovery
 ================================================
 Discovers Egyptian developer accounts on GitHub in two phases:
 
