@@ -46,7 +46,7 @@ The study is organized into five sequential stages. Stages 1–4 are complete or
 │  STAGE 3             │                │
 │  Egyptian Targeted   │────────────────┘
 │  Corpus              │  (Stage 4 also runs on this corpus)
-│  6,642 repos         │
+│  83 repos            │
 └──────────────────────┘
            │
            ▼
@@ -291,33 +291,91 @@ Step 2 — Snowball expansion (up to 3 rounds):
 ```
 For each discovered account:
   Fetch public non-fork repositories via GraphQL
-  Apply Stage 1-equivalent inclusion filters:
+  Apply inclusion filters:
     - primary language = JavaScript or TypeScript
     - JS + TS bytes ≥ 50% of total language bytes
     - has package.json (verified via GraphQL)
     - not archived, not tutorial/auto-gen name pattern
 
-Quality filter (matching Stage 1 thresholds exactly):
+Quality filter (matching global corpus thresholds exactly):
   - stars ≥ 4
-  - commits ≥ 50  ← added to match Stage 1a filter
-  - last push ≥ 2025-01-01
+  - commits ≥ 50
+  - created ≥ 2025-02-24
   - deduplicate by full_name
 ```
 
-Applying identical inclusion and quality filters to both corpora ensures that any adoption rate difference in RQ3 cannot be explained by differences in repository quality or selection criteria. The commits ≥ 50 filter was specifically added after Stage 4 had already run on a preliminary 420-repo version of the corpus (which lacked this filter), to ensure the Egyptian corpus is built on the same activity threshold as the global sample.
+### 5.3 Corpus Version History and Filter Correction
 
-### 5.3 Results
+The Egyptian corpus went through two versions before reaching its final form. Both versions are documented here because comparing their results is itself a finding.
+
+---
+
+**Version 1 — Preliminary corpus (used filter: pushed ≥ 2025-01-01)**
+
+The first version of the corpus was built using a last-push date filter instead of a creation date filter. This was an inconsistency with the global corpus, which requires `created ≥ 2025-02-24`. A repository that was created in 2019 and simply pushed to in 2025 would pass this filter, even though it pre-dates the AI coding agent era entirely.
+
+| Step | Count |
+|---|---|
+| Raw repos pulled | ~6,642 |
+| After stars ≥ 4, commits ≥ 50, pushed ≥ 2025-01-01 | **136** |
+
+Stage 4 was run on this corpus. Results:
+
+| Metric | Value |
+|---|---|
+| Multi-signal adoption | 17.6% (24 repos) |
+| Single-signal adoption | 11.8% (16 repos) |
+| Undercounting delta | 5.9 pp |
+| Gap vs global | −49.9 pp |
+
+---
+
+**Version 2 — Corrected corpus (final, used filter: created ≥ 2025-02-24)**
+
+After identifying the filter inconsistency, the corpus was rebuilt from scratch requiring `created ≥ 2025-02-24` — identical to the global corpus. This is the corpus used for all final analysis.
 
 | Step | Count | Removed |
 |---|---|---|
-| Repos pulled from Egyptian accounts (raw) | 6,642 | — |
-| After stars ≥ 4 | 819 | −5,823 |
-| After commits ≥ 50 + pushed ≥ 2025-01-01 | **136** | −683 |
+| Accounts processed | 26,475 | — |
+| Repos pulled from Egyptian accounts (raw) | 21,523 | — |
+| After quality filters (stars ≥ 4, commits ≥ 50, created ≥ 2025-02-24) | **83** | −21,440 |
 
-**By ecosystem:** npm only (136)  
-**By language:** TypeScript 77 (56.6%) · JavaScript 59 (43.4%)
+**By ecosystem:**
 
-The large drop at the stars filter (6,642 → 819) reflects that Egyptian developer accounts contain many personal, learning, and small-scale projects with 0–3 stars. These are excluded by the same quality bar applied to the global corpus. The 136 remaining repositories represent the subset of Egyptian-owned JS/TS projects that meet the same activity and quality criteria as the global sample — the appropriate comparison group for RQ3.
+| Ecosystem | Count |
+|---|---|
+| npm | 52 |
+| pnpm | 17 |
+| npm_no_lock | 13 |
+| yarn | 1 |
+| **Total** | **83** |
+
+**By language:** TypeScript 63 (75.9%) · JavaScript 20 (24.1%)
+
+Stage 4 results on the corrected corpus:
+
+| Metric | Value |
+|---|---|
+| Multi-signal adoption | 41.0% (34 repos) |
+| Single-signal adoption | 25.3% (21 repos) |
+| Undercounting delta | 15.7 pp |
+| Gap vs global | −26.5 pp |
+
+---
+
+**Why the adoption rate changed so dramatically between versions (17.6% → 41.0%)**
+
+This difference is expected and methodologically meaningful. The Version 1 corpus included repos created as far back as 2018–2024 that had simply been pushed to recently. Those older repos were built before AI coding agents existed, so naturally very few of them show AI adoption signals. The Version 2 corpus contains only repos started on or after 2025-02-24 — the same condition as the global corpus — meaning every repository in both corpora had access to mature AI tools from the beginning.
+
+The jump from 17.6% to 41.0% therefore does not mean Egyptian developers suddenly adopted more. It means the Version 1 number was artificially deflated by the inclusion of pre-AI-era repos. The Version 2 number (41.0%) is the correct, comparable figure.
+
+**This comparison is itself a finding.** It demonstrates concretely how much a corpus construction decision — specifically, using a last-push filter instead of a creation date filter — can distort adoption rate measurements. A researcher who used the Version 1 approach would have reported a 50-percentage-point gap between Egypt and the global average. The correct gap, after fixing the filter, is 26.5 percentage points — still large and meaningful, but not nearly as extreme. This illustrates why creation date filtering is essential when comparing adoption across corpora, and why methodology transparency matters.
+
+---
+
+**The 83-repo corpus size is itself a finding.** Out of 26,475 Egyptian developer accounts, only 83 repositories met all quality and creation date criteria. This means Egyptian developers are creating far fewer new qualifying repositories in the 2025 study window than the global sample implies. It suggests Egyptian developers tend to maintain older established projects rather than starting new high-activity ones, and that new Egyptian repos tend to be smaller in scale. This is relevant context for interpreting the RQ3 results.
+
+The small corpus size limits statistical power for subgroup analysis. However, for the primary RQ3 comparison, 83 repos is sufficient to detect large adoption rate differences. A 20-percentage-point gap is detectable at p < 0.001 at this sample size.
 
 ---
 
@@ -425,62 +483,64 @@ The difference between these two rates is the **undercounting delta**: the perce
 
 **Claude Code dominance:** 88.1% of signal instances are attributable to Claude Code. This likely reflects the strong community adoption of Claude Code's `Co-authored-by: Claude` trailer convention combined with the corpus's 2025 timeframe. This finding will be discussed in the results chapter.
 
-### 6.6 Results — Egyptian Corpus (136 repos) ✅
+### 6.6 Results — Egyptian Corpus (83 repos) ✅
 
 **Headline adoption rates:**
 
 | Metric | Value |
 |---|---|
-| Total repos scanned | 136 |
-| Multi-signal adoption rate | **17.6%** (24 repos) |
-| Single-signal adoption rate | **11.8%** (16 repos) |
-| Undercounting delta | **+5.9 percentage points** |
+| Total repos scanned | 83 |
+| Multi-signal adoption rate | **41.0%** (34 repos) |
+| Single-signal adoption rate | **25.3%** (21 repos) |
+| Undercounting delta | **+15.7 percentage points** |
 
 **Adoption level breakdown:**
 
 | Level | Count | % |
 |---|---|---|
-| agentic | 15 | 11.0% |
-| ai_assisted | 9 | 6.6% |
-| none | 112 | 82.4% |
+| agentic | 29 | 34.9% |
+| ai_assisted | 5 | 6.0% |
+| none | 49 | 59.0% |
 
 **Signal type breakdown:**
 
 | Signal type | Instances |
 |---|---|
-| Commit trailers | 323 |
-| Config files | 48 |
-| PR branch patterns | 29 |
+| Commit trailers | 1,167 |
+| Config files | 73 |
+| PR branch patterns | 43 |
 | PR labels | 21 |
-| Author email | 4 |
+| Author email | 23 |
+| PR body patterns | 3 |
 | npm dependency | 2 |
-| PR body patterns | 1 |
 
 **Agent breakdown:**
 
 | Agent | Signal instances |
 |---|---|
-| Claude Code | 339 |
-| OpenAI | 44 |
-| Copilot | 26 |
-| Cursor | 14 |
-| Cline | 2 |
-| Continue | 1 |
+| Claude Code | 1,160 |
+| Cursor | 80 |
+| OpenAI | 48 |
+| Copilot | 34 |
+| Gemini | 5 |
+| Cline | 3 |
 | Windsurf | 1 |
-| Gemini | 1 |
+| Continue | 1 |
 
 ### 6.7 RQ3 Comparison — Egypt vs Global
 
-| Metric | Global (n=4,500) | Egyptian (n=136) | Gap |
+| Metric | Global (n=4,500) | Egyptian (n=83) | Gap |
 |---|---|---|---|
-| Multi-signal adoption | 67.5% | 17.6% | **−49.9 pp** |
-| Single-signal adoption | 48.1% | 11.8% | **−36.3 pp** |
-| Agentic level | 61.9% | 11.0% | **−50.9 pp** |
-| Undercounting delta | 19.5 pp | 5.9 pp | — |
+| Multi-signal adoption | 67.5% | 41.0% | **−26.5 pp** |
+| Single-signal adoption | 48.1% | 25.3% | **−22.8 pp** |
+| Agentic level | 61.9% | 34.9% | **−27.0 pp** |
+| Undercounting delta | 19.5 pp | 15.7 pp | — |
 
-**Preliminary RQ3 answer:** Egyptian JS/TS developers adopt AI coding agents at dramatically lower rates than the global average (17.6% vs 67.5%, a gap of ~50 percentage points). This difference will be formally tested in Stage 5 using Fisher's exact test. Given the magnitude of the gap, statistical significance at p < 0.0001 is expected.
+**Preliminary RQ3 answer:** Egyptian JS/TS developers adopt AI coding agents at a notably lower rate than the global average (41.0% vs 67.5%, a gap of ~26.5 percentage points). This difference will be formally tested in Stage 5 using Fisher's exact test. Given the magnitude of the gap, statistical significance is expected.
 
-**Note on undercounting delta:** The smaller delta in the Egyptian corpus (5.9 pp vs 19.5 pp globally) suggests Egyptian developers who do use AI tools rely slightly more on commit trailers relative to other signal types — possibly because they are less likely to configure project-level agent settings (config files).
+**Important note on the change from the previous corpus:** The earlier Egyptian corpus (136 repos, using pushed ≥ 2025-01-01) showed only 17.6% adoption. The corrected corpus (83 repos, using created ≥ 2025-02-24) shows 41.0%. The large increase is expected and methodologically meaningful: by requiring repos to be created after February 2025, the new corpus contains only projects that were started during the AI agent era — the same condition as the global sample. The old corpus included many repos created in 2018–2024 that were simply pushed to recently; those older repos naturally had lower AI adoption because they pre-dated the tools. The corrected comparison (41.0% vs 67.5%) is the valid one.
+
+**Note on undercounting delta:** The Egyptian delta (15.7 pp) is close to the global delta (19.5 pp), which is consistent with both corpora now being from the same time window. Egyptian developers who use AI tools rely on a similar mix of signal types as global developers.
 
 ---
 
@@ -559,9 +619,9 @@ Most active JS/TS projects started in 2025 show signs of AI tool use (67.5%), an
 
 | Step | What | Status |
 |---|---|---|
-| Stage 3b (filter) | Filter 6,642 Egyptian repos → 136 repos | ✅ Done |
-| Stage 4 (Egyptian) | Run AI detection on 136 Egyptian repos | ✅ Done — 17.6% adoption |
-| Stage 5 | Statistical analysis — all three RQs | ⏳ Scripts to write |
+| Stage 3b | Re-pull Egyptian corpus with created ≥ 2025-02-24 filter | ✅ Done — 83 repos |
+| Stage 4 (Egyptian) | Run AI detection on 83 Egyptian repos | ✅ Done — 41.0% adoption |
+| Stage 5 | Statistical analysis — all three RQs | ⏳ Pending Stage 4 Egyptian results |
 
 **Stage 5 plan:**
 
@@ -584,9 +644,9 @@ Most active JS/TS projects started in 2025 show signs of AI tool use (67.5%), an
 | `owners_final.csv` | `data/stage2/` | Final owner classifications |
 | `egypt_corpus.csv` | `data/stage2/` | 10 Egyptian repos from global sample |
 | `coverage_stats.csv` | `data/stage2/` | Signal contribution breakdown |
-| `egyptian_corpus_raw.csv` | `data/stage3/` | 6,642 targeted Egyptian repos (raw) |
-| `egypt_corpus_input.csv` | `data/stage3/` | 136 quality-filtered Egyptian repos ✅ |
+| `egyptian_corpus_raw.csv` | `data/stage3/` | 21,523 targeted Egyptian repos (raw) |
+| `egypt_corpus_input.csv` | `data/stage3/` | 83 quality-filtered Egyptian repos ✅ |
 | `sample_corpus_detected.csv` | `data/stage4/` | AI detection results — global corpus ✅ |
 | `signals_global.csv` | `data/stage4/` | Per-signal instances — global corpus ✅ |
-| `egypt_corpus_input_detected.csv` | `data/stage4/` | AI detection results — Egyptian ✅ |
+| `egypt_corpus_input_detected.csv` | `data/stage4/` | AI detection results — Egyptian (83 repos, 41.0%) ✅ |
 | `signals_egypt_corpus_input.csv` | `data/stage4/` | Per-signal instances — Egyptian ✅ |

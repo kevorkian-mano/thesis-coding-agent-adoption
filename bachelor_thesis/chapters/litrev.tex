@@ -102,7 +102,7 @@ that are missed when a narrower signal set is used. This is the
 
 The study also found several patterns that inform the design of this thesis.
 Adoption is positively correlated with repository size, activity, and star
-count, which justifies the size-stratified sampling used in Stage~1. AI-generated
+count, which supports collecting repositories across different size groups. AI-generated
 commits are \textbf{3$\times$ larger} than human commits (median 31 vs.\ 11
 added lines), suggesting agents write code in bigger blocks than individual
 autocomplete acceptances. The most common task type for AI-authored commits is
@@ -132,12 +132,12 @@ in new ones. Claude Code accounts for about three times more signals than
 Copilot in new repositories, consistent with its terminal-first design that
 fits naturally into npm workflows.
 
-These findings explain the creation date filter in Stage~1. Repositories
-created before the agentic era were built without agents from the start;
-including them mixes non-adoption with \emph{pre-adoption}, which inflates the
-apparent non-adoption rate. By focusing on repositories created on or after
-24 February 2025, this study measures adoption in projects that had access to
-mature agentic tools from the beginning.
+These findings explain why this study focuses only on repositories created on
+or after 24 February 2025. Repositories created before mature agentic tools
+were available were built without agents from the start; including them would
+mix non-adoption with pre-adoption and give a misleadingly low adoption rate.
+Focusing on newer repositories means every project in the sample had access to
+the tools from the beginning.
 
 \subsection{A Census-Scale Study}
 
@@ -227,7 +227,7 @@ requires insight into how developers actually use these tools.
 \subsection{Bimodal Interaction Patterns}
 
 Barke et al.~\cite{barke2023} studied 20 programmers using GitHub Copilot on
-structured coding tasks, producing the first theoretically grounded account of
+structured coding tasks, producing one of the first detailed accounts of
 how developers interact with AI coding tools. They found a consistent bimodal
 pattern: \emph{acceleration mode}, where developers know what to write and
 use Copilot to get there faster (code prompts dominant: 71.4\%), and
@@ -361,8 +361,7 @@ Wachs et al.~\cite{wachs2022} carried out the most comprehensive study of
 geographic patterns in open-source software on GitHub, analysing contributor
 location data for millions of repositories. Their central finding is that OSS
 contribution is heavily concentrated in North America and Western Europe, with
-developers in these regions contributing to disproportionately high-visibility
-repositories. They also document a measurable link between a country's GDP per
+developers in these regions contributing to notably more visible repositories. They also document a measurable link between a country's GDP per
 capita and the visibility of its developers' contributions.
 
 Importantly for this thesis, Wachs et al.\ validate GitHub profile location
@@ -370,28 +369,27 @@ self-reporting as a practical basis for geographic attribution. They find that
 self-reported location is broadly consistent with other geographic signals for
 developers who fill in the field, but they note that developers who leave the
 field blank, and who therefore cannot be attributed, are more likely to be from
-lower-income countries. This directly motivates the snowball expansion in
-Stage~2 of this thesis, which recovers Egyptian developers who are socially
-connected to location-tagged Egyptian accounts but do not themselves report a
-location.
+lower-income countries. This directly motivates the network expansion approach used in this study to
+find Egyptian developers who are socially connected to other Egyptian accounts
+but do not themselves report a location in their profile.
 
 \subsection{The Egyptian Developer Community}
 
 Egypt is the most populous Arabic-speaking country and has a rapidly growing
 technology sector. Several universities, including Cairo University, the
 American University in Cairo, and the German University in Cairo, produce
-large annual cohorts of software engineering graduates. Egyptian developers
-are a particularly interesting group for AI adoption studies because they:
-(a) work predominantly in English, which removes language-barrier confounds
-that would complicate studies of, e.g., Chinese-language developers;
-(b) have an active GitHub presence, as shown by the Stage~2a location search
-that identified 1,876 seed accounts using explicit Egyptian location strings
-in both English (\textit{Egypt}, \textit{Cairo}, \textit{Alexandria},
-\textit{Giza}) and Arabic (\textit{مصر}, \textit{القاهرة},
-\textit{الإسكندرية}, \textit{الجيزة}); and
-(c) work primarily on personal, academic, and small-scale commercial projects
-rather than high-visibility open-source libraries, as shown by the strong
-skew of the Egyptian sub-corpus toward low-star repositories (OBS-001).
+large annual cohorts of software engineering graduates. Egyptian developers are a useful group for AI adoption studies for several
+reasons. They largely write code and documentation in English, which avoids
+the language-related complications that arise when studying developer
+communities where the primary language is not English. They also have a
+visible presence on GitHub: a location-based search for Egyptian developer
+accounts identified over 1,800 accounts directly using Egyptian city and
+country names in both English and Arabic, and a further network expansion
+step raised this to over 26,000 accounts. In addition, Egyptian developers
+tend to work on personal, academic, and small-scale commercial projects
+rather than large open-source libraries, which means the Egyptian corpus
+in this study skews toward lower-star repositories, reflecting a different
+type of development activity than the global sample.
 
 No prior study has examined AI coding agent adoption within the Egyptian or
 MENA developer community. The closest work is Wachs et al.~\cite{wachs2022},
@@ -424,8 +422,8 @@ Robbes et al.~\cite{robbesAgenticMuch2026}, and the 30$\times$ undercounting
 factor documented by Khosravani and Mockus~\cite{khosravani2026}, show that
 single-signal detection misrepresents true adoption. However, no study has
 quantified this undercounting delta specifically for the JavaScript/TypeScript
-ecosystem, where npm dependency declarations provide a fifth signal type not
-available in other ecosystems.
+ecosystem, where npm dependency declarations provide an additional signal type
+that is not available in other language ecosystems.
 
 \textbf{Gap 3: The Community Comparison Gap.}
 Prior adoption studies report blended figures that hide community-level
