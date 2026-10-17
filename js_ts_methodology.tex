@@ -1,0 +1,151 @@
+% ============================================================
+% JS/TS Methodology Pipeline Diagram -- DRAFT
+% One page, simple representation
+% ============================================================
+
+\documentclass[11pt, a4paper]{article}
+\usepackage[margin=1.8cm, top=1.8cm, bottom=1.8cm]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, calc}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{gray}{\small DRAFT}}
+\cfoot{\thepage}
+
+% ── Colors ───────────────────────────────────────────────────────────────────
+\definecolor{c1bg}{HTML}{D6EAF8}   \definecolor{c1bd}{HTML}{2471A3}
+\definecolor{c2bg}{HTML}{D5F5E3}   \definecolor{c2bd}{HTML}{1E8449}
+\definecolor{c3bg}{HTML}{FDEBD0}   \definecolor{c3bd}{HTML}{CA6F1E}
+\definecolor{c4bg}{HTML}{E8DAEF}   \definecolor{c4bd}{HTML}{7D3C98}
+\definecolor{coutbg}{HTML}{F4F6F7} \definecolor{coutbd}{HTML}{95A5A6}
+
+% ── Styles ───────────────────────────────────────────────────────────────────
+\tikzset{
+  phase/.style={
+    rectangle, rounded corners=7pt,
+    text width=11.5cm, minimum height=2.6cm,
+    inner xsep=14pt, inner ysep=10pt,
+    draw=#1!80, fill=#1,
+    font=\small, align=left
+  },
+  outbox/.style={
+    rectangle, rounded corners=5pt,
+    text width=3.4cm, minimum height=1.2cm,
+    inner sep=8pt,
+    draw=coutbd, fill=coutbg,
+    font=\footnotesize, align=center,
+    dashed
+  },
+  arr/.style={
+    -{Stealth[length=5mm, width=3mm]},
+    line width=2.2pt, color=#1
+  },
+  sidarr/.style={
+    -{Stealth[length=3mm]},
+    line width=0.9pt, color=coutbd, dashed
+  }
+}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE\bfseries JS/TS Coding Agent Adoption Study}\\[5pt]
+  {\large End-to-End Methodology Pipeline}\\[2pt]
+  {\small JavaScript \& TypeScript / npm Ecosystem on GitHub \quad $\cdot$ \quad 60,129 Repositories}
+\end{center}
+
+\vspace{0.35cm}
+
+\begin{tikzpicture}[node distance=0.55cm]
+
+% ── Phase 1 ──────────────────────────────────────────────────────────────────
+\node[phase=c1bg] (p1) {%
+  \textbf{\textcolor{c1bd}{\large Phase 1 \quad Repository Collection}}\\[5pt]
+  $\bullet$ \ GitHub Search API with date-window partitioning
+             (5-day windows, recursive split at 1,000-result cap)\\[3pt]
+  $\bullet$ \ Agreed filters: stars $\geq 4$ \quad commits $\geq 50$
+             \quad \texttt{fork:false} \quad created $\geq$ 2025-02-24
+             \quad JS+TS bytes $\geq$ 175\,KB\\[3pt]
+  $\bullet$ \ Ecosystem categorization:
+             \textbf{npm} \quad \textbf{yarn} \quad \textbf{pnpm}
+             \quad \textbf{bun} \quad \textbf{deno} \quad \textbf{vanilla}
+};
+\node[outbox, right=0.7cm of p1] (o1) {
+  \texttt{global\_corpus.csv}\\[3pt]
+  \textbf{60,129 repos}\\[2pt]
+  + ecosystem\_type
+};
+\draw[sidarr] (p1.east) -- (o1.west);
+
+% ── Phase 2 ──────────────────────────────────────────────────────────────────
+\node[phase=c2bg, below=0.55cm of p1] (p2) {%
+  \textbf{\textcolor{c2bd}{\large Phase 2 \quad Owner Location Inference}}\\[5pt]
+  $\bullet$ \ \textbf{Pass 1} -- batch GraphQL (50 owners/request):
+             match \texttt{location} field against country/city keywords
+             $\rightarrow$ 27.2\% resolved\\[3pt]
+  $\bullet$ \ \textbf{Pass 2} -- deep profile query per unresolved owner:
+             bio $\rightarrow$ company $\rightarrow$ email TLD
+             $\rightarrow$ website TLD $\rightarrow$ org location
+             $\rightarrow$ network majority\\[3pt]
+  $\bullet$ \ Owners with no match labelled \texttt{not\_specified}
+             and excluded from geographic analysis
+};
+\node[outbox, right=0.7cm of p2] (o2) {
+  \texttt{owner\_locations\_all.csv}\\[3pt]
+  \textbf{50,002 owners}\\[2pt]
+  country + confidence
+};
+\draw[sidarr] (p2.east) -- (o2.west);
+\draw[arr=c2bd] (p1.south) -- (p2.north);
+
+% ── Phase 3 ──────────────────────────────────────────────────────────────────
+\node[phase=c3bg, below=0.55cm of p2] (p3) {%
+  \textbf{\textcolor{c3bd}{\large Phase 3 \quad AI Adoption Detection (3 Passes)}}\\[5pt]
+  $\bullet$ \ \textbf{Pass 1} -- config file check, batch GraphQL (10 repos/request):
+             \texttt{CLAUDE.md}, \texttt{.cursorrules}, \texttt{GEMINI.md},
+             \texttt{copilot-instructions.md}, \texttt{.aider.conf.yml} \ldots
+             $\rightarrow$ match = \textbf{agentic}\\[3pt]
+  $\bullet$ \ \textbf{Pass 2} -- 100 commits + 50 PRs:
+             \texttt{Co-authored-by:} trailer patterns, PR branch prefixes
+             (\texttt{copilot/}, \texttt{devin/}, \texttt{codex/})\\[3pt]
+  $\bullet$ \ \textbf{Pass 3} -- 300 commits + 100 PRs + \texttt{package.json}
+             SDK deps: full signal scan on remaining unclassified repos\\[4pt]
+  \textbf{\textcolor{c3bd}{Rule:}} \
+  $\geq$3 signals or $\geq$2 agents $\Rightarrow$ \textbf{agentic} \quad
+  1--2 signals, 1 agent $\Rightarrow$ \textbf{ai\_assisted} \quad
+  no signal $\Rightarrow$ \textbf{none}
+};
+\node[outbox, right=0.7cm of p3] (o3) {
+  \texttt{corpus\_detected\_full.csv}\\[3pt]
+  \textbf{60,129 repos}\\[2pt]
+  agentic /\\ai\_assisted / none
+};
+\draw[sidarr] (p3.east) -- (o3.west);
+\draw[arr=c3bd] (p2.south) -- (p3.north);
+
+% ── Phase 4 ──────────────────────────────────────────────────────────────────
+\node[phase=c4bg, below=0.55cm of p3] (p4) {%
+  \textbf{\textcolor{c4bd}{\large Phase 4 \quad Geographic Analysis}}\\[5pt]
+  $\bullet$ \ Join detected corpus with owner locations on \texttt{owner\_login}
+             $\rightarrow$ each repo gets a country\\[3pt]
+  $\bullet$ \ Country ranking: adoption rate (\%) + Wilson 95\% CI
+             for all countries with $\geq$30 repos\\[3pt]
+  $\bullet$ \ \textbf{RQ1} Binomial test (global adoption $>$ 5\%) \quad
+             \textbf{RQ2} McNemar test (multi-signal vs.\ single-signal) \quad
+             \textbf{RQ3} Chi-squared + Fisher's exact + BH correction
+};
+\node[outbox, right=0.7cm of p4] (o4) {
+  \texttt{country\_adoption.csv}\\[2pt]
+  \texttt{statistical\_tests.txt}\\[3pt]
+  country ranking\\
+  + RQ1/2/3 results
+};
+\draw[sidarr] (p4.east) -- (o4.west);
+\draw[arr=c4bd] (p3.south) -- (p4.north);
+
+\end{tikzpicture}
+
+\end{document}

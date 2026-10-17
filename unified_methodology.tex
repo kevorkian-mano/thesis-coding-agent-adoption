@@ -1,0 +1,264 @@
+% ============================================================
+% Unified Methodology -- DRAFT
+% ============================================================
+
+\documentclass[11pt, a4paper]{article}
+
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{array}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{gray}{\small DRAFT}}
+\lhead{\textcolor{gray}{\small Unified Methodology}}
+\cfoot{\thepage}
+
+\title{\textbf{Unified Methodology for Measuring AI Coding Agent Adoption on GitHub}}
+\author{Manuel}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+% ============================================================
+% PAGE 1 -- REPOSITORY COLLECTION
+% ============================================================
+
+\section{Repository Collection}
+
+\subsection*{Step 1a -- Pulling Repositories from GitHub}
+
+Repositories are retrieved from the GitHub Search API
+(\texttt{/search/repositories}).
+Because the API returns at most 1,000 results per query, the search window is
+partitioned by creation date (\texttt{created:YYYY-MM-DD..YYYY-MM-DD}) and
+iterated over the full date range. Windows with more than 1,000 results are
+split in half recursively until each window fits within the cap.
+
+\begin{table}[h]
+\centering
+\caption{Filters agreed across all team stacks (Step 1a).}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Filter} & \textbf{Value} & \textbf{Rationale} \\
+\midrule
+Stars            & $\geq 4$              & Removes placeholder and abandoned repos \\
+Commits          & $\geq 50$             & Ensures meaningful development activity \\
+Fork             & \texttt{false}        & Original repositories only \\
+Creation date    & $\geq$ 2025-02-24     & Repos born in the AI coding agent era \\
+Language         & Stack primary language & JS or TS for this study; differs per stack \\
+Language bytes   & $\geq 175{,}000$ (175 KB) & Confirms language is primary, not incidental \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The \textbf{ecosystem start date} is the date when AI coding agent tooling
+became broadly accessible to ordinary developers in the target ecosystem, not
+when the first tool was ever released. All repositories created before this
+date are excluded, since the tooling was not yet available at the time of
+their creation.
+
+\subsection*{Step 1b -- Ecosystem Categorization}
+
+After collection, each repository is categorized by its sub-ecosystem type.
+This is done via a single GraphQL query per batch (15 repos at a time) that
+checks whether specific files exist at the repository root. No file contents
+are read. The detected files determine the category.
+
+\begin{table}[h]
+\centering
+\caption{Ecosystem categorization logic -- general form.}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Category} & \textbf{Detected by} & \textbf{Example (JS/TS stack)} \\
+\midrule
+Sub-ecosystem A   & Config file A present             & \texttt{package-lock.json} (npm) \\
+Sub-ecosystem B   & Config file B present             & \texttt{yarn.lock} (Yarn) \\
+Sub-ecosystem C   & Config file C present             & \texttt{pnpm-lock.yaml} (pnpm) \\
+Sub-ecosystem D   & Config file D present             & \texttt{bun.lockb} (Bun) \\
+No lockfile       & Root config present, no lockfile  & \texttt{package.json} only \\
+Alternative runtime & Runtime config present          & \texttt{deno.json} (Deno) \\
+Vanilla           & No recognized config              & Plain JS/TS files \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{JS/TS example.} Seven files are checked per repository:
+\texttt{package.json}, \texttt{package-lock.json}, \texttt{yarn.lock},
+\texttt{pnpm-lock.yaml}, \texttt{bun.lockb}, \texttt{deno.json}, and
+\texttt{deno.jsonc}. Priority when multiple lockfiles exist: npm $>$ yarn
+$>$ pnpm $>$ bun.
+
+\textbf{Python example.} The equivalent files to check would be:
+\texttt{requirements.txt}, \texttt{Pipfile.lock}, \texttt{poetry.lock},
+\texttt{setup.py}, \texttt{pyproject.toml}, and \texttt{conda.yml}. The
+category labels would map to pip, Pipenv, Poetry, conda, and so on.
+
+The output is a single corpus file with an \texttt{ecosystem\_type} column
+added to every repository record. No repositories are dropped at this step;
+all are kept with their assigned category label.
+
+\newpage
+% ============================================================
+% PAGE 2 -- COUNTRY DETECTION
+% ============================================================
+
+\section{Owner Location Inference}
+
+Location on GitHub is attached to user profiles, not to repositories. For
+each unique owner login in the corpus, a country is inferred in two passes.
+
+\subsection*{Pass 1 -- Fast Lookup}
+
+The GitHub GraphQL API is queried in batches of 50 owners per request to
+fetch the \texttt{location} profile field. The raw string is matched against
+a keyword lookup table of country names, major cities, and common
+abbreviations in multiple languages (English and Arabic are covered; others
+can be added). Matching uses substring search with the longest key checked
+first to avoid partial matches.
+
+Owners whose field is empty, unrecognisable, or contains only generic terms
+(e.g., ``Earth'', ``Remote'') are passed to Pass 2.
+
+\subsection*{Pass 2 -- Deep Profile Inference}
+
+One GraphQL query per unresolved owner fetches additional profile fields. Six
+signals are tried in order; inference stops at the first successful match.
+
+\begin{table}[h]
+\centering
+\caption{Signal cascade in Pass 2.}
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{Priority} & \textbf{Signal} & \textbf{Field fetched} & \textbf{Confidence} \\
+\midrule
+1 & Bio keyword match    & \texttt{bio}                        & Medium \\
+2 & Company keyword match & \texttt{company}                   & Medium \\
+3 & Company domain TLD   & \texttt{company} (domain part)      & Medium \\
+4 & Email domain TLD     & \texttt{email}                      & Medium \\
+5 & Website TLD          & \texttt{websiteUrl}                 & Low    \\
+6 & Organisation location & \texttt{organizations.nodes.location} & Medium \\
+7 & Network majority     & \texttt{followers} + \texttt{following} ($\geq 3$ located, $\geq 40\%$ agreement) & Low \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Country-code top-level domains (e.g., \texttt{.de} for Germany, \texttt{.eg}
+for Egypt, \texttt{.br} for Brazil) are used for signals 3, 4, and 5.
+Owners that remain unresolved after all seven signals are labelled
+\texttt{not\_specified} and are excluded from country-level analysis.
+
+\subsection*{Combined Output}
+
+Pass 1 and Pass 2 results are merged into \texttt{owner\_locations\_all.csv}.
+This file maps every owner login to a country name and a confidence level.
+It is used by the geographic analysis phase to assign a country to each
+repository via its owner.
+
+\newpage
+% ============================================================
+% PAGE 3 -- AGENTIC TRACES DETECTION
+% ============================================================
+
+\section{AI Adoption Detection}
+
+Each repository is classified as \textbf{agentic}, \textbf{AI-assisted}, or
+\textbf{none} using a three-pass layered pipeline. A repository is classified
+by the first pass that finds a signal and never re-processed by later passes.
+This keeps the total API cost low while still applying expensive signals where
+needed.
+
+\subsection*{Pass 1 -- Configuration File Check}
+
+Repositories are checked in batches of 10 via GraphQL for the presence of
+known AI agent configuration files at the repository root. These files are
+hard positives: they are created deliberately by developers configuring an
+agent.
+
+\begin{table}[h]
+\centering
+\caption{AI agent configuration files checked in Pass 1.}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{File} & \textbf{Agent} \\
+\midrule
+\texttt{CLAUDE.md}                       & Claude Code \\
+\texttt{AGENTS.md}                       & Claude Code / Generic \\
+\texttt{.cursorrules}                    & Cursor \\
+\texttt{.cursorignore}                   & Cursor \\
+\texttt{.aider.conf.yml}                 & Aider \\
+\texttt{.roomodes}                       & Roo Code \\
+\texttt{.windsurfrules}                  & Windsurf \\
+\texttt{GEMINI.md}                       & Gemini CLI \\
+\texttt{.github/copilot-instructions.md} & GitHub Copilot \\
+\texttt{.continue/config.json}           & Continue \\
+\texttt{.codeium/config.json}            & Codeium \\
+\texttt{AGENTS.json}                     & OpenAI Codex \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Any match immediately labels the repository \textbf{agentic}.
+
+\subsection*{Pass 2 -- Commit Trailer and PR Branch Scan}
+
+The 100 most recent commits and 50 most recent pull requests are fetched.
+Commit messages are scanned for co-authorship trailer patterns. PR head
+branch names are scanned for agent-specific prefixes.
+
+\begin{table}[h]
+\centering
+\caption{Representative patterns checked in Pass 2.}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Pattern} & \textbf{Agent} \\
+\midrule
+\texttt{Co-authored-by: ...claude...anthropic} & Claude Code \\
+\texttt{Co-authored-by: ...github.copilot}     & GitHub Copilot \\
+\texttt{Co-authored-by: ...devin}              & Devin \\
+\texttt{Co-authored-by: ...cursor}             & Cursor \\
+\texttt{Co-authored-by: ...aider}              & Aider \\
+\texttt{Co-authored-by: ...windsurf}           & Windsurf \\
+\texttt{Co-authored-by: ...gemini}             & Gemini \\
+\texttt{noreply@anthropic.com} (author email)  & Claude Code \\
+PR branch prefix \texttt{copilot/}            & GitHub Copilot \\
+PR branch prefix \texttt{codex/}              & OpenAI Codex \\
+PR branch prefix \texttt{devin/}              & Devin \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{Pass 3 -- Deep Scan}
+
+Repositories not classified by Pass 1 or Pass 2 receive a comprehensive scan:
+up to 300 commits (message and author email), up to 100 pull requests (body
+text, labels, and branch name), and the package dependency file
+(\texttt{package.json} for npm, or the equivalent for other ecosystems).
+
+\subsection*{Classification Rule (all passes)}
+
+\begin{table}[h]
+\centering
+\caption{Classification thresholds applied after each pass.}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Condition} & \textbf{Label} \\
+\midrule
+$\geq 3$ AI signals, OR signals from $\geq 2$ distinct agents & \textbf{agentic} \\
+1 or 2 AI signals from a single agent                         & \textbf{AI-assisted} \\
+No signal found in any pass                                   & \textbf{none} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+After all three passes complete, results are merged in priority order (Pass 1
+supersedes Pass 2, which supersedes Pass 3) and joined with the corpus to
+produce \texttt{corpus\_detected\_full.csv}.
+
+\end{document}

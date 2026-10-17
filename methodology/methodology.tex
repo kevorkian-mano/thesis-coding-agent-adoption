@@ -1,0 +1,351 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\definecolor{draftgray}{gray}{0.45}
+
+\title{\textbf{Methodology Draft Notes}\\
+\large Coding Agent Adoption in JavaScript/TypeScript/npm Repositories on GitHub\\
+\large Geographic Country Ranking Study}
+\author{Manuel Youssef Haik Kevorkian}
+\date{October 2026 \quad\textcolor{red}{\textbf{DRAFT -- not for submission}}}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{Research Questions}
+% ============================================================
+
+This study investigates three research questions:
+
+\begin{itemize}
+  \item \textbf{RQ1:} What proportion of active JavaScript/TypeScript/npm repositories
+        on GitHub show evidence of AI coding agent use, and is this proportion
+        statistically non-trivial?
+
+  \item \textbf{RQ2:} How much does single-signal detection undercount AI adoption
+        compared to a multi-signal approach, and is this difference statistically
+        significant?
+
+  \item \textbf{RQ3:} Do AI coding agent adoption rates differ significantly across
+        countries within the JS/TS/npm ecosystem, and which countries show the highest
+        and lowest rates?
+\end{itemize}
+
+RQ1 and RQ2 address global adoption and measurement reliability. RQ3 introduces the
+geographic dimension by ranking all countries with enough repositories in the corpus.
+
+% ============================================================
+\section{Pipeline Overview}
+% ============================================================
+
+The study follows four sequential phases. No sampling is applied; the full corpus of
+60,129 repositories is processed end-to-end.
+
+\begin{enumerate}
+  \item \textbf{Phase 1} -- Corpus construction: 60,129 JS/TS/npm repos collected and
+        categorized by ecosystem (npm, pnpm, yarn, bun, deno, vanilla).
+  \item \textbf{Phase 2} -- Owner location inference: two-pass pipeline assigns a country
+        to each of the 50,002 unique owners using GitHub profile signals.
+  \item \textbf{Phase 3} -- AI adoption detection: three-pass layered pipeline classifies
+        each of the 60,129 repos as agentic, ai\_assisted, or none.
+  \item \textbf{Phase 4} -- Geographic analysis: repos joined with owner countries,
+        adoption rates computed per country, formal statistical tests applied.
+\end{enumerate}
+
+% ============================================================
+\section{Phase 1 -- Corpus Construction}
+% ============================================================
+
+\subsection{Collection}
+
+Repositories collected via GitHub GraphQL Search API in two passes (JavaScript and
+TypeScript separately -- GitHub does not support OR-combined language filters in one
+query). Rolling 5-day creation date windows from 2025-02-24 to October 2026. Windows
+exceeding the 1,000-result cap were recursively halved until every window fit.
+
+\medskip
+\noindent\textbf{Inclusion filters (agreed across research team):}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+Filter & Value & Rationale \\
+\midrule
+Language            & JavaScript or TypeScript & Thesis scope \\
+Created on or after & 2025-02-24               & Mature AI agent era \\
+Stars               & $\geq 4$                 & Excludes toy/abandoned projects \\
+Commits             & $\geq 50$                & Meaningful development history \\
+Fork                & No                       & Excludes derivative projects \\
+JS + TS bytes       & $\geq 175{,}000$         & JS/TS is primary language \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Result: 60,129 repositories.}
+
+\subsection{Ecosystem Categorization}
+
+Seven files checked at root per repo via GraphQL batch queries (15 repos per request).
+Classification priority: deno.json $\to$ deno; package.json + package-lock.json $\to$ npm;
++ yarn.lock $\to$ yarn; + pnpm-lock.yaml $\to$ pnpm; + bun.lockb $\to$ bun;
+package.json only $\to$ npm\_no\_lock; none $\to$ vanilla.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Ecosystem & Count & \% \\
+\midrule
+npm           & 28,248 & 47.0\% \\
+pnpm          & 12,229 & 20.3\% \\
+vanilla       & 10,177 & 16.9\% \\
+npm\_no\_lock &  7,979 & 13.3\% \\
+yarn          &  1,091 &  1.8\% \\
+deno          &    250 &  0.4\% \\
+bun           &    107 &  0.2\% \\
+unknown       &     48 &  0.1\% \\
+\textbf{Total} & \textbf{60,129} & \textbf{100\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Note on sampling:} A previous version of this study drew a stratified
+sample of 4,500 repos. Sampling has been removed because the layered detection pipeline
+(Phase 3) processes the full corpus efficiently without requiring sampling, and sampling
+before geographic labeling would introduce bias into the country-level analysis.
+
+\subsection{Output Files}
+\begin{itemize}
+  \item \texttt{data/stage1/global\_corpus.csv} -- all 60,129 repos
+  \item \texttt{data/stage1/ecosystem\_audit.csv} -- category breakdown
+\end{itemize}
+
+% ============================================================
+\section{Phase 2 -- Owner Location Inference}
+% ============================================================
+
+\subsection{Motivation}
+
+GitHub location is attached to user profiles, not repositories. For each of the
+50,002 unique owner logins in the corpus, a country is inferred in two passes.
+Approximately 60\% of GitHub users leave the location field blank -- this is why
+a two-pass approach is needed rather than a simple field lookup.
+
+\subsection{Pass 1 -- Fast Location Lookup}
+
+Batch GraphQL queries (50 owners per request) fetch the raw \texttt{location} profile
+field. Each string is matched against a keyword lookup table of country names, major
+cities, and common abbreviations in English and Arabic, using substring matching
+(longest key first to avoid partial matches).
+
+\medskip
+\noindent\textbf{Result: approximately 13,625 owners located (27.2\%). 36,377 passed to Pass 2.}
+
+\subsection{Pass 2 -- Deep Profile Inference}
+
+One GraphQL query per unresolved owner fetches additional profile fields. Six signals
+are tried in order; inference stops at the first match:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}clll@{}}
+\toprule
+Priority & Signal & Field & Confidence \\
+\midrule
+1 & Bio keyword match      & \texttt{bio}                  & Medium \\
+2 & Company keyword match  & \texttt{company}              & Medium \\
+3 & Company domain TLD     & \texttt{company} (domain)     & Medium \\
+4 & Email domain TLD       & \texttt{email}                & Medium \\
+5 & Website URL TLD        & \texttt{websiteUrl}           & Low \\
+6 & Org location keyword   & \texttt{organizations.location} & Medium \\
+7 & Network majority       & followers + following ($\geq$3 located, $\geq$40\% agree) & Low \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Country-code TLDs: .de (Germany), .eg (Egypt), .br (Brazil), .in (India), etc.
+Owners unresolved after all signals are labelled \texttt{not\_specified} and excluded
+from country-level analysis.
+
+\subsection{Output Files}
+\begin{itemize}
+  \item \texttt{data/stage2/owner\_locations\_fast.csv} -- Pass 1 results
+  \item \texttt{data/stage2/owner\_locations\_deep.csv} -- Pass 2 results
+  \item \texttt{data/stage2/owner\_locations\_all.csv} -- merged master file (input to Phase 4)
+\end{itemize}
+
+% ============================================================
+\section{Phase 3 -- AI Adoption Detection}
+% ============================================================
+
+\subsection{Design: Layered Three-Pass Pipeline}
+
+Passes are applied in order of increasing API cost. A repo classified by an earlier
+pass is never re-examined. This ensures the most expensive checks run only on the
+smallest subset of repos.
+
+\subsection{Pass 1 -- Configuration File Check}
+
+Every repo checked for 12 known agent config files via batch GraphQL (10 repos/request).
+These are hard positives -- nobody accidentally creates a \texttt{CLAUDE.md}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+File & Agent \\
+\midrule
+\texttt{CLAUDE.md}                       & Claude Code \\
+\texttt{AGENTS.md}                       & Claude Code / Generic \\
+\texttt{.cursorrules}, \texttt{.cursorignore} & Cursor \\
+\texttt{.aider.conf.yml}                 & Aider \\
+\texttt{.roomodes}                       & Roo Code \\
+\texttt{.windsurfrules}                  & Windsurf \\
+\texttt{GEMINI.md}                       & Gemini CLI \\
+\texttt{.github/copilot-instructions.md} & GitHub Copilot \\
+\texttt{.continue/config.json}           & Continue \\
+\texttt{.codeium/config.json}            & Codeium \\
+\texttt{AGENTS.json}                     & OpenAI Codex \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Any file found: repo immediately labelled \textbf{agentic}. Skips Pass 2 and 3.
+
+\subsection{Pass 2 -- Commit Trailer and PR Branch Scan}
+
+100 most recent commits and 50 most recent PRs fetched per repo. Commit messages
+scanned for \texttt{Co-authored-by:} trailer patterns and author email patterns.
+PR head branch names scanned for agent prefixes (\texttt{copilot/}, \texttt{devin/},
+\texttt{codex/}). Agents covered: Claude Code, GitHub Copilot, Devin, Cursor, Aider,
+Windsurf, Gemini, Codeium.
+
+\subsection{Pass 3 -- Deep Scan}
+
+Runs only on repos unclassified after Pass 1 and 2. Up to 300 commits, 100 PRs (body,
+labels, branch), and \texttt{package.json} dependency file. npm SDK deps checked:
+\texttt{@anthropic-ai/sdk}, \texttt{@anthropic-ai/claude-code}, \texttt{@cursor/agent}.
+
+\subsection{Detection Approach}
+
+Detection is \textbf{heuristic-based only} -- pattern matching against known signatures.
+No ML classifier is used because no labeled training dataset exists for the JS/TS/npm
+ecosystem. Commit size and behavioral features are not used.
+
+\subsection{Classification Rule (all passes)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+Condition & Label \\
+\midrule
+$\geq$3 signals OR $\geq$2 distinct agents & \textbf{agentic} \\
+1--2 signals from a single agent           & \textbf{ai\_assisted} \\
+No signal found                            & \textbf{none} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Single vs Multi-Signal (RQ2)}
+
+Pass 1 config-file-only labels are saved separately alongside the full three-pass labels.
+McNemar's test is applied to the paired per-repo outcomes to test whether multi-signal
+detection captures significantly more adoption than single-signal.
+
+\subsection{Output Files}
+\begin{itemize}
+  \item \texttt{data/stage3/pass1\_results.csv} -- config file results
+  \item \texttt{data/stage3/pass2\_results.csv} -- commit trailer results
+  \item \texttt{data/stage3/pass3\_results.csv} -- deep scan results
+  \item \texttt{data/stage3/corpus\_detected\_full.csv} -- final merged labels for all 60,129 repos
+\end{itemize}
+
+% ============================================================
+\section{Phase 4 -- Geographic Analysis}
+% ============================================================
+
+\subsection{Join}
+
+\texttt{corpus\_detected\_full.csv} is joined with \texttt{owner\_locations\_all.csv}
+on \texttt{owner\_login}. Each repo inherits its owner's country. Repos with
+\texttt{not\_specified} owners are kept in global totals but excluded from country
+ranking.
+
+\subsection{Country Aggregation}
+
+For each country with $\geq$30 repos in the corpus:
+
+\begin{itemize}
+  \item Total repos
+  \item Adopted repos (agentic + ai\_assisted)
+  \item Agentic-only repos
+  \item Adoption rate (\%) + Wilson 95\% CI
+  \item Agentic rate (\%)
+\end{itemize}
+
+Countries ranked by adoption rate (descending) to produce the primary result table.
+
+\subsection{Statistical Tests}
+
+\begin{itemize}
+  \item \textbf{RQ1} -- One-sample binomial test: global adoption rate $>$ 5\% baseline.
+        Null: adoption is trivial (casual one-time use only).
+
+  \item \textbf{RQ2} -- McNemar test on paired repo labels (Pass 1 only vs.\ full
+        pipeline). Measures undercounting delta in percentage points.
+
+  \item \textbf{RQ3} -- Chi-squared test of independence across all eligible countries.
+        Followed by pairwise Fisher's exact tests (each country vs.\ global baseline)
+        with Benjamini-Hochberg FDR correction at $\alpha = 0.05$.
+\end{itemize}
+
+\subsection{Output Files}
+\begin{itemize}
+  \item \texttt{data/stage4/corpus\_with\_country.csv} -- full corpus with country column
+  \item \texttt{data/stage4/country\_adoption.csv} -- per-country ranking table
+  \item \texttt{data/stage4/statistical\_tests.txt} -- RQ1/RQ2/RQ3 test results
+  \item \texttt{data/stage4/pairwise\_fisher.csv} -- pairwise country vs.\ global results
+\end{itemize}
+
+% ============================================================
+\section{Supplementary: Egypt Corpus (Previous Work)}
+% ============================================================
+
+A targeted Egyptian developer corpus was built in an earlier version of this study.
+It is retained as supplementary material and is not part of the main geographic ranking.
+Key findings from this work are documented for potential use in the discussion chapter.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+Metric & Version 1 (wrong filter) & Version 2 (corrected) \\
+\midrule
+Filter used            & pushed $\geq$ 2025-01-01    & created $\geq$ 2025-02-24 \\
+Corpus size            & 136 repos                   & 83 repos \\
+Multi-signal adoption  & 17.6\% (24/136)             & 41.0\% (34/83) \\
+Single-signal adoption & 11.8\% (16/136)             & 25.3\% (21/83) \\
+Undercounting delta    & 5.9 pp                      & 15.7 pp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The jump from 17.6\% to 41.0\% is not real growth: it reflects the removal of
+pre-AI-era repos that were active recently but created before 2025-02-24. This version
+comparison is itself a methodological finding illustrating how a single corpus
+construction decision can distort adoption measurements by more than 20 percentage points.
+
+Egypt will appear as one data point in the Phase 4 country ranking if enough repos
+qualify under the $\geq$30 threshold.
+
+\end{document}

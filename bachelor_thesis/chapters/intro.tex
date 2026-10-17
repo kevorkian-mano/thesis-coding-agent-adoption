@@ -21,7 +21,7 @@ The pace of adoption is striking. GitHub's Octoverse 2025 report recorded
 TypeScript as the most-used language on the platform for the first time, with
 the JavaScript and TypeScript ecosystem making up the single largest share of
 public activity~\cite{octoverse2025}. This makes the \emph{npm}
-ecosystem, which is the package registry behind both languages, and a natural place to
+ecosystem, which is the package registry behind both languages, a natural place to
 study how AI coding tools are being adopted. npm repositories leave behind
 observable traces: lockfiles, dependency declarations, configuration files,
 and commit histories that can all be analysed at scale.
@@ -41,15 +41,16 @@ packages and tens of billions of weekly downloads~\cite{chatzidimitriou2018}.
 
 A second gap is about where in the world developers are using these tools.
 Prior work has shown that open-source participation varies significantly across
-countries~\cite{wachs2022}, yet no study has compared AI coding agent adoption
-between developer communities in the Global North and the Global South.
-Egypt is a particularly interesting case. It has one of the fastest-growing
-developer communities on GitHub in the Middle East and North
-Africa~\cite{octoverse2024}, yet Egyptian developers operate under conditions
-that differ from those in wealthier markets: infrastructure constraints, more
-limited access to paid AI tools, and different professional norms around
-automation. Whether these conditions lead to different AI adoption rates is an
-open question that this thesis addresses.
+countries~\cite{wachs2022}, and recent evidence from Daniotti et
+al.~\cite{daniotti2025} confirms that AI coding tool adoption itself varies
+by country, with substantial differences between high-income and lower-income
+developer communities. Yet no study has produced a ranked country-level
+comparison of AI coding agent adoption within a specific ecosystem, tested
+whether country differences are statistically significant, or reported
+adoption rates with confidence intervals at the country level. Knowing which
+developer communities lead and which lag in adoption has practical implications
+for tool vendors, educators, and open-source foundations who want to support
+equitable access to AI development tools.
 
 % ------------------------------------------------------------
 \section{Research Aim and Objectives}
@@ -58,29 +59,26 @@ open question that this thesis addresses.
 
 The aim of this thesis is to measure AI coding agent adoption across the
 JavaScript, TypeScript, and npm ecosystem on GitHub, to quantify how much
-single-signal detection methods undercount that adoption, and to determine
-whether Egyptian developers adopt these tools at a different rate than the
-global baseline.
+single-signal detection methods undercount that adoption, and to rank
+countries by their adoption rate using a statistically grounded approach.
 
 To reach this aim, the thesis pursues the following objectives:
 
 \begin{enumerate}
-  \item To construct a representative stratified sample of active JS/TS/npm
-    repositories created during the high-growth agentic era (February 2025
-    onwards), covering all major package manager ecosystems.
+  \item To construct a corpus of active JS/TS/npm repositories created during
+    the high-growth agentic era (February 2025 onwards), covering all major
+    package manager ecosystems.
 
   \item To design and implement a multi-signal detection method that identifies
-    AI coding agent usage from four independent signal families, and to
+    AI coding agent usage from multiple independent signal families, and to
     quantify the undercounting error introduced by single-signal approaches.
 
-  \item To build a targeted Egyptian developer corpus using a nine-signal
-    identity inference pipeline, applying identical quality filters to those
-    used for the global sample.
+  \item To infer the country of each repository owner using a two-pass
+    geographic inference pipeline applied to GitHub profile data.
 
-  \item To compare AI adoption rates between the global JS/TS/npm sample and
-    the Egyptian corpus using appropriate statistical tests, and to identify
-    which developer and repository characteristics correlate with adoption
-    differences.
+  \item To rank countries by AI coding agent adoption rate within the
+    JS/TS/npm ecosystem and to test whether country-level differences are
+    statistically significant using formal hypothesis tests.
 \end{enumerate}
 
 % ------------------------------------------------------------
@@ -88,87 +86,76 @@ To reach this aim, the thesis pursues the following objectives:
 \label{sec:intro:rqs}
 % ------------------------------------------------------------
 
-This thesis is structured around three research questions (RQs):
+This thesis is structured around three research questions:
 
 \begin{description}
   \item[RQ1] \textbf{Scope of adoption.}
     What proportion of active JavaScript, TypeScript, and npm repositories on
     GitHub created since February 2025 show evidence of AI coding agent use,
-    and how does this vary by package manager ecosystem (npm, Yarn, pnpm, Bun),
-    primary language, and repository size?
+    and is this proportion statistically non-trivial?
 
   \item[RQ2] \textbf{Signal undercounting.}
     To what extent does relying on a single detection signal underestimate AI
-    coding agent adoption compared with a multi-signal approach, and which
-    signal types contribute most to detection coverage in the JS/TS/npm
-    ecosystem?
+    coding agent adoption compared with a multi-signal approach, and is this
+    difference statistically significant?
 
-  \item[RQ3] \textbf{Community comparison.}
-    Do repositories with Egyptian-affiliated contributors show significantly
-    different AI coding agent adoption rates than the global JS/TS/npm
-    baseline, and what factors (tool accessibility, repository size, and community
-    type) correlate with any observed difference?
+  \item[RQ3] \textbf{Geographic ranking.}
+    Do AI coding agent adoption rates differ significantly across countries
+    within the JS/TS/npm ecosystem, and which countries show the highest and
+    lowest rates?
 
 \end{description}
 
 These three questions address the scope, the measurement reliability, and the
-geographic dimension of AI coding agent adoption, which are the three gaps identified
-in the literature review (Chapter~\ref{chap:litrev}). Each RQ maps directly
-to one of the four objectives above: RQ1 to Objective~1, RQ2 to Objective~2,
-and RQ3 to Objectives~3 and~4.
+geographic dimension of AI coding agent adoption, which are the three gaps
+identified in the literature review (Chapter~\ref{chap:litrev}). RQ1 maps to
+Objective~1, RQ2 to Objective~2, and RQ3 to Objectives~3 and~4.
 
 % ------------------------------------------------------------
 \section{Scope and Delimitations}
 \label{sec:intro:scope}
 % ------------------------------------------------------------
 
-The study targets \emph{public} GitHub repositories that meet all of the
-following criteria: created on or after 24 February 2025 (the start of the
-high-growth agentic era); at least four stars (to exclude toy repositories
-and forks of popular projects); at least fifty commits (to ensure a meaningful
-development history); not themselves forks; and with at least 175\,000 bytes
-of combined JavaScript and TypeScript source code (to confirm that JS/TS is
-the primary language of the project).
+The study targets public GitHub repositories created on or after
+24 February 2025, with at least four stars, at least fifty commits, not
+themselves forks, and with at least 175,000 bytes of combined JavaScript or
+TypeScript source code. This date marks the point at which the npm ecosystem
+had broad, simultaneous access to multiple mature AI coding agents. Ecosystem
+membership is confirmed by the presence of \texttt{package.json} alongside a
+lockfile at the repository root (npm, Yarn, pnpm, or Bun).
 
-\emph{Ecosystem} is determined by the lockfile present at the repository
-root: \texttt{package-lock.json} (npm), \texttt{yarn.lock} (Yarn),
-\texttt{pnpm-lock.yaml} (pnpm), \texttt{bun.lockb} (Bun). Repositories with
-\texttt{package.json} but no lockfile are classified as \texttt{npm\_no\_lock};
-repositories with \texttt{deno.json} are classified as \texttt{deno};
-repositories with neither are classified as \texttt{vanilla}. The thesis
-focuses on the four lockfile-confirmed ecosystems and \texttt{npm\_no\_lock},
-which together represent the main npm dependency surface.
+AI coding agent adoption is detected using three signal families applied in
+three passes ordered by cost: agent configuration files (checked first, batch
+GraphQL), commit message trailers and PR branch prefixes (checked second, REST
+API), and PR body text, PR labels, and npm SDK dependency declarations
+(checked third, deep scan). A repository is classified as \emph{agentic} if
+it shows three or more signals or signals from two or more distinct agents,
+\emph{AI-assisted} if it shows one or two signals from a single agent, and
+\emph{none} otherwise.
 
-\emph{AI coding agent adoption} is detected using four families of signals
-adapted from Robbes et al.~\cite{robbesHeuristics2026} and Galster et al.\
-\cite{galsterConfig2026}: (1) configuration files (\texttt{CLAUDE.md},
-\texttt{.cursorrules}, \texttt{AGENTS.md}, etc.); (2) commit message patterns
-left by agents (\texttt{Co-authored-by: Claude},
-\texttt{Generated with Claude Code}, etc.); (3) pull request body patterns;
-and (4) AI-specific npm dependency declarations (e.g.\
-\texttt{@anthropic-ai/claude-code}, \texttt{@cursor/agent}). Repositories
-are classified as \emph{agentic} if they show at least two distinct signal
-types, \emph{AI-assisted} if they show exactly one type, and \emph{none}
-otherwise.
-
-The Egyptian corpus is built by matching contributor GitHub profiles to
-Egypt using location fields, biography text, and organisational affiliations.
-The comparison is observational; no causal claims are made.
+Country attribution is based on a two-pass geographic inference pipeline
+applied to the GitHub profile of each unique repository owner. Countries with
+fewer than 30 repositories in the corpus are excluded from the geographic
+ranking. The comparison is observational; no causal claims are made about why
+adoption rates differ across countries.
 
 % ------------------------------------------------------------
 \section{Methodology Overview}
 \label{sec:intro:method}
 % ------------------------------------------------------------
 
-The study follows a computational pipeline implemented in Python using the
-GitHub GraphQL and REST APIs. Repositories are collected via stratified random
-sampling across ecosystem, language, and size strata, then scanned for AI
-adoption signals using four detection families: agent configuration files,
-commit message trailers, pull request body patterns, and npm dependency
-declarations. Global and Egyptian adoption rates are then compared using
-Fisher's exact test and Mann-Whitney U. All data and scripts are publicly
-archived to ensure reproducibility; full technical details are given in
-Chapter~\ref{chap:methodology}.
+The study follows a four-phase computational pipeline implemented in Python
+using the GitHub GraphQL and REST APIs. First, repositories are collected via
+the GitHub Search API using date-window partitioning and filtered by the
+agreed team criteria. Second, a two-pass geographic inference pipeline assigns
+a country to each repository owner using profile location fields, bio text,
+company fields, email and website domains, organisation memberships, and
+social network signals. Third, each repository is scanned for AI adoption
+signals using the three-pass layered detection pipeline. Fourth, adoption
+labels are joined with owner countries to produce a per-country ranking, and
+formal statistical tests are applied to answer each research question. All
+data and scripts are archived to ensure reproducibility; full technical
+details are given in Chapter~\ref{chap:methodology}.
 
 % ------------------------------------------------------------
 \section{Contributions}
@@ -186,16 +173,16 @@ literature:
     than averaging across all GitHub languages.
 
   \item \textbf{Multi-signal undercounting quantification.} By comparing
-    single-signal and four-signal detection on the same corpus, the study
+    single-signal and multi-signal detection on the same corpus, the study
     provides a concrete estimate of how much adoption is missed when only
     one detection signal is used, directly addressing the measurement concern
     raised by Khosravani and Mockus~\cite{khosravani2026}.
 
-  \item \textbf{Cross-community comparison.} The Egyptian-versus-global
-    comparison provides the first empirical data point on AI coding agent
-    adoption in a Middle Eastern/African developer community, contributing
-    evidence on equitable access to AI development tools across the Global
-    South.
+  \item \textbf{Country-level adoption ranking.} By inferring owner location
+    for all repositories in the corpus and applying formal statistical tests,
+    the study produces the first country-level ranking of AI coding agent
+    adoption within the JS/TS/npm ecosystem, with Wilson confidence intervals
+    and significance-tested pairwise comparisons.
 \end{enumerate}
 
 % ------------------------------------------------------------
@@ -207,10 +194,10 @@ The remainder of this thesis is organised as follows.
 Chapter~\ref{chap:litrev} reviews the relevant literature across six themes:
 AI coding agent definitions, empirical adoption studies, detection methodology,
 developer interaction research, the JS/TS/npm ecosystem as a research context,
-and geographic dimensions of open-source development.
+and geographic dimensions of AI coding tool adoption.
 Chapter~\ref{chap:methodology} describes the data collection pipeline, corpus
-construction, signal detection algorithm, and statistical analysis plan in
-full technical detail.
+construction, owner location inference, signal detection algorithm, and
+statistical analysis plan in full technical detail.
 Chapter~\ref{chap:results} presents the quantitative findings for each of the
 three research questions.
 Chapter~\ref{chap:discussion} interprets the findings, discusses threats to

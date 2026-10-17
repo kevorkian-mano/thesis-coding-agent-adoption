@@ -1,0 +1,346 @@
+% ============================================================
+% Chapter 4: Results
+% ============================================================
+
+\chapter{Results}
+\label{chap:results}
+
+This chapter presents the quantitative findings of the study in the order of
+the four-phase pipeline. Section~\ref{sec:res:corpus} reports the corpus
+construction outcome. Section~\ref{sec:res:location} reports the owner
+location inference results. Section~\ref{sec:res:detection} will report the
+AI adoption detection results once the three-pass pipeline completes.
+Section~\ref{sec:res:geographic} will report the geographic adoption ranking
+and the answers to the three research questions. Sections marked
+\emph{[pending]} are reserved for results not yet available at the time of
+writing.
+
+% ------------------------------------------------------------
+\section{Phase 1: Corpus Construction}
+\label{sec:res:corpus}
+% ------------------------------------------------------------
+
+\subsection{Collection and Filtering}
+
+The corpus was assembled by querying the GitHub GraphQL Search API in two
+separate passes (JavaScript and TypeScript separately, as the API does not
+support combined language filters in a single query) using rolling 5-day
+creation date windows from 24 February 2025 to October 2026. Windows that
+hit the 1,000-result cap were recursively halved until every window fitted.
+After applying all agreed inclusion filters (stars $\geq 4$, commits $\geq 50$,
+not a fork, JS+TS bytes $\geq 175{,}000$), the final corpus contains
+\textbf{60,129 repositories}. This is the population to which all subsequent
+analyses are applied; no sampling was performed.
+
+The creation date threshold of 24 February 2025 is central to the study design.
+It marks the point at which the npm ecosystem had broad, simultaneous access
+to multiple independent mature AI coding agents. Repositories created before this
+date were started before their developers had realistic access to the full range
+of today's agentic tools. Including pre-threshold repositories would mix
+projects that never had access to agents with those that did, producing a
+misleadingly low adoption rate. The 60,129 repositories in this corpus were
+all created after this threshold and therefore represent the population of
+interest: active JS/TS/npm projects built during the agentic era.
+
+\subsection{Ecosystem Distribution}
+
+Each repository was classified by package manager using the presence and type of
+lockfile at the root. The results are shown in Table~\ref{tab:ecosystem}.
+
+\begin{table}[h]
+\centering
+\caption{Ecosystem distribution of the 60,129-repository corpus.}
+\label{tab:ecosystem}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Ecosystem & Repositories & Share (\%) \\
+\midrule
+npm           & 28,248 & 47.0 \\
+pnpm          & 12,229 & 20.3 \\
+vanilla       & 10,177 & 16.9 \\
+npm\_no\_lock &  7,979 & 13.3 \\
+yarn          &  1,091 &  1.8 \\
+deno          &    250 &  0.4 \\
+bun           &    107 &  0.2 \\
+unknown       &     48 &  0.1 \\
+\midrule
+\textbf{Total} & \textbf{60,129} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+npm is the dominant ecosystem at 47.0\%, followed by pnpm at 20.3\%.
+The combined npm family (npm + npm\_no\_lock) accounts for 60.3\% of the
+corpus. pnpm's 20.3\% share is notably large relative to its overall market
+share, which likely reflects its popularity among more engineering-focused
+projects that are also more likely to adopt new tooling including AI coding agents.
+vanilla (no package.json or lockfile) accounts for 16.9\%, capturing JavaScript
+projects that do not use the npm registry for dependency management.
+Deno (0.4\%) and bun (0.2\%) are present but small, consistent with their
+recent launch dates and niche adoption.
+
+The ecosystem breakdown matters for the detection pipeline because some
+AI coding tools leave different traces depending on the package manager.
+npm-specific SDK dependencies (\texttt{@anthropic-ai/sdk},
+\texttt{@anthropic-ai/claude-code}) are only detectable in repositories with
+a \texttt{package.json} file, which excludes vanilla and some deno repositories.
+This means that the multi-signal approach used in this study captures a signal
+type that is entirely absent from language-agnostic adoption studies.
+
+% ------------------------------------------------------------
+\section{Phase 2: Owner Location Inference}
+\label{sec:res:location}
+% ------------------------------------------------------------
+
+\subsection{Two-Pass Pipeline Outcomes}
+
+The corpus contains 50,002 unique owner logins across its 60,129 repositories,
+an average of 1.2 repositories per owner. Country inference was performed in
+two passes. The fast pass (batch GraphQL on the \texttt{location} profile field,
+50 owners per request) resolved 13,625 owners, representing 27.2\% of the total.
+The subsequent deep pass (one query per unresolved owner, six supplementary
+signals tried in sequence) resolved a further 8,323 owners.
+
+The combined result is 21,948 owners with a country label, representing
+\textbf{43.9\%} of all unique owners. The remaining 28,054 owners (56.1\%)
+could not be attributed to any country and are labelled \texttt{not\_specified}.
+These owners are retained in all global totals but are excluded from the
+country-level adoption ranking. Table~\ref{tab:location_passes} summarises
+the two-pass pipeline.
+
+\begin{table}[h]
+\centering
+\caption{Owner location inference: two-pass summary.}
+\label{tab:location_passes}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Pass & Owners resolved & Cumulative (\%) \\
+\midrule
+Pass 1 (fast: location field)      & 13,625 & 27.2 \\
+Pass 2 (deep: bio, company, TLD, network) &  8,323 & 43.9 \\
+\midrule
+Total located                      & 21,948 & 43.9 \\
+Not specified                      & 28,054 & 56.1 \\
+Total unique owners                & 50,002 & 100.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The deep pass contributed an additional 16.7 percentage points of coverage
+on top of the fast pass alone. This is consistent with the finding of
+Wachs et al.~\cite{wachs2022}, who documented that roughly 60\% of GitHub
+developers leave the location field blank. The two-pass design specifically
+targets this population by using bio text, company domain TLDs, email TLDs,
+website TLDs, organisation membership location, and network majority vote as
+supplementary signals. The fact that the deep pass recovered 61\% as many
+additional owners as the fast pass (8,323 vs.\ 13,625) demonstrates the
+value of this supplementary inference: had the study relied solely on the
+\texttt{location} field, 28.0\% fewer owners would have been attributed to a
+country, disproportionately affecting countries whose developers are less likely
+to fill in the field.
+
+\subsection{Geographic Distribution of Located Owners}
+
+Table~\ref{tab:top25} shows the 25 countries with the highest number of
+located owners in the corpus.
+
+\begin{table}[h]
+\centering
+\caption{Top 25 countries by located owner count.}
+\label{tab:top25}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Country & Owners & Share of located (\%) \\
+\midrule
+China          & 3,462 & 15.8 \\
+United States  & 2,899 & 13.2 \\
+India          & 2,858 & 13.0 \\
+Germany        &   994 &  4.5 \\
+United Kingdom &   786 &  3.6 \\
+Brazil         &   770 &  3.5 \\
+Japan          &   680 &  3.1 \\
+France         &   642 &  2.9 \\
+Canada         &   634 &  2.9 \\
+South Korea    &   507 &  2.3 \\
+Indonesia      &   405 &  1.8 \\
+Turkey         &   400 &  1.8 \\
+Spain          &   364 &  1.7 \\
+Australia      &   345 &  1.6 \\
+Italy          &   332 &  1.5 \\
+Vietnam        &   295 &  1.3 \\
+Netherlands    &   283 &  1.3 \\
+Taiwan         &   250 &  1.1 \\
+Bangladesh     &   246 &  1.1 \\
+Poland         &   219 &  1.0 \\
+Russia         &   213 &  1.0 \\
+Pakistan       &   211 &  1.0 \\
+Singapore      &   194 &  0.9 \\
+Iran           &   186 &  0.8 \\
+Nigeria        &   182 &  0.8 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{China leads the corpus.} With 3,462 located owners, China is
+the most represented country, accounting for 15.8\% of all located owners. This
+is a notable finding given that during the fast pass (location field only), India
+led with 1,650 owners compared to China's 1,521. China's position at the top after
+the deep pass indicates that Chinese developers are significantly less likely to
+fill in the profile location field relative to their actual presence in the corpus:
+the deep pass added 1,941 additional Chinese owners (a 127\% increase), compared
+to 1,208 additional Indian owners (73\%) and 1,408 additional US owners (94\%).
+This differential resolution rate has an important methodological implication:
+studies that rely solely on the \texttt{location} field would substantially
+undercount Chinese developers and potentially misrank China in any geographic analysis.
+
+\noindent\textbf{Three-tier structure.} The top three countries (China 15.8\%,
+US 13.2\%, India 13.0\%) are closely clustered and together account for 42.0\%
+of all located owners. The next tier (Germany, UK, Brazil, Japan, France, Canada)
+each contribute 2.9--4.5\%. The remaining countries contribute under 2.5\% each.
+This distribution is broadly consistent with the global patterns documented by
+Wachs et al.~\cite{wachs2022}, who found OSS contribution to be concentrated
+in a small number of high-income countries alongside rapidly growing participation
+from China and India.
+
+\noindent\textbf{Global South representation.} Notable entries in the top 25
+include Indonesia (11th, 405), Vietnam (16th, 295), Bangladesh (19th, 246),
+Pakistan (22nd, 211), and Nigeria (25th, 182). These countries' presence in the
+top 25 reflects both the growing size of their developer communities and the
+specific focus of this study on the JS/TS ecosystem, which is dominant in
+web development and therefore well-represented in emerging-economy developer
+communities.
+
+\noindent\textbf{Scope for country-level analysis.} The geographic ranking
+in Phase 4 will include only countries with $\geq 30$ repositories in the corpus
+after the geographic join. Given that the average owner has 1.2 repositories,
+any country with $\geq 25$ located owners is likely to qualify. Based on
+Table~\ref{tab:top25}, a minimum of 25 countries will be eligible for the
+ranking, covering a geographically diverse set of high-income, middle-income,
+and lower-income developer communities.
+
+% ------------------------------------------------------------
+\section{Phase 3: AI Adoption Detection}
+\label{sec:res:detection}
+% ------------------------------------------------------------
+
+\subsection{Pass 1: Configuration File Detection}
+
+The first pass checked all 60,129 repositories for the presence of 12 known
+agent configuration files at the repository root. The results are shown in
+Table~\ref{tab:pass1_agents}.
+
+\begin{table}[h]
+\centering
+\caption{Pass 1 (config file) detections by agent.}
+\label{tab:pass1_agents}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Agent & Repositories & Share of Pass 1 (\%) \\
+\midrule
+Claude Code (\texttt{CLAUDE.md})           & 15,152 & 60.6 \\
+Claude Code / Generic (\texttt{AGENTS.md}) &  8,705 & 34.8 \\
+GitHub Copilot (\texttt{copilot-instructions.md}) & 715 & 2.9 \\
+Cursor (\texttt{.cursorrules})             &    298 &  1.2 \\
+Gemini CLI (\texttt{GEMINI.md})            &    106 &  0.4 \\
+Windsurf (\texttt{.windsurfrules})         &     20 &  0.1 \\
+Roo Code (\texttt{.roomodes})              &     12 &  0.0 \\
+Aider (\texttt{.aider.conf.yml})           &      2 &  0.0 \\
+\midrule
+\textbf{Total agentic (Pass 1)} & \textbf{25,010} & \textbf{100.0} \\
+Unclassified (no config file)   & 35,119 & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Pass 1 classified \textbf{25,010 repositories as agentic} (41.6\% of the corpus)
+using configuration files alone. This is the \emph{single-signal detection rate}
+that will be compared against the full three-pass rate to answer RQ2. The
+remaining 35,119 repositories (58.4\%) were passed to Pass 2 for commit trailer
+and PR branch scanning.
+
+The 41.6\% single-signal rate is already substantially higher than the
+22--28\% reported by Robbes et al.~\cite{robbesAgenticMuch2026} for established
+repositories across all GitHub languages. This is consistent with
+Robbes et al.~\cite{robbesAgenticVery2026}, who found 71--76\% adoption in
+newly created repositories: all repositories in this corpus were created after
+February 2025 and therefore belong to the same new-project population.
+
+\noindent\textbf{Claude Code's dominance.}
+CLAUDE.md and AGENTS.md together account for 23,857 out of 25,010 Pass 1
+detections (95.4\%). This concentration is striking. GitHub Copilot (715,
+2.9\%), Cursor (298, 1.2\%), and Gemini CLI (106, 0.4\%) are distant
+second-tier agents. Three explanations account for this pattern. First, Claude
+Code launched in March 2025, directly within the corpus window, so every
+repository in the corpus was created at a point when Claude Code was available
+from the first commit. Second, Claude Code is a terminal-first, CLI-native tool
+that integrates naturally into the \texttt{npm run} workflow, giving it a
+structural affinity with the JS/TS/npm ecosystem specifically. Third,
+CLAUDE.md files are part of Claude Code's recommended setup workflow and are
+therefore created at high rates by developers who adopt Claude Code seriously,
+while other agents (Copilot, Cursor) operate within IDEs without requiring a
+dedicated configuration file at the repository root. This last point also
+means that the actual usage share of Copilot and Cursor is likely higher than
+their config-file counts suggest, and that Pass 2 and Pass 3 will recover
+a significant share of their adoption that is invisible at the config-file level.
+
+\subsection{Pass 2: Commit Trailer and PR Branch Scan \emph{[pending]}}
+
+This subsection will report the number of repositories from the 35,119
+unclassified pool that receive a label from commit \texttt{Co-authored-by:}
+trailer patterns, author email patterns, and PR branch prefix patterns
+(\texttt{copilot/}, \texttt{devin/}, \texttt{codex/}).
+
+\subsection{Pass 3: Deep Scan \emph{[pending]}}
+
+This subsection will report additional repositories classified from the
+extended commit scan (up to 300 commits), PR body and label scan (up to
+100 PRs), and the \texttt{package.json} SDK dependency check. The npm
+SDK dependency signal (\texttt{@anthropic-ai/sdk},
+\texttt{@anthropic-ai/claude-code}, \texttt{@cursor/agent}) is unique to
+the JS/TS/npm ecosystem and has no equivalent in language-agnostic studies.
+
+\subsection{Final Classification Distribution \emph{[pending]}}
+
+This subsection will report the three-class distribution across all 60,129
+repositories and a breakdown by ecosystem (npm, pnpm, yarn, bun, deno, vanilla)
+once Passes 2 and 3 are complete.
+
+% ------------------------------------------------------------
+\section{Phase 4: Geographic Analysis and Research Questions \emph{[pending]}}
+\label{sec:res:geographic}
+% ------------------------------------------------------------
+
+This section will be completed after the detection pipeline and geographic join
+are finished. It will report answers to all three research questions.
+
+\subsection{RQ1: Scope of Adoption}
+
+\textbf{RQ1:} \textit{What proportion of active JS/TS/npm repositories on GitHub
+created since February 2025 show evidence of AI coding agent use, and is this
+proportion statistically non-trivial?}
+
+This subsection will report the global adoption rate (agentic + ai\_assisted)
+with a Wilson 95\% confidence interval and the result of a one-sample binomial
+test against the 5\% null hypothesis.
+
+\subsection{RQ2: Single-Signal vs.\ Multi-Signal Undercounting}
+
+\textbf{RQ2:} \textit{To what extent does relying on a single detection signal
+underestimate AI coding agent adoption compared with a multi-signal approach,
+and is this difference statistically significant?}
+
+This subsection will report the undercounting delta in percentage points (the
+difference between the Pass 1 config-file-only rate and the full three-pass rate)
+and the result of McNemar's test on the paired per-repository labels.
+
+\subsection{RQ3: Geographic Ranking}
+
+\textbf{RQ3:} \textit{Do AI coding agent adoption rates differ significantly
+across countries within the JS/TS/npm ecosystem, and which countries show the
+highest and lowest rates?}
+
+This subsection will present the country adoption ranking table (all countries
+with $\geq 30$ repositories), with adoption rate (\%), Wilson 95\% CI,
+repository count, and significance flag from pairwise Fisher's exact tests with
+Benjamini-Hochberg FDR correction. The result of the chi-squared test of
+independence across all eligible countries will also be reported.
