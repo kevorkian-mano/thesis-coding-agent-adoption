@@ -61,7 +61,13 @@ configure agents at the project level, going beyond the binary question of wheth
 a file exists. A limitation is that file presence does not reveal whether the agent
 actively follows the instructions or whether the file was created experimentally
 and then abandoned, and the study cannot directly measure the relationship between
-file content and agent output quality.
+file content and agent output quality. A counter-argument is that the rapid growth
+in context files may partly reflect template-driven creation rather than intentional
+configuration: Robbes et al.~\cite{robbesAgenticMuch2026} found that
+\texttt{AGENTS.md}, originally Codex's guidance file, is now used by more than 24
+agents and cannot reliably identify which agent is being configured, suggesting that
+many context files are copied between projects as boilerplate rather than authored
+as project-specific instructions.
 
 Galster et al.~\cite{galsterConfig2026} carried out an empirical study of
 configuration artifacts across 4,738 open-source GitHub repositories that contain
@@ -75,7 +81,12 @@ evidence of agent activity, providing a more grounded characterisation than file
 presence alone. Its main limitation is that the corpus is seeded by repositories
 with configuration files and therefore captures only the most explicitly configured
 subset of agentic development; repositories that use agents through commit trailers
-or PR markers without any configuration file are not represented.
+or PR markers without any configuration file are not represented. A counter-argument
+is that characterising this explicitly configured subset as representative may
+mislead: Khosravani and Mockus~\cite{khosravani2026} found that configuration-file
+signals alone detect up to 30 times less AI usage than a full four-signal approach,
+implying that the population of repositories that configure agents explicitly is a
+small and systematically unrepresentative fraction of all AI-assisted development.
 
 In a companion exploratory study, Galster et al.~\cite{galsterExploratory2026}
 examined broader patterns of AI coding agent adoption in open-source projects,
@@ -88,7 +99,12 @@ project sizes. The study's strength is its breadth, covering multiple ecosystems
 and adoption styles in a single analysis. By design, exploratory studies are
 hypothesis-generating rather than confirmatory, and the patterns reported represent
 tendencies in the studied sample rather than definitive characterisations of the
-full population of AI-assisted projects on GitHub.
+full population of AI-assisted projects on GitHub. A counter-argument is that
+exploratory adoption patterns are sensitive to which detection signals were used to
+identify AI activity in the first place: Mao et al.~\cite{mao2026} demonstrated
+that different signal types produce substantially different adoption rate estimates
+on the same corpus, meaning the adoption styles and prevalence observed by Galster
+et al.\ may change considerably if the underlying detection method is varied.
 
 Galster et al.~\cite{galsterHarness2026} examined \emph{agent harness engineering},
 analysing the structure and content of skill definitions and tool configurations
@@ -102,6 +118,12 @@ applicable because the files are human-readable and parseable without specialise
 tooling. A limitation is that this pattern may reflect the current early-stage
 maturity of harness engineering rather than a permanent property of the field, and
 the proportion of dynamically scripted harnesses may increase as the practice matures.
+A counter-argument is that the dominance of plain-language instructions may reflect
+tooling constraints rather than developer preference: Agarwal et al.~\cite{agarwal2026}
+found that more precise agent control is associated with better quality outcomes,
+suggesting that if dynamic scripting were more accessible developers would adopt it
+at higher rates, and the current instruction-dominant pattern would shift as the
+tooling matures.
 
 Agarwal, He, and Vasilescu~\cite{agarwal2026} conducted a longitudinal study
 distinguishing between AI IDEs (editor-integrated tools such as Cursor and
@@ -180,6 +202,11 @@ of the heuristic catalogue across 63 agents. A key limitation is that pooling al
 GitHub languages conflates high-adoption ecosystems such as npm with low-adoption
 ones such as legacy C repositories, making it impossible to determine whether
 the 22--28\% figure is high or low for any specific technical community.
+A counter-argument is that the companion study~\cite{robbesAgenticVery2026} shows
+that the 22--28\% figure is already a severe understatement for new projects, where
+adoption reaches 71--76\%; pooling established and new repositories into a single
+adoption rate therefore obscures a fundamental cohort effect, and the reported
+average may be unrepresentative of any real sub-population.
 
 \subsection{Adoption in New Repositories}
 
@@ -199,7 +226,13 @@ the corpus construction date threshold used in this thesis. A limitation is that
 the corpus of new repositories is small relative to all GitHub projects, and the
 quality filters applied may oversample highly active new projects where agent
 adoption would be expected to be highest, potentially overstating the true rate
-for all new repositories.
+for all new repositories. A counter-argument is that the quality filters themselves
+(at least 10 stars, 5,000 lines of code, 100 commits) may be biased towards
+AI-adopting repositories: Agarwal et al.~\cite{agarwal2026} found that agents
+rapidly increase both commit count and code volume, making it easier for
+agent-heavy projects to meet activity thresholds, which would artificially
+inflate the measured adoption rate among qualifying repositories independently of
+the selection on new projects.
 
 \subsection{A Census of All GitHub Repositories}
 
@@ -220,6 +253,13 @@ is that scanning all 180 million repositories, including abandoned projects and
 toy repositories, likely deflates the adoption rate relative to studies that
 restrict to active, maintained projects, meaning the absolute rates are not
 directly comparable to filtered-corpus studies such as this thesis.
+A counter-argument is that including unfiltered repositories may not simply
+deflate adoption: Kalliamvakou et al.~\cite{kalliamvakou2016} documented that
+a substantial fraction of GitHub repositories are experimental or non-genuine,
+and if AI tools disproportionately generate such throwaway projects, the
+180-million-repository denominator may itself include a large number of
+AI-created repositories classified as inactive, paradoxically suppressing the
+measured rate even while those repositories constitute evidence of AI use.
 
 % ------------------------------------------------------------
 \section{Detection Methodology and the Multi-Signal Challenge}
@@ -243,7 +283,14 @@ rather than the 3--5 covered in most prior work, it captures a far larger fracti
 of the true adoption signal. A limitation is that heuristics are static and may
 become outdated as agents change their default behaviours, and they are
 deliberately vulnerable to developers who modify commit trailers to conceal or
-simulate agent use.
+simulate agent use. A counter-argument is that heuristic catalogues face a
+fundamental coverage ceiling that model-based approaches can overcome: Ghaleb
+~\cite{ghaleb2026} demonstrated that a behavioural classifier trained without
+relying on explicit markers achieves a 97.2\% F1 score, implying that the signal
+missed by any static heuristic set---because agents change defaults, developers
+disable signatures, or new agents emerge---can in principle be recovered by
+approaches that learn to distinguish AI-generated from human-written code without
+depending on any specific identifier.
 
 Dey et al.~\cite{dey2020biman} introduced BIMAN, a systematic framework for
 detecting bots in GitHub commit and issue comment histories, predating the
@@ -293,7 +340,14 @@ limitation is that aggregating signals from multiple agents may also introduce
 false positives: a repository that shows one config-file signal from one agent
 and one trailer signal from another may be classified as more intensively agentic
 than warranted, so multi-signal approaches may overcount some dimensions of
-adoption while correctly capturing the overall rate.
+adoption while correctly capturing the overall rate. A counter-argument is that
+the shared corpus used to compare signal types was likely assembled using
+multi-signal methods, meaning the single-signal evaluations are applied to a
+population pre-selected for AI activity; Kalliamvakou et al.~\cite{kalliamvakou2016}
+showed that corpus construction choices systematically shape study conclusions, and
+this circular validation could overstate the undercounting gap because the
+denominator already excludes repositories detectable only by the signals being
+evaluated.
 
 % ------------------------------------------------------------
 \section{Developer Interaction with AI Coding Tools}
@@ -321,10 +375,17 @@ strength is its theoretically grounded account of human-AI interaction that move
 beyond simple acceptance rates. A limitation is the small sample size of 20
 participants and the controlled laboratory nature of the tasks, which may not
 reflect how professional developers behave in production codebases with existing
-conventions, test requirements, and team norms. Exploration-mode interactions are
-more likely to leave visible traces in commit diffs and PR descriptions, since
-developers write natural-language comments as prompts and accept large generated
-blocks, which has direct implications for signal detectability in this study.
+conventions, test requirements, and team norms. A counter-argument is that the
+bimodal acceleration/exploration framework may be an artefact of the controlled
+task design rather than a stable property of real-world interaction: Ziegler
+et al.~\cite{ziegler2022} studied 2,631 Copilot users in genuine production contexts
+and found that acceptance rates varied substantially across users in ways that resist
+clean categorical description, suggesting that real developer behaviour is more
+continuous and context-dependent than a two-mode model implies. Exploration-mode
+interactions are more likely to leave visible traces in commit diffs and PR
+descriptions, since developers write natural-language comments as prompts and accept
+large generated blocks, which has direct implications for signal detectability in
+this study.
 
 \subsection{Productivity and Acceptance Rates}
 
@@ -345,7 +406,13 @@ alongside self-reports. A key limitation is that the study was conducted by GitH
 and Microsoft employees evaluating their own product, creating potential conflicts
 of interest. Acceptance rate as a productivity measure also favours frequent
 lower-quality suggestions over rare high-quality ones, and the weak correlation
-($r = 0.24$) leaves most productivity variance unexplained.
+($r = 0.24$) leaves most productivity variance unexplained. A counter-argument is
+that self-reported productivity at moderate usage levels may not capture the quality
+degradation that emerges at high adoption intensities: Agarwal et al.~\cite{agarwal2026}
+found an 18--39\% post-merge bug rate increase when agents are overused, suggesting
+that Ziegler et al.'s positive association between acceptance rate and productivity
+holds only within a moderate usage range and would reverse at the higher adoption
+rates that are increasingly common in newer projects.
 
 \subsection{Pull Request Dynamics and Code Quality}
 
@@ -359,7 +426,12 @@ more code per PR. The study's strength is its observational scale and its attemp
 to control for confounders such as repository size and developer experience.
 A limitation is the absence of randomisation: teams with naturally fast review
 cycles produce more PRs regardless of AI use, and without random assignment of
-tools the causal interpretation remains tentative.
+tools the causal interpretation remains tentative. A counter-argument is that
+producing more code per PR does not necessarily represent a productivity gain:
+Oukhay et al.~\cite{oukhay2026} found that AI-attributed commits are reverted at
+7.2--7.6\% compared to 4.7\% for human commits, suggesting that higher code volume
+from AI-assisted PRs may partly reflect the generation of code that is subsequently
+identified as incorrect and reversed, rather than durable productive output.
 
 Ogenrwot and Businge~\cite{ogenrwot2026} characterised AI-generated pull requests
 on GitHub by analysing a corpus of PRs attributed to known AI coding agents through
@@ -373,6 +445,13 @@ terms of description length, label usage, and review comment volume. A limitatio
 is that the study is restricted to PRs identifiable through explicit markers, which
 excludes the majority of AI-assisted contributions that do not leave such signals,
 so the characterised population is unrepresentative of all AI-assisted PRs.
+A counter-argument is that the subset of AI-generated PRs identified through
+explicit markers may be systematically different from the broader population:
+Khosravani and Mockus~\cite{khosravani2026} found that explicit markers detect up
+to 30 times less AI activity than a full multi-signal approach, implying that the
+83.8\% acceptance rate applies to the most conspicuously attributed contributions,
+which may be the most carefully vetted subset rather than a representative sample
+of all AI-assisted PRs.
 
 Popescu et al.~\cite{popescu2026} examined the quality of AI-assisted code in
 open-source pull requests using static analysis metrics and post-merge defect
@@ -388,6 +467,14 @@ code. The study's strength is its multi-dimensional quality assessment, which go
 beyond simple revert rates. A limitation is that static analysis metrics capture
 only a subset of quality concerns and may miss runtime defects, security
 vulnerabilities, and architectural problems that manifest over longer time horizons.
+A counter-argument is that the higher quality variance observed for AI contributions
+may reflect task selection bias rather than an intrinsic property of AI-generated
+code: Barke et al.~\cite{barke2023} documented that developers use AI tools in
+exploration mode specifically when they are uncertain about what to write, which is
+also the context in which code quality is intrinsically hardest to achieve regardless
+of authorship, meaning that AI code appearing below the repository quality median may
+do so because it was applied to harder tasks rather than because of lower intrinsic
+quality.
 
 Oukhay et al.~\cite{oukhay2026} investigated whether AI-generated commits are
 reverted more frequently than human-authored commits by analysing repositories
@@ -451,17 +538,34 @@ industry reports is that they draw on platform-scale data not accessible to
 academic researchers. A limitation common to all such reports is that methodology
 is not fully disclosed and the data may be selected or framed to highlight
 commercially favourable trends; the causal attribution of TypeScript growth to
-AI tools is asserted rather than statistically demonstrated.
+AI tools is asserted rather than statistically demonstrated. A counter-argument
+is provided by Markov\'{a}~\cite{markova2025}, whose empirical study of
+JavaScript-to-TypeScript migrations on GitHub finds that migration activity is
+driven by multiple independent factors including framework requirements, team
+convention, and IDE tooling improvements, not solely by AI coding tools; this
+suggests that the Octoverse 2025 framing that attributes TypeScript's growth
+predominantly to AI agents may overstate the AI contribution and understate
+ecosystem-internal pressures already under way before the agentic era.
 
 GitHub, Inc.~\cite{octoverse2024} published the Octoverse 2024 report, providing
-a baseline for JavaScript and TypeScript ecosystem activity in the year immediately
-preceding the corpus window of this study, before broad access to multiple mature
-AI coding agents. The 2024 edition documents the scale of the JS/TS community
-and package manager usage patterns prior to the agentic era, which is the
-appropriate comparison point for interpreting 2025 and 2026 growth figures.
-Its limitation is the same as for the 2025 edition: industry reports lack
-peer-reviewed methodology and represent the data owner's selection and framing
-of statistics.
+an annual snapshot of developer activity and language trends across all of GitHub.
+Their approach combined platform-scale telemetry with aggregated repository and
+pull-request metadata to produce language rankings, contribution volume trends,
+and ecosystem growth figures. The key finding relevant to this thesis is that
+JavaScript and TypeScript together ranked as the two most-used languages on GitHub
+for the fourth consecutive year, and npm remained the dominant package registry
+by new package additions; the 2024 edition thus documents the pre-agentic baseline
+scale and composition of the JS/TS community that this study's corpus is drawn from.
+The strength of this report is that it draws on platform-complete data not
+accessible to academic researchers, providing an ecosystem reference point for
+contextualising adoption figures. A limitation common to all such reports is that
+methodology is not fully disclosed and the data may be selected or framed to
+highlight commercially favourable trends. A counter-argument is that the 2024
+report was compiled before broad access to multiple mature AI coding agents, so
+it cannot itself account for the structural shift in repository composition that
+Robbes et al.~\cite{robbesAgenticVery2026} document in 2025--2026 data; the
+pre-agentic baseline it establishes may underrepresent the full scale of AI agent
+activity that was already building by the time the report was published.
 
 Chatzidimitriou et al.~\cite{chatzidimitriou2018} built \emph{npm-miner}, an
 infrastructure for measuring software quality properties of the npm registry,
@@ -475,7 +579,13 @@ its scale and the establishment of quality baselines for the npm ecosystem that
 subsequent work can use as reference points. A limitation is that it dates from
 2018 and predates the proliferation of AI-generated packages; quality
 distributions and dependency patterns in the current npm registry may differ
-substantially.
+substantially. A counter-argument comes from Robbes et al.~\cite{robbesAgenticVery2026},
+who find that in 2025--2026 agentic tools are already detected in 71--76\% of
+newly created repositories; if AI agents now generate a substantial fraction of
+new npm packages, then the 2018 quality baselines are not merely outdated---they
+are baselines from a structurally different era---and comparisons between the
+Chatzidimitriou metrics and any current measurement should be interpreted as
+capturing a distributional shift rather than organic evolution of the registry.
 
 \subsection{Ecosystem Affinity with AI Coding Agents}
 
@@ -521,6 +631,15 @@ et al.\ for filtering out non-representative projects. A limitation is that the
 study was conducted in 2016 and the landscape of GitHub usage has changed
 considerably with the rise of AI-generated repositories and organisational
 migrations, so some of the original findings may not hold at current scale.
+A counter-argument is that the AI-agentic era has intensified precisely the
+problems Kalliamvakou et al.\ identified: Robbes et al.~\cite{robbesAgenticVery2026}
+document that 71--76\% of newly created repositories in 2025--2026 show signs of
+agentic tool use, meaning the fraction of non-representative, short-lived, or
+single-author repositories on GitHub has likely grown substantially beyond the
+2016 estimates; the filter criteria recommended by Kalliamvakou et al.\ (and
+adopted in this thesis) are therefore more necessary than ever, but their
+specific thresholds may require upward revision in future corpus construction
+studies targeting AI-era GitHub data.
 
 Dabi\'c et al.~\cite{dabic2021} introduced the SEART GitHub Search (GHS) tool,
 a publicly accessible infrastructure for sampling GitHub repositories with
@@ -532,8 +651,12 @@ repository characteristics. They found that star-based stratification produces
 corpora with more stable and comparable properties across studies than random
 sampling or contributor-based stratification. The study's strength is its direct
 practical contribution to reproducible corpus construction, and the SEART GHS
-tool is widely used in MSR research. A counter-argument is that star counts can
-be influenced by promotional activity and are not always a reliable proxy for
+tool is widely used in MSR research. A limitation is that the SEART GHS tool
+was designed before AI-generated repositories became a substantial fraction of
+GitHub content; the star and commit thresholds it recommends were calibrated on
+pre-agentic data and may now systematically admit or exclude AI-generated
+repositories in ways that were not anticipated when the tool was evaluated. A
+counter-argument is that star counts can be influenced by promotional activity and are not always a reliable proxy for
 project quality or representativeness; corpora filtered by stars may oversample
 repositories from well-networked developer communities and undersample equally
 active repositories from communities with lower social visibility on the platform.
@@ -564,11 +687,15 @@ finding that self-reported location is broadly consistent with other geographic
 signals for developers who fill in the field, though developers from lower-income
 countries are more likely to leave the field blank. The study's strength is its
 large scale and the validation of the location inference methodology that underpins
-Phase 2 of this thesis's pipeline. A counter-argument is that the study measures
-contribution \emph{visibility} (stars, forks, reach) rather than contribution
-volume, and visible contributions from the US may reflect the dominance of
-English-language documentation and US-based repositories in GitHub discovery
-mechanisms rather than a genuine effort gap.
+Phase 2 of this thesis's pipeline. A limitation is that the data collection
+predates the rise of AI coding agents, and the geographic concentration metrics
+may shift as AI tools lower the barrier to contribution in lower-income countries;
+the study cannot therefore speak to whether the observed concentration will
+persist, narrow, or reverse in the agentic era. A counter-argument is that the
+study measures contribution \emph{visibility} (stars, forks, reach) rather than
+contribution volume, and visible contributions from the US may reflect the
+dominance of English-language documentation and US-based repositories in GitHub
+discovery mechanisms rather than a genuine effort gap.
 
 \subsection{Global Diffusion of AI Coding Tools}
 
@@ -590,7 +717,15 @@ Limitations include the focus on Python, which may not generalise to the JS/TS
 ecosystem, and the reliance on function-level AI detection, which captures only
 a subset of the signals used in more comprehensive multi-signal detection pipelines
 and does not include repository-level signals such as configuration files or
-PR markers. This thesis extends this line of work by applying a multi-signal
+PR markers. A counter-argument is that the geographic ordering observed by
+Daniotti et al.\ for Python may not translate directly to the JS/TS ecosystem:
+Robbes et al.~\cite{robbesAgenticVery2026} find that Claude Code dominates new
+JS/TS repositories by a factor of approximately $3\times$ over GitHub Copilot,
+whereas Copilot has stronger relative penetration in Python-heavy enterprise
+settings; if the agent tool composition differs between ecosystems, the geographic
+adoption pattern---which may be shaped partly by which tools are available through
+employer licences versus individual subscriptions---could differ substantially from
+the Daniotti et al.\ findings. This thesis extends this line of work by applying a multi-signal
 detection pipeline to the JS/TS/npm ecosystem and applying formal statistical
 tests (chi-squared and pairwise Fisher's exact with false-discovery rate
 correction) to test whether country-level differences are statistically

@@ -1,0 +1,206 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=1.8cm]{geometry}
+\usepackage{booktabs}
+\usepackage{multicol}
+\usepackage{parskip}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{hyperref}
+
+\setlength{\parskip}{3pt}
+\setlength{\columnsep}{1cm}
+
+\title{\textbf{Pipeline Results Summary}\\
+\large AI Coding Agent Adoption in JS/TS/npm Repositories on GitHub\\[2pt]
+\normalsize Manuel Youssef Haik Kevorkian}
+\date{October 2026 \quad \textcolor{red}{\textbf{DRAFT -- not for submission}}}
+
+\begin{document}
+\maketitle
+\vspace{-10pt}
+\hrule
+\vspace{6pt}
+
+% ─── STAGE 1 ──────────────────────────────────────────────────────────────────
+\section*{Stage 1 — Corpus Construction}
+
+\begin{multicols}{2}
+
+\textbf{Corpus:} 60,129 repositories created after 24 Feb 2025, JS+TS bytes
+$\geq 175{,}000$, $\geq 4$ stars, $\geq 50$ commits, not a fork.
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Ecosystem & Repos & \% \\
+\midrule
+npm           & 28,248 & 47.0 \\
+pnpm          & 12,229 & 20.3 \\
+vanilla       & 10,177 & 16.9 \\
+npm\_no\_lock &  7,979 & 13.3 \\
+yarn          &  1,091 &  1.8 \\
+deno          &    250 &  0.4 \\
+bun           &    107 &  0.2 \\
+\midrule
+\textbf{Total} & \textbf{60,129} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{Language split:} TypeScript 45,314 (75.4\%) \quad JavaScript 14,815 (24.6\%)
+
+\vspace{6pt}
+% ─── STAGE 2 ────────────────────────────────────────────────────────────────
+\section*{Stage 2 — Owner Location Inference}
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Pass & Owners & Cumul.\ \% \\
+\midrule
+Pass 1 (location field)   & 13,625 & 27.2 \\
+Pass 2 (bio, TLD, network)&  8,323 & 43.9 \\
+\midrule
+Located total             & 21,948 & 43.9 \\
+Not specified             & 28,054 & 56.1 \\
+\textbf{Unique owners}    & \textbf{50,002} & \\
+\bottomrule
+\end{tabular}
+
+Top countries: China 3,462 (15.8\%), US 2,899 (13.2\%), India 2,858 (13.0\%)
+\end{multicols}
+
+\hrule
+\vspace{4pt}
+
+% ─── STAGE 3 ──────────────────────────────────────────────────────────────────
+\section*{Stage 3 — AI Adoption Detection (Four Passes)}
+
+\begin{multicols}{2}
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Pass & Agentic & Input \\
+\midrule
+Pass 1 — config files    & 25,010 (41.6\%) & 60,129 \\
+Pass 2 — commit trailers &  9,618 (27.4\%) & 35,119 \\
+Pass 3 — deep scan       &    764 (3.5\%)  & 21,655 \\
+Stage 3d Phase 1 (re-classify) & 3,846 & 8,503 \\
+Stage 3d Phase 2 (deep API)    &   258 & 4,657 \\
+\bottomrule
+\end{tabular}
+
+\textbf{Pass 1 top agents:}\\
+Claude Code (CLAUDE.md) \quad 15,152 (60.6\%)\\
+Claude Code / Generic (AGENTS.md) \quad 8,705 (34.8\%)\\
+GitHub Copilot \quad 715 (2.9\%) \quad Cursor \quad 298 (1.2\%)
+
+\columnbreak
+
+\textbf{Final Classification (corpus\_detected\_full\_v2.csv):}
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Label & Repos & \% \\
+\midrule
+Agentic      & 39,496 & 65.7 \\
+AI-assisted  &  4,399 &  7.3 \\
+None         & 16,234 & 27.0 \\
+\midrule
+\textbf{Total adopted} & \textbf{43,895} & \textbf{73.0} \\
+\textbf{Total corpus}  & \textbf{60,129} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Breakdowns:}\\
+TypeScript 77.1\% \quad JavaScript 60.5\%\\
+pnpm 82.5\% \quad npm 73.7\% \quad vanilla 57.5\%\\
+Large repos 91.7\% \quad Medium 82.7\% \quad Small 70.5\%\\[3pt]
+\textbf{Tool loyalty:} 95.4\% of adopters use 1 tool\\
+Claude Code only: 59.2\% of adopters\\
+Top pair: Claude Code + Cursor (628 repos, 1.04\%)
+\end{multicols}
+
+\hrule
+\vspace{4pt}
+
+% ─── STAGE 4 ──────────────────────────────────────────────────────────────────
+\section*{Stage 4 — Geographic Analysis \& Research Questions}
+
+\textbf{Coverage:} 65 countries with $\geq 30$ repos \quad
+26,586 repos with country (44.2\% of corpus) \quad
+Global adoption (located): 71.3\%
+
+\begin{multicols}{2}
+
+\textbf{Top 10 countries:}
+
+\begin{tabular}{@{}rlrr@{}}
+\toprule
+Rk & Country & Repos & Rate\% \\
+\midrule
+ 1 & Belgium         &    89 & 89.9* \\
+ 2 & South Korea     &   643 & 86.2* \\
+ 3 & Israel          &   181 & 85.6* \\
+ 4 & UAE             &   114 & 85.1* \\
+ 5 & Malaysia        &    84 & 84.5* \\
+ 6 & Taiwan          &   323 & 84.2* \\
+ 7 & New Zealand     &    84 & 83.3* \\
+ 8 & Sweden          &   197 & 82.7* \\
+ 9 & United States   & 3,608 & 82.5* \\
+10 & Netherlands     &   329 & 82.1* \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{Bottom 10 countries:}
+
+\begin{tabular}{@{}rlrr@{}}
+\toprule
+Rk & Country & Repos & Rate\% \\
+\midrule
+56 & Bangladesh  &   303 & 44.2* \\
+57 & Iran        &   217 & 43.8* \\
+58 & Pakistan    &   268 & 41.8* \\
+59 & Ghana       &    40 & 40.0* \\
+60 & Morocco     &    79 & 39.2* \\
+61 & Kenya       &   163 & 36.8* \\
+62 & Nepal       &    52 & 34.6* \\
+63 & Sri Lanka   &    92 & 33.7* \\
+64 & Ethiopia    &    91 & 31.9* \\
+65 & Rwanda      &    49 & 22.4* \\
+\bottomrule
+\end{tabular}
+
+\end{multicols}
+
+{\small * = significantly different from rest-of-world (Fisher's exact, BH FDR $\alpha=0.05$). \quad
+Major corpora: China 4,196 repos 77.2\%* \quad India 3,447 repos 51.2\%* \quad Germany 1,155 repos 78.2\%*}
+
+\vspace{6pt}
+\hrule
+\vspace{4pt}
+
+\section*{Research Questions — Statistical Test Results}
+
+\begin{tabular}{@{}p{3.2cm} p{5.5cm} p{3.2cm} p{3.0cm}@{}}
+\toprule
+\textbf{RQ} & \textbf{Finding} & \textbf{Test} & \textbf{Decision} \\
+\midrule
+\textbf{RQ1} Scope of adoption &
+  73.0\% adoption rate (43,895/60,129). Wilson 95\% CI: [72.65\%, 73.35\%] &
+  Binomial test vs $H_0{:}\ p \leq 5\%$ \newline $p < 10^{-300}$ &
+  \textcolor{red}{\textbf{Reject $H_0$}} \\[4pt]
+\textbf{RQ2} Undercounting &
+  Single-signal (Pass 1): 41.6\%. Multi-signal: 73.0\%. Delta: \textbf{+31.41 pp}. $b=18{,}885$, $c=0$ &
+  McNemar $\chi^2 = 18{,}883$ \newline $p < 10^{-300}$ &
+  \textcolor{red}{\textbf{Reject $H_0$}} \\[4pt]
+\textbf{RQ3} Geographic variation &
+  Rates range from 89.9\% (Belgium) to 22.4\% (Rwanda). 41/65 countries significantly differ from global mean &
+  $\chi^2 = 2234.55$, $df=64$ \newline $p < 10^{-300}$ &
+  \textcolor{red}{\textbf{Reject $H_0$}} \\
+\bottomrule
+\end{tabular}
+
+\end{document}

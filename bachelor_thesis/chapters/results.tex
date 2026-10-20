@@ -8,8 +8,9 @@
 This chapter presents the quantitative findings of the study in the order of
 the four-phase pipeline. Section~\ref{sec:res:corpus} reports the corpus
 construction outcome. Section~\ref{sec:res:location} reports the owner
-location inference results. Section~\ref{sec:res:detection} will report the
-AI adoption detection results once the three-pass pipeline completes.
+location inference results. Section~\ref{sec:res:detection} reports the
+AI adoption detection results from the complete four-pass pipeline (Passes 1--3
+plus reclassification pass Stage 3d, all complete).
 Section~\ref{sec:res:geographic} will report the geographic adoption ranking
 and the answers to the three research questions. Sections marked
 \emph{[pending]} are reserved for results not yet available at the time of
@@ -283,64 +284,565 @@ means that the actual usage share of Copilot and Cursor is likely higher than
 their config-file counts suggest, and that Pass 2 and Pass 3 will recover
 a significant share of their adoption that is invisible at the config-file level.
 
-\subsection{Pass 2: Commit Trailer and PR Branch Scan \emph{[pending]}}
+\subsection{Pass 2: Commit Trailer and PR Branch Scan}
 
-This subsection will report the number of repositories from the 35,119
-unclassified pool that receive a label from commit \texttt{Co-authored-by:}
-trailer patterns, author email patterns, and PR branch prefix patterns
-(\texttt{copilot/}, \texttt{devin/}, \texttt{codex/}).
+Pass 2 scanned the 35,119 unclassified repositories from Pass 1 for
+\texttt{Co-authored-by:} trailer patterns, author email patterns, and
+agent-style PR branch prefixes (\texttt{copilot/}, \texttt{devin/},
+\texttt{codex/}, etc.).\ across up to 100 recent commits and 50 pull requests
+per repository. The results are shown in Table~\ref{tab:pass2}.
 
-\subsection{Pass 3: Deep Scan \emph{[pending]}}
+\begin{table}[h]
+\centering
+\caption{Pass 2 (commit trailer and PR branch scan) outcomes.}
+\label{tab:pass2}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Label & Repositories & Share of Pass 2 input (\%) \\
+\midrule
+Agentic     &  9,618 & 27.4 \\
+AI-assisted &  3,846 & 11.0 \\
+Unclassified & 21,655 & 61.7 \\
+\midrule
+\textbf{Total} & \textbf{35,119} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-This subsection will report additional repositories classified from the
-extended commit scan (up to 300 commits), PR body and label scan (up to
-100 PRs), and the \texttt{package.json} SDK dependency check. The npm
-SDK dependency signal (\texttt{@anthropic-ai/sdk},
-\texttt{@anthropic-ai/claude-code}, \texttt{@cursor/agent}) is unique to
-the JS/TS/npm ecosystem and has no equivalent in language-agnostic studies.
+Pass 2 classified a further \textbf{9,618 repositories as agentic} (27.4\% of
+its input pool) and 3,846 as AI-assisted (11.0\%), raising the cumulative
+agentic count to $25{,}010 + 9{,}618 = \mathbf{34{,}628}$ repositories
+(57.6\% of the full corpus). The 21,655 repositories (61.7\%) that yielded no
+commit-level signal were passed to Pass 3.
 
-\subsection{Final Classification Distribution \emph{[pending]}}
+The agentic rate within Pass 2's input pool (27.4\%) is substantially lower
+than Pass 1's rate (41.6\% of the full corpus). This is expected: Pass 1
+captured the easiest-to-detect repositories --- those with a committed
+configuration file --- whereas Pass 2's input consists of repositories with no
+such file. The 11.0\% AI-assisted pool predominantly consists of repositories
+with one or two commit trailers from a single agent; under the tiered
+classification rule used in this study, these will be re-examined in Pass 4
+(stage 3d) where most are expected to be upgraded to agentic, since a single
+agent-attributed commit constitutes a strong signal.
 
-This subsection will report the three-class distribution across all 60,129
-repositories and a breakdown by ecosystem (npm, pnpm, yarn, bun, deno, vanilla)
-once Passes 2 and 3 are complete.
+\subsection{Pass 3: Deep Scan}
+
+Pass 3 applied an extended multi-signal scan to the 21,655 repositories that
+remained unclassified after Pass 2. For each repository, a single GraphQL
+batch query (5 repositories per request) retrieved up to 150 recent commits,
+50 pull requests with metadata, the contents of \texttt{.gitignore}, the list
+of repository topic tags, and flags for the presence of dedicated agent ignore
+files (\texttt{.cursorignore}, \texttt{.aiderignore}, etc.). From these raw
+payloads, the pipeline extracted seven distinct signal families and applied a
+tiered classification rule. The results are shown in Table~\ref{tab:pass3}.
+
+\begin{table}[h]
+\centering
+\caption{Pass 3 (deep scan) outcomes.}
+\label{tab:pass3}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Label & Repositories & Share of Pass 3 input (\%) \\
+\midrule
+Agentic      &    764 &  3.5 \\
+AI-assisted  &  4,657 & 21.5 \\
+None         & 16,234 & 75.0 \\
+\midrule
+\textbf{Total} & \textbf{21,655} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Pass 3 classified a further \textbf{764 repositories as agentic} (3.5\% of
+its input) and 4,657 as AI-assisted (21.5\%), leaving 16,234 repositories
+(75.0\%) with no detectable signal. The lower agentic detection rate compared
+to Pass 2 (27.4\%) is expected: Passes 1 and 2 had already captured the
+most conspicuous signals --- configuration files and commit trailers ---
+so the repositories reaching Pass 3 are by definition those with the weakest
+or most indirect evidence. The 21.5\% AI-assisted rate, however, shows that
+a substantial fraction of these repositories do carry partial evidence that
+warrants re-examination in the reclassification pass (Stage 3d).
+
+\noindent\textbf{Signal diversity in Pass 3.}
+The signals that drove Pass 3 classifications include: bot account authorship
+across 20 known agent bot logins (e.g.\ \texttt{github-copilot[bot]},
+\texttt{coderabbitai[bot]}); CI workflow files containing agent-specific job
+steps; PR labels and PR body text with agent attribution phrases; dedicated
+agent ignore files (\texttt{.cursorignore}, \texttt{.aiderignore}); and
+GitHub repository topic tags (e.g.\ \texttt{claude-code}, \texttt{opencode},
+\texttt{agentic-ai}). The \texttt{.gitignore} signal is unique to this
+study's pipeline: it detects repositories where the developer used an agent
+but did not commit its configuration file, leaving only a local-ignore entry
+for the agent's working directory as evidence. This signal recovered
+repositories that all prior passes, including the extended commit scan, had
+missed.
+
+\subsection{Cumulative Classification After Three Passes}
+
+Table~\ref{tab:pass3_cumulative} shows the cumulative classification
+distribution across all 60,129 repositories after completing all three
+detection passes.
+
+\begin{table}[h]
+\centering
+\caption{Cumulative classification distribution after Passes 1--3.}
+\label{tab:pass3_cumulative}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Label & Repositories & Share of corpus (\%) \\
+\midrule
+Agentic      & 35,392 & 58.9 \\
+AI-assisted  &  8,503 & 14.1 \\
+None         & 16,234 & 27.0 \\
+\midrule
+\textbf{Total adopted (agentic + AI-assisted)} & \textbf{43,895} & \textbf{73.0} \\
+\textbf{Total corpus} & \textbf{60,129} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+After three passes, \textbf{73.0\%} of the corpus shows at least some evidence
+of AI coding agent use. The 73.0\% total adoption rate is closely consistent
+with Robbes et al.~\cite{robbesAgenticVery2026}, who found 71--76\% adoption
+in newly created repositories across all GitHub languages. This convergence
+provides strong external validation that the multi-signal pipeline is capturing
+the same underlying phenomenon at the appropriate order of magnitude.
+
+The 8,503 AI-assisted repositories represent cases where the pipeline found
+signals below the agentic threshold under the tiered classification rule. These
+repositories were passed to the reclassification pass (Stage 3d), described in
+the subsection below.
+
+\subsection{Reclassification Pass (Stage 3d)}
+
+Stage 3d examined all 8,503 AI-assisted repositories in two phases. Phase 1
+re-interpreted the existing signal evidence under the tiered rule without any
+new API calls: the 3,846 repositories from Pass 2 each carried at least one
+commit trailer, which constitutes a STRONG signal under the tiered rule; they
+had been labelled AI-assisted only under the older count-based rule
+(1--2 trailers) and were immediately upgraded to agentic. Phase 2 performed
+targeted deep API checks on the remaining 4,657 repositories from Pass 3,
+fetching up to 300 commits, 100 pull requests, CI workflow files, and extended
+configuration files to search for stronger evidence. Table~\ref{tab:stage3d}
+summarises the Stage 3d outcomes.
+
+\begin{table}[h]
+\centering
+\caption{Stage 3d reclassification outcomes across all 8,503 AI-assisted repos.}
+\label{tab:stage3d}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Phase & Upgraded to agentic & Share of 8,503 (\%) \\
+\midrule
+Phase 1 (re-interpret existing signals, no API) & 3,846 & 45.2 \\
+Phase 2 (deep API checks)                       &   258 &  3.0 \\
+\midrule
+\textbf{Total upgraded}     & \textbf{4,104} & \textbf{48.3} \\
+Confirmed AI-assisted (not upgradeable) & 4,399 & 51.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Phase 1's 100\% upgrade rate for Pass 2 repositories confirms that the
+reclassification was necessary: under the original count-based rule, a single
+commit trailer was treated as weak evidence, whereas under the tiered rule it
+is a STRONG signal regardless of count. Phase 2's 3.0\% upgrade rate is low
+by design --- these repositories reached Phase 2 precisely because no strong
+signal had been found in any prior pass. The 258 Phase 2 upgrades were driven
+primarily by agent-style PR branch prefixes (209), extended configuration
+files (121), and CI workflow files (46).
+
+\subsection{Final Classification Distribution}
+
+Table~\ref{tab:final_labels} shows the definitive three-class distribution
+across all 60,129 repositories after the complete four-pass pipeline.
+
+\begin{table}[h]
+\centering
+\caption{Final classification distribution after the complete four-pass pipeline.}
+\label{tab:final_labels}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Label & Repositories & Share of corpus (\%) \\
+\midrule
+Agentic      & 39,496 & 65.7 \\
+AI-assisted  &  4,399 &  7.3 \\
+None         & 16,234 & 27.0 \\
+\midrule
+\textbf{Total adopted (agentic + AI-assisted)} & \textbf{43,895} & \textbf{73.0} \\
+\textbf{Total corpus} & \textbf{60,129} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The final adoption rate of \textbf{73.0\%} (43,895 repositories) is unchanged
+from the pre-reclassification total because Stage 3d reclassifies within the
+already-adopted category only: it moves repositories from AI-assisted to
+agentic but does not promote repositories from none. The reclassification does,
+however, substantially shift the balance within the adopted group: the agentic
+share rises from 58.9\% (pre-Stage 3d) to \textbf{65.7\%}, and the AI-assisted
+share falls from 14.1\% to 7.3\%. This shift matters for the geographic analysis
+in Phase 4, which uses the agentic rate (not total adoption rate) as its primary
+measure of intensity of AI agent use.
+
+The 16,234 repositories (27.0\%) classified as none are the confirmed
+non-adopters: they passed through all four detection passes --- configuration
+file scan, commit trailer scan, deep multi-signal scan, and targeted
+reclassification --- without triggering any signal. These repositories form the
+denominator against which all country-level adoption rates are computed in
+Phase 4.
+
+\subsection{Adoption Breakdowns by Corpus Dimension}
+
+The final classified corpus was disaggregated along three dimensions intrinsic
+to the JS/TS/npm ecosystem: package manager ecosystem, primary language, and
+repository size stratum. These breakdowns require no additional data collection
+and are computed directly from the final labels.
+
+\noindent\textbf{Ecosystem.}
+Table~\ref{tab:breakdown_eco} shows adoption rates by package manager ecosystem.
+pnpm repositories have the highest adoption rate at 82.5\%, approximately 9
+percentage points above the npm baseline (73.7\%). This is consistent with
+pnpm's reputation as the package manager of choice for more
+engineering-intensive projects, which are also more likely to adopt new tooling
+such as AI coding agents. vanilla repositories (no lockfile) show the lowest
+rate at 57.5\%, which is expected since the npm SDK dependency signal
+(\texttt{@anthropic-ai/sdk}) is unavailable in repositories without a
+\texttt{package.json}, meaning some adoption is structurally invisible to the
+detection pipeline.
+
+\begin{table}[h]
+\centering
+\caption{Adoption rate by package manager ecosystem.}
+\label{tab:breakdown_eco}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Ecosystem & Repos & Adopted & Rate (\%) & Agentic (\%) \\
+\midrule
+pnpm          & 12,229 & 10,089 & 82.5 & 75.3 \\
+deno          &    250 &    201 & 80.4 & 75.6 \\
+npm\_no\_lock &  7,979 &  6,190 & 77.6 & 71.0 \\
+npm           & 28,248 & 20,809 & 73.7 & 66.2 \\
+bun           &    107 &     67 & 62.6 & 57.9 \\
+yarn          &  1,091 &    676 & 62.0 & 54.5 \\
+vanilla       & 10,177 &  5,857 & 57.5 & 49.9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Language.}
+TypeScript repositories show a substantially higher adoption rate (77.1\%) than
+JavaScript repositories (60.5\%), a gap of 16.6 percentage points. This is
+consistent with the finding of Robbes et al.~\cite{robbesAgenticVery2026} and
+Galster et al.~\cite{galsterConfig2026} that TypeScript is the most common
+language in repositories with agent configuration files: TypeScript's strict
+typing produces fewer incorrect AI suggestions and requires less manual
+correction, giving developers a stronger incentive to adopt agents. The corpus
+itself is 75.4\% TypeScript (45,314 repositories), reflecting the broader
+ecosystem trend documented in Octoverse 2025~\cite{octoverse2025}.
+
+\noindent\textbf{Size stratum.}
+Adoption scales monotonically with repository size: small repositories ($\leq
+50$ stars) show 70.5\% adoption, medium (51--500 stars) 82.7\%, and large
+($>500$ stars) 91.7\%. Large repositories are almost universally agentic
+(86.6\%). This pattern may reflect a combination of two effects: larger
+projects have more development activity and thus more opportunities for an
+agent signal to appear, and developers who invest heavily in a project (enough
+to attract $>500$ stars) are more likely to use advanced tooling.
+
+\begin{table}[h]
+\centering
+\caption{Adoption rate by repository size stratum.}
+\label{tab:breakdown_size}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Size stratum & Repos & Adopted & Rate (\%) & Agentic (\%) \\
+\midrule
+Small ($\leq$ 50 stars)    & 49,562 & 34,955 & 70.5 & 63.3 \\
+Medium (51--500 stars)     &  8,375 &  6,929 & 82.7 & 74.3 \\
+Large ($>$ 500 stars)      &  2,192 &  2,011 & 91.7 & 86.6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Co-adoption and tool loyalty.}
+Of the 43,895 adopted repositories, 42,497 (96.8\%) have at least one named
+agent recorded. Claude Code (CLAUDE.md signal) accounts for 44.7\% of all
+60,129 corpus repositories, and Claude Code / Generic (AGENTS.md) accounts
+for a further 14.5\%. GitHub Copilot is detected in 4.9\%, Cursor in 3.7\%,
+and OpenAI Codex in 3.5\%. The remaining tools each account for under 1\%.
+
+Tool loyalty is high: 95.4\% of adopters use exactly one tool, and 59.2\%
+use Claude Code exclusively. Multi-tool repositories account for only 4.6\%
+of adopters (1,965 repositories). Among multi-tool pairs, Claude Code +
+Cursor is the most common combination (628 repositories, 1.04\% of the corpus),
+followed by Claude Code + GitHub Copilot (439, 0.73\%) and Claude Code +
+OpenAI Codex (276, 0.46\%). In all top pairs, Claude Code is one of the
+two tools, confirming its central position in the JS/TS/npm agentic ecosystem.
 
 % ------------------------------------------------------------
-\section{Phase 4: Geographic Analysis and Research Questions \emph{[pending]}}
+\section{Phase 4: Geographic Analysis and Research Questions}
 \label{sec:res:geographic}
 % ------------------------------------------------------------
 
-This section will be completed after the detection pipeline and geographic join
-are finished. It will report answers to all three research questions.
+\subsection{Geographic Coverage}
 
+The geographic join matched 26,586 of the 60,129 corpus repositories to a
+country (44.2\%), covering 65 countries with at least 30 repositories each.
+The remaining 33,543 repositories (55.8\%) belong to owners whose location
+could not be inferred after the two-pass location pipeline and are excluded
+from country-level comparisons. All Phase 4 analyses are conducted on the
+26,586 located repositories; the global adoption rate within this subset is
+71.3\%, consistent with the full-corpus rate of 73.0\%.
+
+\subsection{Country Adoption Ranking}
+
+Table~\ref{tab:country_rank_hi} and Table~\ref{tab:country_rank_lo} present
+the full ranking of all 65 eligible countries, sorted by adoption rate
+descending. Countries marked with * are significantly different from the
+rest-of-world at $\alpha = 0.05$ after Benjamini-Hochberg FDR correction.
+
+\begin{table}[h]
+\centering
+\caption{Country adoption ranking, ranks 1--33 (higher adoption half).}
+\label{tab:country_rank_hi}
+\small
+\begin{tabular}{@{}rlrrrr@{}}
+\toprule
+Rank & Country & Repos & Rate (\%) & 95\% CI & Sig \\
+\midrule
+ 1 & Belgium              &    89 & 89.9 & [81.9, 94.6] & * \\
+ 2 & South Korea          &   643 & 86.2 & [83.3, 88.6] & * \\
+ 3 & Israel               &   181 & 85.6 & [79.8, 90.0] & * \\
+ 4 & United Arab Emirates &   114 & 85.1 & [77.4, 90.5] & * \\
+ 5 & Malaysia             &    84 & 84.5 & [75.3, 90.7] & * \\
+ 6 & Taiwan               &   323 & 84.2 & [79.8, 87.8] & * \\
+ 7 & Saudi Arabia         &    31 & 83.9 & [67.4, 92.9] &   \\
+ 8 & New Zealand          &    84 & 83.3 & [74.0, 89.8] & * \\
+ 9 & Sweden               &   197 & 82.7 & [76.8, 87.4] & * \\
+10 & United States        & 3,608 & 82.5 & [81.2, 83.7] & * \\
+11 & Netherlands          &   329 & 82.1 & [77.6, 85.8] & * \\
+12 & Greece               &    73 & 80.8 & [70.3, 88.2] &   \\
+13 & South Africa         &    52 & 80.8 & [68.1, 89.2] &   \\
+14 & Chile                &    76 & 80.3 & [70.0, 87.7] &   \\
+15 & Thailand             &   119 & 79.8 & [71.7, 86.1] &   \\
+16 & Canada               &   775 & 79.6 & [76.6, 82.3] & * \\
+17 & Austria              &   156 & 79.5 & [72.5, 85.1] & * \\
+18 & Finland              &    92 & 79.3 & [70.0, 86.4] &   \\
+19 & Switzerland          &   206 & 79.1 & [73.1, 84.1] & * \\
+20 & United Kingdom       &   972 & 78.8 & [76.1, 81.3] & * \\
+21 & Portugal             &   139 & 78.4 & [70.9, 84.4] &   \\
+22 & Germany              & 1,155 & 78.2 & [75.7, 80.5] & * \\
+23 & Czech Republic       &   100 & 78.0 & [68.9, 85.0] &   \\
+24 & France               &   747 & 77.8 & [74.7, 80.6] & * \\
+25 & Singapore            &   237 & 77.6 & [71.9, 82.5] &   \\
+26 & Mexico               &    67 & 77.6 & [66.3, 85.9] &   \\
+27 & Denmark              &    89 & 77.5 & [67.8, 85.0] &   \\
+28 & Italy                &   386 & 77.5 & [73.0, 81.3] & * \\
+29 & Japan                &   861 & 77.3 & [74.4, 80.0] & * \\
+30 & China                & 4,196 & 77.2 & [75.9, 78.4] & * \\
+31 & Australia            &   411 & 76.9 & [72.6, 80.7] & * \\
+32 & Spain                &   429 & 76.5 & [72.2, 80.2] & * \\
+33 & Poland               &   270 & 74.1 & [68.5, 78.9] &   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Country adoption ranking, ranks 34--65 (lower adoption half).}
+\label{tab:country_rank_lo}
+\small
+\begin{tabular}{@{}rlrrrr@{}}
+\toprule
+Rank & Country & Repos & Rate (\%) & 95\% CI & Sig \\
+\midrule
+34 & Hong Kong    &   111 & 73.9 & [65.0, 81.2] &   \\
+35 & Argentina    &   168 & 73.2 & [66.0, 79.3] &   \\
+36 & Ukraine      &   145 & 71.7 & [63.9, 78.4] &   \\
+37 & Ireland      &    91 & 71.4 & [61.4, 79.7] &   \\
+38 & Norway       &    98 & 71.4 & [61.8, 79.4] &   \\
+39 & Colombia     &   153 & 71.2 & [63.6, 77.8] &   \\
+40 & Hungary      &    48 & 70.8 & [56.8, 81.8] &   \\
+41 & Turkey       &   468 & 70.7 & [66.5, 74.7] &   \\
+42 & Serbia       &    41 & 70.7 & [55.5, 82.4] &   \\
+43 & Vietnam      &   355 & 70.4 & [65.5, 74.9] &   \\
+44 & Romania      &    67 & 68.7 & [56.8, 78.5] &   \\
+45 & Brazil       &   855 & 67.4 & [64.2, 70.4] & * \\
+46 & Bulgaria     &    49 & 67.3 & [53.4, 78.8] &   \\
+47 & Russia       &   251 & 63.0 & [56.8, 68.7] & * \\
+48 & Philippines  &   242 & 57.0 & [50.7, 63.1] & * \\
+49 & Indonesia    &   490 & 56.5 & [52.1, 60.9] & * \\
+50 & Peru         &    68 & 55.9 & [44.1, 67.0] & * \\
+51 & Algeria      &    44 & 54.5 & [40.1, 68.3] & * \\
+52 & Egypt        &   173 & 53.2 & [45.8, 60.5] & * \\
+53 & Tunisia      &    59 & 52.5 & [40.0, 64.7] & * \\
+54 & India        & 3,447 & 51.2 & [49.6, 52.9] & * \\
+55 & Nigeria      &   269 & 46.8 & [41.0, 52.8] & * \\
+56 & Bangladesh   &   303 & 44.2 & [38.7, 49.9] & * \\
+57 & Iran         &   217 & 43.8 & [37.3, 50.4] & * \\
+58 & Pakistan     &   268 & 41.8 & [36.0, 47.8] & * \\
+59 & Ghana        &    40 & 40.0 & [26.4, 55.4] & * \\
+60 & Morocco      &    79 & 39.2 & [29.2, 50.3] & * \\
+61 & Kenya        &   163 & 36.8 & [29.8, 44.4] & * \\
+62 & Nepal        &    52 & 34.6 & [23.1, 48.2] & * \\
+63 & Sri Lanka    &    92 & 33.7 & [24.9, 43.8] & * \\
+64 & Ethiopia     &    91 & 31.9 & [23.2, 42.0] & * \\
+65 & Rwanda       &    49 & 22.4 & [13.0, 35.9] & * \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Geographic pattern.}
+The ranking reveals a pronounced geographic divide. The top tier (ranks 1--11,
+adoption $\geq 82\%$) is dominated by high-income economies: Belgium, South
+Korea, Israel, UAE, Malaysia, Taiwan, New Zealand, Sweden, the United States,
+and the Netherlands. The bottom tier (ranks 54--65, adoption $\leq 52\%$) is
+composed entirely of lower-middle-income and low-income economies: India,
+Nigeria, Bangladesh, Iran, Pakistan, Ghana, Morocco, Kenya, Nepal, Sri Lanka,
+Ethiopia, and Rwanda, with Rwanda at 22.4\% as the lowest-ranked country.
+The four most-represented countries in the corpus --- China (4,196 repos),
+the United States (3,608), India (3,447), and Germany (1,155) --- span a wide
+range: US at 82.5\%, China at 77.2\%, Germany at 78.2\%, and India at only
+51.2\%, a gap of 31.3 percentage points between the US and India alone.
+This pattern is broadly consistent with the geographic concentration documented
+by Wachs et al.~\cite{wachs2022} and the income-stratified adoption gradient
+found by Daniotti et al.~\cite{daniotti2025}.
+
+% ------------------------------------------------------------
 \subsection{RQ1: Scope of Adoption}
 
 \textbf{RQ1:} \textit{What proportion of active JS/TS/npm repositories on GitHub
 created since February 2025 show evidence of AI coding agent use, and is this
 proportion statistically non-trivial?}
 
-This subsection will report the global adoption rate (agentic + ai\_assisted)
-with a Wilson 95\% confidence interval and the result of a one-sample binomial
-test against the 5\% null hypothesis.
+\noindent\textbf{Result.} \textbf{73.0\%} of the 60,129 corpus repositories
+(43,895 repositories) show evidence of AI coding agent use, with a Wilson 95\%
+confidence interval of [72.65\%, 73.35\%]. A one-sample binomial test against
+the null hypothesis $H_0: p \leq 0.05$ yields $p \approx 0$ (effectively
+zero), decisively rejecting the null. Table~\ref{tab:rq1} summarises the test.
 
+\begin{table}[h]
+\centering
+\caption{RQ1: Global AI coding agent adoption --- binomial test results.}
+\label{tab:rq1}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Metric & Value \\
+\midrule
+Total repositories            & 60,129 \\
+Adopted (agentic + AI-assisted) & 43,895 \\
+Adoption rate                 & 73.00\% \\
+Wilson 95\% CI                & [72.65\%, 73.35\%] \\
+$H_0$                         & $p_0 \leq 5\%$ \\
+Binomial test $p$-value       & $< 2.2 \times 10^{-308}$ \\
+Decision                      & Reject $H_0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The 73.0\% adoption rate substantially exceeds not only the 5\% null baseline
+but also the 22--28\% rate reported for established repositories by
+Robbes et al.~\cite{robbesAgenticMuch2026}. It is closely consistent with the
+71--76\% rate for newly created repositories reported by
+Robbes et al.~\cite{robbesAgenticVery2026}, providing strong cross-study
+validation. AI coding agent adoption in the JS/TS/npm ecosystem in 2025--2026
+is not a marginal phenomenon but a majority practice.
+
+% ------------------------------------------------------------
 \subsection{RQ2: Single-Signal vs.\ Multi-Signal Undercounting}
 
 \textbf{RQ2:} \textit{To what extent does relying on a single detection signal
 underestimate AI coding agent adoption compared with a multi-signal approach,
 and is this difference statistically significant?}
 
-This subsection will report the undercounting delta in percentage points (the
-difference between the Pass 1 config-file-only rate and the full three-pass rate)
-and the result of McNemar's test on the paired per-repository labels.
+\noindent\textbf{Result.} Pass 1 (configuration file detection alone) detected
+25,010 repositories (41.6\% of the corpus). The full four-pass multi-signal
+pipeline detected 43,895 repositories (73.0\%). The undercounting delta is
+\textbf{+31.41 percentage points}: single-signal detection misses nearly half
+of all AI-adopted repositories. McNemar's test on the paired per-repository
+labels yields $\chi^2 = 18{,}883$, $p \approx 0$, decisively rejecting the
+null hypothesis of no difference. Table~\ref{tab:rq2} summarises the test.
 
-\subsection{RQ3: Geographic Ranking}
+\begin{table}[h]
+\centering
+\caption{RQ2: Single-signal vs.\ multi-signal detection --- McNemar test.}
+\label{tab:rq2}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Metric & Value \\
+\midrule
+Single-signal detected (Pass 1)   & 25,010  (41.6\%) \\
+Multi-signal detected (full pipeline) & 43,895  (73.0\%) \\
+Undercounting delta               & +31.41 pp \\
+McNemar $b$ (multi+ \& single$-$) & 18,885 \\
+McNemar $c$ (single+ \& multi$-$) & 0 \\
+McNemar $\chi^2$ (CC)             & 18,883 \\
+$p$-value                         & $< 2.2 \times 10^{-308}$ \\
+Decision                          & Reject $H_0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The McNemar $c$ value of 0 is notable: there is not a single repository that
+the single-signal approach detects and the multi-signal approach misses. The
+multi-signal pipeline is a strict superset of single-signal detection for
+every repository in the corpus. The 31.41 pp undercounting delta is larger
+than the 6.46 pp gap reported by Robbes et al.~\cite{robbesAgenticMuch2026},
+which is expected: Robbes et al.\ compared two heuristic sets within a
+single-pass framework, whereas this study spans four qualitatively different
+passes (configuration files, commit trailers, deep multi-signal scan,
+reclassification) each recovering a disjoint population of adopted repositories.
+
+% ------------------------------------------------------------
+\subsection{RQ3: Geographic Variation}
 
 \textbf{RQ3:} \textit{Do AI coding agent adoption rates differ significantly
 across countries within the JS/TS/npm ecosystem, and which countries show the
 highest and lowest rates?}
 
-This subsection will present the country adoption ranking table (all countries
-with $\geq 30$ repositories), with adoption rate (\%), Wilson 95\% CI,
-repository count, and significance flag from pairwise Fisher's exact tests with
-Benjamini-Hochberg FDR correction. The result of the chi-squared test of
-independence across all eligible countries will also be reported.
+\noindent\textbf{Result.} A chi-squared test of independence across all 65
+eligible countries yields $\chi^2 = 2234.55$, $df = 64$, $p \approx 0$,
+rejecting the null hypothesis that adoption rates are equal across countries.
+Pairwise Fisher's exact tests (each country vs.\ rest-of-world) with
+Benjamini-Hochberg FDR correction at $\alpha = 0.05$ find \textbf{41 of 65
+countries} (63.1\%) to be significantly different from the global mean.
+Table~\ref{tab:rq3} summarises the omnibus test.
+
+\begin{table}[h]
+\centering
+\caption{RQ3: Geographic variation in adoption --- omnibus chi-squared test.}
+\label{tab:rq3}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Metric & Value \\
+\midrule
+Countries tested          & 65 \\
+Chi-squared statistic     & 2234.55 \\
+Degrees of freedom        & 64 \\
+$p$-value                 & $< 2.2 \times 10^{-308}$ \\
+Decision                  & Reject $H_0$ \\
+Significant post-hoc (BH) & 41 / 65 countries \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The 24 non-significant countries (ranks 12--46 approximately, rates 67--81\%)
+cluster around the global mean and cannot be distinguished from each other
+statistically, forming a broad middle band where differences may reflect
+sampling noise rather than genuine adoption gaps. The 41 significant countries
+split clearly into two groups: a high-adoption group where rates significantly
+exceed the global mean (Belgium, South Korea, Israel, UAE, Malaysia, Taiwan,
+New Zealand, Sweden, the United States, the Netherlands, Canada, Austria,
+Switzerland, the United Kingdom, Germany, France, Italy, Japan, China,
+Australia, and Spain) and a low-adoption group where rates significantly fall
+below it (Brazil, Russia, Philippines, Indonesia, Peru, Algeria, Egypt,
+Tunisia, India, Nigeria, Bangladesh, Iran, Pakistan, Ghana, Morocco, Kenya,
+Nepal, Sri Lanka, Ethiopia, and Rwanda).
+
+The geographic divide maps closely onto the World Bank income classification:
+all significantly high-adoption countries are high-income or upper-middle-income
+economies, while all significantly low-adoption countries are lower-middle-income
+or low-income economies. This is consistent with the findings of
+Daniotti et al.~\cite{daniotti2025} for Python and with the GDP--contribution
+visibility relationship documented by Wachs et al.~\cite{wachs2022}.
