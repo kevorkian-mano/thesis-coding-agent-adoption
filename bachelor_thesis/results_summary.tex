@@ -1,7 +1,10 @@
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1.8cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage{booktabs}
 \usepackage{multicol}
+\usepackage{multirow}
 \usepackage{parskip}
 \usepackage{xcolor}
 \usepackage{array}
@@ -17,12 +20,12 @@
 
 \begin{document}
 \maketitle
-\vspace{-10pt}
+\vspace{-4pt}
 \hrule
-\vspace{6pt}
+\vspace{8pt}
 
 % ─── STAGE 1 ──────────────────────────────────────────────────────────────────
-\section*{Stage 1 — Corpus Construction}
+\section*{Stage 1 --- Corpus Construction}
 
 \begin{multicols}{2}
 
@@ -51,29 +54,30 @@ bun           &    107 &  0.2 \\
 
 \vspace{6pt}
 % ─── STAGE 2 ────────────────────────────────────────────────────────────────
-\section*{Stage 2 — Owner Location Inference}
+\section*{Stage 2 --- Owner Location Inference}
 
 \begin{tabular}{@{}lrr@{}}
 \toprule
 Pass & Owners & Cumul.\ \% \\
 \midrule
-Pass 1 (location field)   & 13,625 & 27.2 \\
-Pass 2 (bio, TLD, network)&  8,323 & 43.9 \\
+Pass 1 (location field)    & 13,625 & 27.2 \\
+Pass 2 (bio, TLD, network) &  8,323 & 43.9 \\
 \midrule
-Located total             & 21,948 & 43.9 \\
-Not specified             & 28,054 & 56.1 \\
-\textbf{Unique owners}    & \textbf{50,002} & \\
+Located total              & 21,948 & 43.9 \\
+Not specified              & 28,054 & 56.1 \\
+\textbf{Unique owners}     & \textbf{50,002} & \\
 \bottomrule
 \end{tabular}
 
 Top countries: China 3,462 (15.8\%), US 2,899 (13.2\%), India 2,858 (13.0\%)
 \end{multicols}
 
+\vspace{6pt}
 \hrule
-\vspace{4pt}
+\vspace{6pt}
 
 % ─── STAGE 3 ──────────────────────────────────────────────────────────────────
-\section*{Stage 3 — AI Adoption Detection (Four Passes)}
+\section*{Stage 3 --- AI Adoption Detection (Four Passes)}
 
 \begin{multicols}{2}
 
@@ -81,11 +85,11 @@ Top countries: China 3,462 (15.8\%), US 2,899 (13.2\%), India 2,858 (13.0\%)
 \toprule
 Pass & Agentic & Input \\
 \midrule
-Pass 1 — config files    & 25,010 (41.6\%) & 60,129 \\
-Pass 2 — commit trailers &  9,618 (27.4\%) & 35,119 \\
-Pass 3 — deep scan       &    764 (3.5\%)  & 21,655 \\
-Stage 3d Phase 1 (re-classify) & 3,846 & 8,503 \\
-Stage 3d Phase 2 (deep API)    &   258 & 4,657 \\
+Pass 1 --- config files        & 25,010 (41.6\%) & 60,129 \\
+Pass 2 --- commit trailers     &  9,618 (27.4\%) & 35,119 \\
+Pass 3 --- deep scan           &    764 (3.5\%)  & 21,655 \\
+Stage 3d Phase 1 (re-classify) &  3,846          &  8,503 \\
+Stage 3d Phase 2 (deep API)    &    258          &  4,657 \\
 \bottomrule
 \end{tabular}
 
@@ -96,7 +100,7 @@ GitHub Copilot \quad 715 (2.9\%) \quad Cursor \quad 298 (1.2\%)
 
 \columnbreak
 
-\textbf{Final Classification (corpus\_detected\_full\_v2.csv):}
+\textbf{Final Classification:}
 
 \begin{tabular}{@{}lrr@{}}
 \toprule
@@ -114,18 +118,19 @@ None         & 16,234 & 27.0 \\
 \vspace{4pt}
 \textbf{Breakdowns:}\\
 TypeScript 77.1\% \quad JavaScript 60.5\%\\
-pnpm 82.5\% \quad npm 73.7\% \quad vanilla 57.5\%\\
-Large repos 91.7\% \quad Medium 82.7\% \quad Small 70.5\%\\[3pt]
+pnpm 82.5\% \quad npm 73.7\% \quad vanilla 57.5\%\\[3pt]
 \textbf{Tool loyalty:} 95.4\% of adopters use 1 tool\\
 Claude Code only: 59.2\% of adopters\\
 Top pair: Claude Code + Cursor (628 repos, 1.04\%)
 \end{multicols}
 
+\vspace{6pt}
 \hrule
-\vspace{4pt}
+\vspace{6pt}
 
+\newpage
 % ─── STAGE 4 ──────────────────────────────────────────────────────────────────
-\section*{Stage 4 — Geographic Analysis \& Research Questions}
+\section*{Stage 4 --- Geographic Analysis}
 
 \textbf{Coverage:} 65 countries with $\geq 30$ repos \quad
 26,586 repos with country (44.2\% of corpus) \quad
@@ -139,16 +144,16 @@ Global adoption (located): 71.3\%
 \toprule
 Rk & Country & Repos & Rate\% \\
 \midrule
- 1 & Belgium         &    89 & 89.9* \\
- 2 & South Korea     &   643 & 86.2* \\
- 3 & Israel          &   181 & 85.6* \\
- 4 & UAE             &   114 & 85.1* \\
- 5 & Malaysia        &    84 & 84.5* \\
- 6 & Taiwan          &   323 & 84.2* \\
- 7 & New Zealand     &    84 & 83.3* \\
- 8 & Sweden          &   197 & 82.7* \\
- 9 & United States   & 3,608 & 82.5* \\
-10 & Netherlands     &   329 & 82.1* \\
+ 1 & Belgium       &    89 & 89.9* \\
+ 2 & South Korea   &   643 & 86.2* \\
+ 3 & Israel        &   181 & 85.6* \\
+ 4 & UAE           &   114 & 85.1* \\
+ 5 & Malaysia      &    84 & 84.5* \\
+ 6 & Taiwan        &   323 & 84.2* \\
+ 7 & New Zealand   &    84 & 83.3* \\
+ 8 & Sweden        &   197 & 82.7* \\
+ 9 & United States & 3,608 & 82.5* \\
+10 & Netherlands   &   329 & 82.1* \\
 \bottomrule
 \end{tabular}
 
@@ -160,16 +165,16 @@ Rk & Country & Repos & Rate\% \\
 \toprule
 Rk & Country & Repos & Rate\% \\
 \midrule
-56 & Bangladesh  &   303 & 44.2* \\
-57 & Iran        &   217 & 43.8* \\
-58 & Pakistan    &   268 & 41.8* \\
-59 & Ghana       &    40 & 40.0* \\
-60 & Morocco     &    79 & 39.2* \\
-61 & Kenya       &   163 & 36.8* \\
-62 & Nepal       &    52 & 34.6* \\
-63 & Sri Lanka   &    92 & 33.7* \\
-64 & Ethiopia    &    91 & 31.9* \\
-65 & Rwanda      &    49 & 22.4* \\
+56 & Bangladesh &   303 & 44.2* \\
+57 & Iran       &   217 & 43.8* \\
+58 & Pakistan   &   268 & 41.8* \\
+59 & Ghana      &    40 & 40.0* \\
+60 & Morocco    &    79 & 39.2* \\
+61 & Kenya      &   163 & 36.8* \\
+62 & Nepal      &    52 & 34.6* \\
+63 & Sri Lanka  &    92 & 33.7* \\
+64 & Ethiopia   &    91 & 31.9* \\
+65 & Rwanda     &    49 & 22.4* \\
 \bottomrule
 \end{tabular}
 
@@ -180,9 +185,130 @@ Major corpora: China 4,196 repos 77.2\%* \quad India 3,447 repos 51.2\%* \quad G
 
 \vspace{6pt}
 \hrule
-\vspace{4pt}
+\vspace{6pt}
 
-\section*{Research Questions — Statistical Test Results}
+% ─── CLASSIFICATION LABELS ────────────────────────────────────────────────────
+\section*{Classification Labels --- What Each Label Means}
+
+\begin{multicols}{2}
+
+\begin{tabular}{@{}lrrp{4.2cm}@{}}
+\toprule
+Label & Repos & \% & Condition \\
+\midrule
+Agentic     & 39,496 & 65.7 &
+  $\geq$1 STRONG signal \emph{or} $\geq$2 MEDIUM families \\[2pt]
+AI-assisted &  4,399 &  7.3 &
+  1 MEDIUM only \emph{or} WEAK only --- configured but unconfirmed \\[2pt]
+None        & 16,234 & 27.0 &
+  No signal found in any of the four passes \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{STRONG} (agent \emph{did} work):\\
+bot\_author, ci\_workflow, pr\_branch,\\
+agent\_attribution (commit trailers).\\[4pt]
+\textbf{MEDIUM} (agent \emph{configured}):\\
+config\_file (CLAUDE.md, .cursorrules\ldots), pr\_label.\\[4pt]
+\textbf{WEAK} (incidental mention):\\
+pr\_body, editor\_config.\\[4pt]
+\textbf{AI-assisted} = evidence present but unconfirmed.
+Included in 73.0\% total; \textbf{65.7\% agentic-only}
+is the conservative figure.
+
+\end{multicols}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── THREE SIZING APPROACHES ──────────────────────────────────────────────────
+\section*{Repository Size \& Adoption --- Three Operationalisations}
+
+All three confirm the same monotonic pattern. B and C use corpus tertiles
+(P33/P66) so each stratum holds $\approx$33\% of repos.
+
+\vspace{3pt}
+\begin{tabular}{@{}p{6.2cm}rrrr@{}}
+\toprule
+Approach & Small & Medium & Large & Range \\
+\midrule
+\textbf{A: Stars} ($\leq$50 / 51--500 / $>$500)
+  \newline {\footnotesize repos: 49,562 \quad 8,375 \quad 2,192}
+  & 70.5\% & 82.7\% & 91.7\% & $+$21.2\,pp \\[5pt]
+\textbf{B: Commits} ($\leq$114 / 115--286 / $>$286)
+  \newline {\footnotesize repos: 19,891 \quad 19,863 \quad 20,375}
+  & 64.8\% & 73.4\% & 80.6\% & $+$15.8\,pp \\[5pt]
+\textbf{C: Code volume} ($\leq$0.50\,MB / 0.50--1.45\,MB / $>$1.45\,MB)
+  \newline {\footnotesize repos: 19,843 \quad 19,842 \quad 20,444}
+  & 59.7\% & 73.3\% & 85.6\% & $+$26.0\,pp \\
+\bottomrule
+\end{tabular}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── MENA ─────────────────────────────────────────────────────────────────────
+\section*{MENA Regional Analysis}
+
+\textbf{Coverage:} 1,446 repos (2.4\% corpus, 5.4\% of located repos),
+19 countries defined, 9 eligible ($\geq$30 repos).\\
+\textbf{Overall MENA: 65.1\%} [62.6\%, 67.5\%] ---
+below global 73.0\% (Fisher $p < 10^{-10}$, OR\,=\,0.68).\\
+Within-MENA: $\chi^2 = 147.52$, $df=8$, $p \approx 10^{-28}$ ---
+7/9 countries significant (BH FDR $\alpha=0.05$).
+
+\begin{multicols}{2}
+
+\textbf{Sub-region breakdown:}
+
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Sub-region & Repos & Rate\% & 95\% CI \\
+\midrule
+Gulf (UAE, SA, \ldots)  & 173 & 85.0* & [78.9, 89.5] \\
+Levant (IL, JO, \ldots) & 227 & 81.5* & [75.9, 86.0] \\
+Turkey                  & 468 & 70.7* & [66.5, 74.7] \\
+North Africa            & 355 & 50.1* & [45.0, 55.3] \\
+Iran                    & 223 & 44.8* & [38.5, 51.4] \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{Eligible countries (9 of 19):}
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Country & Repos & Rate\% \\
+\midrule
+Israel       & 181 & 85.6* \\
+UAE          & 114 & 85.1* \\
+Saudi Arabia &  31 & 83.9* \\
+Turkey       & 468 & 70.7* \\
+Algeria      &  44 & 54.5  \\
+Egypt        & 173 & 53.2* \\
+Tunisia      &  59 & 52.5  \\
+Iran         & 217 & 43.8* \\
+Morocco      &  79 & 39.2* \\
+\bottomrule
+\end{tabular}
+
+\end{multicols}
+
+{\small * = significantly different from MENA mean (Fisher exact, BH FDR $\alpha=0.05$). \quad
+Claude Code loyalty within MENA: 58.6\% of adopters (global: 59.2\%).}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── RESEARCH QUESTIONS ───────────────────────────────────────────────────────
+\section*{Research Questions --- Statistical Test Results}
 
 \begin{tabular}{@{}p{3.2cm} p{5.5cm} p{3.2cm} p{3.0cm}@{}}
 \toprule

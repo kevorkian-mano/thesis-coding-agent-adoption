@@ -492,6 +492,81 @@ reclassification --- without triggering any signal. These repositories form the
 denominator against which all country-level adoption rates are computed in
 Phase 4.
 
+\subsection{Interpretation of the Three Classification Labels}
+\label{sec:res:labels}
+
+The three-class scheme --- \emph{agentic}, \emph{AI-assisted}, and \emph{none}
+--- reflects the confidence level with which the pipeline can assert that an AI
+coding agent was actively used in a repository. Understanding the distinction
+is important for interpreting all downstream results.
+
+\textbf{Signal tiers.} Every detected signal is assigned to one of three
+confidence tiers based on how directly it evidences agent activity:
+
+\begin{itemize}
+  \item \textbf{STRONG} --- \texttt{bot\_author}, \texttt{ci\_workflow},
+    \texttt{pr\_branch}, \texttt{agent\_attribution}. These signals record
+    that an agent \emph{performed work}: a known bot account authored commits,
+    a CI workflow invoked an agent action, a PR branch carries an agent-style
+    prefix (\eg\ \texttt{devin/}, \texttt{cline/}), or a commit trailer names
+    an agent as co-author or generator (\eg\ \texttt{Co-authored-by: Claude}).
+    A single STRONG signal is sufficient to classify a repository as
+    \textbf{agentic}.
+
+  \item \textbf{MEDIUM} --- \texttt{config\_file}, \texttt{pr\_label}.
+    These signals record that a developer \emph{configured or labelled}
+    something for an agent: an agent configuration file exists at the
+    repository root (\eg\ \texttt{CLAUDE.md}, \texttt{.cursorrules},
+    \texttt{AGENTS.md}), or a pull request carries an agent-related label.
+    Two or more distinct MEDIUM families, or one MEDIUM family combined with
+    at least one agent-attributed commit, also produce \textbf{agentic}.
+
+  \item \textbf{WEAK} --- \texttt{pr\_body}, \texttt{editor\_config}.
+    These signals record an incidental mention: a pull request body references
+    an agent tool, or a \texttt{.gitignore} entry suggests awareness of an
+    agent without direct use. Weak signals alone are not sufficient for
+    agentic classification.
+\end{itemize}
+
+\textbf{The classify() rule} (applied identically in all passes and Stage 3d):
+\begin{enumerate}
+  \item $\geq 1$ STRONG family $\rightarrow$ \textbf{agentic}
+  \item $\geq 2$ distinct MEDIUM families $\rightarrow$ \textbf{agentic}
+  \item $\geq 1$ MEDIUM family \emph{and} $\geq 1$ agent-attributed commit
+    $\rightarrow$ \textbf{agentic}
+  \item Any MEDIUM or WEAK signal (but conditions 1--3 not met)
+    $\rightarrow$ \textbf{AI-assisted}
+  \item No signal of any kind $\rightarrow$ \textbf{none}
+\end{enumerate}
+
+\textbf{What AI-assisted means in practice.}
+A repository labelled AI-assisted has passed through all four detection passes
+and through Stage 3d's deep reclassification without triggering any of the
+three agentic conditions above. The 4,399 remaining AI-assisted repositories
+fall into two typical cases:
+
+\begin{itemize}
+  \item \emph{Single uncorroborated configuration file.} A \texttt{CLAUDE.md}
+    or \texttt{.cursorrules} file is present, but the repository shows no
+    commit trailers, no agent-style PR branches, no CI workflow invocations,
+    and no bot-authored commits. The developer set up the tool but the pipeline
+    cannot confirm it was ever run. This is genuinely ambiguous: the file may
+    represent active daily use (agent runs interactively and leaves no
+    server-side trace) or an abandoned template.
+
+  \item \emph{Weak signals only.} PR body text mentions an agent tool in
+    passing, or a \texttt{.gitignore} entry references agent-related files,
+    but no configuration or usage trace is found.
+\end{itemize}
+
+These repositories are included in the 73.0\% adopted total on the basis that
+any confirmed signal represents at least some AI tool presence. The
+\emph{agentic} rate (65.7\%) is the conservative figure that excludes them and
+counts only repositories with unambiguous, active agent use. Both figures are
+reported throughout this chapter; the adoption rate (73.0\%) answers RQ1, while
+the agentic rate (65.7\%) is used as the intensity measure in the geographic
+and breakdown analyses.
+
 \subsection{Adoption Breakdowns by Corpus Dimension}
 
 The final classified corpus was disaggregated along three dimensions intrinsic
@@ -846,3 +921,265 @@ economies, while all significantly low-adoption countries are lower-middle-incom
 or low-income economies. This is consistent with the findings of
 Daniotti et al.~\cite{daniotti2025} for Python and with the GDP--contribution
 visibility relationship documented by Wachs et al.~\cite{wachs2022}.
+
+% ------------------------------------------------------------
+\section{Repository Size and Adoption: Three Operationalisations}
+\label{sec:res:size}
+% ------------------------------------------------------------
+
+Section~\ref{sec:res:detection} reported adoption by repository size using star
+count as the proxy, the definition inherited from the Stage~1a corpus filter.
+However, star count measures popularity rather than size: the median repository
+in the corpus has only 10 stars, and 82.4\% of repositories fall into the
+``small'' ($\leq 50$ stars) stratum, making the segmentation heavily skewed.
+This section reports the same size--adoption analysis under three independent
+operationalisations of repository size in order to test whether the monotonic
+pattern is robust to the choice of size proxy.
+
+\textbf{Approach A --- Stars (popularity proxy).}
+Thresholds are fixed at the Stage~1a values: small ($\leq 50$), medium
+(51--500), large ($>500$). This is the same result already reported in
+Table~\ref{tab:breakdown_size} and is included here for comparison.
+
+\textbf{Approach B --- Commits (development-activity proxy).}
+The commit count measures how much development work has been recorded in the
+default branch. It is unaffected by generated artefacts or vendored files and
+represents genuine human development activity. Thresholds are set at the
+corpus 33rd and 66th percentiles, yielding three roughly equal strata:
+small ($\leq 114$ commits, P33), medium (115--286, P66), and large ($>286$).
+
+\textbf{Approach C --- Code volume (lang\_bytes proxy).}
+The \texttt{lang\_bytes} field records the combined JavaScript and TypeScript
+byte count as reported by GitHub Linguist, which excludes \texttt{node\_modules/},
+\texttt{dist/}, \texttt{vendor/}, and generated files. It measures the volume of
+source code in the repository regardless of its star count or age.
+Thresholds are set at the corpus 33rd and 66th percentiles:
+small ($\leq 0.50$\,MB, P33), medium (0.50--1.45\,MB, P66),
+and large ($>1.45$\,MB).
+
+Table~\ref{tab:size_comparison} presents all three breakdowns side by side.
+
+\begin{table}[h]
+\centering
+\caption{Adoption rate by repository size stratum under three operationalisations.
+         Approach~B and C use corpus tertile thresholds (P33/P66) for balanced strata.
+         Wilson 95\% CIs are shown for the large stratum only for brevity.}
+\label{tab:size_comparison}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Approach & Stratum & Repos & \%\ Corpus & Rate (\%) & Agentic (\%) \\
+\midrule
+\multirow{3}{*}{\textbf{A: Stars}}
+  & Small ($\leq$50 stars)      & 49,562 & 82.4 & 70.5 & 63.3 \\
+  & Medium (51--500)            &  8,375 & 13.9 & 82.7 & 74.3 \\
+  & Large ($>$500)              &  2,192 &  3.6 & 91.7 & 86.6 \\[4pt]
+\multirow{3}{*}{\textbf{B: Commits}}
+  & Small ($\leq$114, P33)      & 19,891 & 33.1 & 64.8 & 56.7 \\
+  & Medium (115--286, P66)      & 19,863 & 33.0 & 73.4 & 65.6 \\
+  & Large ($>$286)              & 20,375 & 33.9 & 80.6 & 74.6 \\[4pt]
+\multirow{3}{*}{\textbf{C: Code volume}}
+  & Small ($\leq$0.50\,MB, P33) & 19,843 & 33.0 & 59.7 & 52.4 \\
+  & Medium (0.50--1.45\,MB)     & 19,842 & 33.0 & 73.3 & 65.3 \\
+  & Large ($>$1.45\,MB)         & 20,444 & 34.0 & 85.6 & 79.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The monotonic pattern --- small strata showing lower adoption and large strata
+showing higher adoption --- holds under all three operationalisations.
+The spread between small and large (the range in percentage points) is
+$+21.2$\,pp for stars, $+15.8$\,pp for commits, and $+26.0$\,pp for code
+volume. The commit-based approach yields the most conservative estimate of the
+size effect because it produces balanced strata and is not inflated by a small
+high-popularity tail. The code-volume approach shows the steepest gradient:
+repositories with more than 1.45\,MB of JS/TS source code reach 85.6\%
+adoption versus 59.7\% for the smallest code-volume stratum, a
+$+25.9$\,pp gap with non-overlapping 95\% confidence intervals across all
+three strata.
+
+The consistency across all three approaches supports the substantive
+interpretation offered in Section~\ref{sec:res:detection}: AI coding agents
+are adopted at higher rates in larger, more active, and more code-intensive
+repositories, and this pattern is not an artefact of the star-based size
+definition.
+
+% ------------------------------------------------------------
+\section{MENA Regional Analysis}
+\label{sec:res:mena}
+% ------------------------------------------------------------
+
+This section applies the same analytical framework used for the global corpus
+to the Middle East and North Africa (MENA) region. The MENA definition adopted
+here covers 19 countries across five sub-regions: the Gulf states (United Arab
+Emirates, Saudi Arabia, Kuwait, Qatar, Bahrain, Oman), the Levant (Israel,
+Jordan, Lebanon, Syria, Iraq), North Africa (Egypt, Morocco, Algeria, Tunisia,
+Libya), Turkey, and Iran (including Yemen). Country attribution follows the
+same owner-location inference pipeline described in Section~\ref{sec:res:location}.
+
+\subsection{Coverage}
+\label{sec:res:mena:coverage}
+
+Of the 60,129 corpus repositories, 1,446 (2.4\%) belong to owners inferred to
+be in a MENA country. Among the 26,586 repositories with any known owner
+country, MENA accounts for 5.4\%. Nine MENA countries meet the
+$\geq 30$-repository threshold and are eligible for statistical analysis;
+the remaining nine fall below the threshold (Table~\ref{tab:mena_below}).
+Countries below the threshold are reported for completeness but their rates
+should be treated as indicative only.
+
+\subsection{Overall MENA Adoption vs.\ Global}
+\label{sec:res:mena:overall}
+
+The overall MENA adoption rate is \textbf{65.1\%} (941 of 1,446 repositories),
+with Wilson 95\%~CI $[62.6\%, 67.5\%]$. This is significantly lower than the
+global rate of 73.0\%: a two-sided Fisher exact test yields $p < 10^{-10}$,
+odds ratio 0.68, confirming that MENA repositories are statistically less
+likely to show AI adoption than the rest of the corpus. Within MENA, the label
+breakdown is: agentic 56.9\%, AI-assisted 8.2\%, none 34.9\%.
+
+\subsection{Per-Country Ranking}
+\label{sec:res:mena:countries}
+
+Table~\ref{tab:mena_ranking} ranks the nine eligible MENA countries by
+adoption rate. Table~\ref{tab:mena_below} lists the nine below-threshold
+countries with indicative rates.
+
+\begin{table}[h]
+\centering
+\caption{AI adoption rates for eligible MENA countries ($\geq 30$ repos),
+         ranked by adoption rate. * = significantly different from
+         MENA mean (Fisher exact, BH FDR $\alpha = 0.05$).}
+\label{tab:mena_ranking}
+\begin{tabular}{@{}clrrrr@{}}
+\toprule
+Rank & Country & Sub-region & Repos & Rate (\%) & 95\% CI \\
+\midrule
+1 & Israel              & Levant        & 181 & 85.6* & [79.8, 90.0] \\
+2 & United Arab Emirates & Gulf         & 114 & 85.1* & [77.4, 90.5] \\
+3 & Saudi Arabia        & Gulf          &  31 & 83.9* & [67.4, 92.9] \\
+4 & Turkey              & Turkey        & 468 & 70.7* & [66.5, 74.7] \\
+5 & Algeria             & North Africa  &  44 & 54.5  & [40.1, 68.3] \\
+6 & Egypt               & North Africa  & 173 & 53.2* & [45.8, 60.5] \\
+7 & Tunisia             & North Africa  &  59 & 52.5  & [40.0, 64.7] \\
+8 & Iran                & Iran          & 217 & 43.8* & [37.3, 50.4] \\
+9 & Morocco             & North Africa  &  79 & 39.2* & [29.2, 50.3] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{MENA countries below the 30-repo threshold --- indicative rates only,
+         no confidence intervals reported.}
+\label{tab:mena_below}
+\begin{tabular}{@{}llrr@{}}
+\toprule
+Country & Sub-region & Repos & Rate (\%) \\
+\midrule
+Oman    & Gulf   & 14 & 85.7 \\
+Qatar   & Gulf   &  6 & 83.3 \\
+Kuwait  & Gulf   &  6 & 83.3 \\
+Yemen   & Iran   &  6 & 83.3 \\
+Lebanon & Levant &  9 & 77.8 \\
+Iraq    & Levant &  9 & 66.7 \\
+Jordan  & Levant & 24 & 62.5 \\
+Syria   & Levant &  4 & 50.0 \\
+Bahrain & Gulf   &  2 & 100.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Sub-region Comparison}
+\label{sec:res:mena:subregion}
+
+Table~\ref{tab:mena_subregion} aggregates adoption by sub-region. The Gulf
+states and Levant cluster at the top, comparable to high-adoption countries in
+the global ranking. North Africa and Iran cluster at the bottom, comparable to
+the lowest-adoption countries globally.
+
+\begin{table}[h]
+\centering
+\caption{AI adoption by MENA sub-region.}
+\label{tab:mena_subregion}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Sub-region & Repos & Adopted & Rate (\%) & 95\% CI \\
+\midrule
+Gulf         & 173 & 147 & 85.0 & [78.9, 89.5] \\
+Levant       & 227 & 185 & 81.5 & [75.9, 86.0] \\
+Turkey       & 468 & 331 & 70.7 & [66.5, 74.7] \\
+North Africa & 355 & 178 & 50.1 & [45.0, 55.3] \\
+Iran         & 223 & 100 & 44.8 & [38.5, 51.4] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The 40.2-percentage-point gap between the Gulf (85.0\%) and Iran (44.8\%)
+is the largest sub-regional spread observed in this study and mirrors the
+global income-level divide reported in Section~\ref{sec:res:geographic}.
+
+\subsection{Statistical Tests Within MENA}
+\label{sec:res:mena:tests}
+
+A chi-squared test of independence across the nine eligible MENA countries
+yields $\chi^2 = 147.52$, $df = 8$, $p \approx 10^{-28}$, confirming that
+adoption rates differ significantly within the region. Pairwise Fisher exact
+tests against the MENA mean, corrected with Benjamini-Hochberg FDR at
+$\alpha = 0.05$, find \textbf{7 of 9 countries} to be individually significant.
+Algeria and Tunisia are the two non-significant countries, likely due to their
+small sample sizes (44 and 59 repositories respectively), which yield wide
+confidence intervals that overlap the MENA mean.
+
+\subsection{Breakdowns: Ecosystem, Language, and Size}
+\label{sec:res:mena:breakdowns}
+
+The ecosystem and language patterns within MENA mirror the global results.
+TypeScript repositories adopt at 69.0\% versus 53.0\% for JavaScript, a
+16-pp gap consistent with the global 16.6-pp gap (Section~\ref{sec:res:detection}).
+Among ecosystems, pnpm leads at 76.5\% and vanilla repositories trail at 44.3\%,
+again consistent with the global pattern.
+
+The three-approach size breakdown (Table~\ref{tab:mena_size}) confirms the
+monotonic adoption--size relationship within MENA. The code-volume approach
+(lang\_bytes) shows the steepest gradient: small MENA repositories
+($\leq 0.43$\,MB) adopt at 48.4\% while large ones ($> 1.04$\,MB) adopt at
+80.5\%, a 32.1-pp spread. The commits approach shows a 18.8-pp spread
+(56.4\% to 75.2\%) and the stars approach a 30.2-pp spread (62.7\% to 92.9\%,
+though the large-stars stratum contains only 14 repositories).
+
+\begin{table}[h]
+\centering
+\caption{MENA adoption by repository size --- three operationalisations.
+         Commit and lang\_bytes tertiles are computed on the MENA subset.}
+\label{tab:mena_size}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Approach & Stratum & Repos & \%\ MENA & Rate (\%) & 95\% CI \\
+\midrule
+\multirow{3}{*}{\textbf{A: Stars}}
+  & Small ($\leq$50)        & 1,272 & 88.0 & 62.7 & [60.0, 65.3] \\
+  & Medium (51--500)        &   160 & 11.1 & 81.2 & [74.5, 86.5] \\
+  & Large ($>$500)          &    14 &  1.0 & 92.9 & [68.5, 98.7] \\[4pt]
+\multirow{3}{*}{\textbf{B: Commits}}
+  & Small ($\leq$92, P33)   &   479 & 33.1 & 56.4 & [51.9, 60.7] \\
+  & Medium (93--215, P66)   &   475 & 32.8 & 63.4 & [58.9, 67.6] \\
+  & Large ($>$215)          &   492 & 34.0 & 75.2 & [71.2, 78.8] \\[4pt]
+\multirow{3}{*}{\textbf{C: Code volume}}
+  & Small ($\leq$0.43\,MB)  &   477 & 33.0 & 48.4 & [44.0, 52.9] \\
+  & Medium (0.43--1.04\,MB) &   477 & 33.0 & 65.8 & [61.5, 69.9] \\
+  & Large ($>$1.04\,MB)     &   492 & 34.0 & 80.5 & [76.8, 83.8] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Tool Usage Within MENA}
+\label{sec:res:mena:tools}
+
+Claude Code dominance observed globally persists within MENA. Of the 900 MENA
+adopters with a named agent signal, Claude Code appears in 563 repositories
+(38.9\% of all MENA repos, 59.8\% of MENA adopters). The Claude Code /
+Generic signal (AGENTS.md) adds a further 17.5\% of adopters. GitHub Copilot
+is detected in 8.3\% and Cursor in 5.6\% of MENA adopters. Tool loyalty is
+high: 95.0\% of MENA adopters use a single tool, and 58.6\% use Claude Code
+exclusively --- nearly identical to the global figures of 95.4\% and 59.2\%
+respectively.
