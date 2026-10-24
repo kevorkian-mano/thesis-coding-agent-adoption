@@ -1,0 +1,890 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{mdframed}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ── colours ─────────────────────────────────────────────────────────────────
+\definecolor{stageblue}{HTML}{1E3A5F}
+\definecolor{accentblue}{HTML}{2563EB}
+\definecolor{lightblue}{HTML}{EFF6FF}
+\definecolor{green}{HTML}{16A34A}
+\definecolor{amber}{HTML}{D97706}
+\definecolor{purple}{HTML}{7C3AED}
+\definecolor{gray}{HTML}{6B7280}
+\definecolor{lightgray}{HTML}{F3F4F6}
+
+% ── header/footer ───────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textcolor{gray}{\small\textit{Pipeline Scripts Guide --- AI Coding Agent Adoption Study}}}
+\rhead{\textcolor{gray}{\small\textit{Manuel Youssef Haik Kevorkian}}}
+\cfoot{\textcolor{gray}{\small\thepage}}
+\renewcommand{\headrulewidth}{0.3pt}
+
+% ── section styling ─────────────────────────────────────────────────────────
+\titleformat{\section}[block]
+  {\color{white}\normalfont\large\bfseries}
+  {}
+  {0pt}
+  {\colorbox{stageblue}{\parbox{\dimexpr\linewidth-2\fboxsep}{\thesection\quad #1}}}
+
+\titleformat{\subsection}[block]
+  {\color{accentblue}\normalfont\normalsize\bfseries}
+  {\thesubsection}
+  {6pt}
+  {#1}
+
+% ── custom environments ─────────────────────────────────────────────────────
+\newmdenv[
+  linecolor=accentblue,
+  backgroundcolor=lightblue,
+  linewidth=1.2pt,
+  leftmargin=0pt, rightmargin=0pt,
+  innerleftmargin=8pt, innerrightmargin=8pt,
+  innertopmargin=6pt, innerbottommargin=6pt,
+  skipabove=4pt, skipbelow=4pt
+]{infobox}
+
+\newmdenv[
+  linecolor=green,
+  backgroundcolor=white,
+  linewidth=1pt,
+  leftmargin=0pt, rightmargin=0pt,
+  innerleftmargin=8pt, innerrightmargin=8pt,
+  innertopmargin=5pt, innerbottommargin=5pt,
+  skipabove=3pt, skipbelow=3pt
+]{outputbox}
+
+\newmdenv[
+  linecolor=amber,
+  backgroundcolor=white,
+  linewidth=1pt,
+  leftmargin=0pt, rightmargin=0pt,
+  innerleftmargin=8pt, innerrightmargin=8pt,
+  innertopmargin=5pt, innerbottommargin=5pt,
+  skipabove=3pt, skipbelow=3pt
+]{numbersbox}
+
+\setlist[itemize]{noitemsep, topsep=2pt, leftmargin=*}
+\setlength{\parskip}{4pt}
+
+% ── title ───────────────────────────────────────────────────────────────────
+\title{%
+  \vspace{-1cm}
+  \textbf{\color{stageblue}Pipeline Scripts Guide}\\[0.3em]
+  \large Coding Agent Adoption in JavaScript/TypeScript/npm\\
+  Repositories on GitHub\\[0.4em]
+  \normalsize One Page Per Script --- Inputs, Outputs, Methods, and Thesis Contribution
+}
+\author{Manuel Youssef Haik Kevorkian}
+\date{October 2026 \quad \textcolor{red}{\textbf{DRAFT}}}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+\vspace{-0.5cm}
+\hrule
+\vspace{0.3cm}
+
+{\small
+This document describes every pipeline script across the four stages of the study.
+Each page covers one script: what it does, what it reads, what it produces,
+the key numbers it generated, and how it contributes to answering the three
+research questions. Scripts are presented in execution order.
+The pipeline has \textbf{13 scripts} organised into 4 stages and produces
+a final corpus of \textbf{60,129 repositories} with complete adoption labels
+and geographic metadata.
+}
+
+\vspace{0.4cm}
+\begin{center}
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{Stage} & \textbf{Script} & \textbf{Purpose} & \textbf{Key output} \\
+\midrule
+1a & stage1a\_collect\_repos.py    & GitHub API collection        & 60,129 repos \\
+1b & stage1b\_categorize\_ecosystem.py & Lockfile detection      & ecosystem labels \\
+2a & stage2a\_location\_fast.py   & Location field lookup        & 13,625 owners located \\
+2b & stage2b\_location\_deep.py   & Bio / TLD / network scan     & 8,323 more located \\
+3a & stage3a\_config\_files.py    & Config file existence check  & 25,010 agentic \\
+3b & stage3b\_commit\_trailers.py & Commit trailer scan          & 9,618 agentic + 3,846 ai-assisted \\
+3c & stage3c\_deep\_scan.py       & Full GraphQL deep scan       & 764 agentic + 4,657 ai-assisted \\
+3d & stage3d\_reclassify.py       & Reclassification (Pass 4)    & 258 upgraded to agentic \\
+4a & stage4a\_geographic\_analysis.py & Country join + ranking   & 65-country table \\
+4b & stage4b\_statistical\_tests.py   & RQ1 / RQ2 / RQ3 tests    & 3 statistical tests \\
+4c & stage4c\_breakdowns.py           & Ecosystem + tool analysis & breakdown CSVs \\
+4d & stage4d\_size\_analysis.py        & Repo-size analysis        & 3-approach size table \\
+4e & stage4e\_mena\_analysis.py        & MENA regional deep-dive   & MENA ranking + stats \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Stage 1 --- Corpus Construction}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection*{\texttt{stage1a\_collect\_repos.py} --- GitHub API Repository Collection}
+
+\begin{infobox}
+\textbf{Purpose:} Queries the GitHub GraphQL Search API to collect all JavaScript
+and TypeScript repositories that meet the corpus inclusion criteria.
+Produces the raw population to which all subsequent analyses are applied.
+No sampling is performed --- the output is a complete census.
+\end{infobox}
+
+\textbf{Method.}
+The script issues two separate search queries (one for JavaScript, one for
+TypeScript, because the API does not support combined language filters) using
+rolling 5-day creation date windows from 24~February~2025 to October~2026.
+Any window that hits the API's 1,000-result cap is recursively split into
+2-day sub-windows until every window fits under the cap. For each repository
+returned, the script records: full name, stars, forks, commit count,
+JavaScript+TypeScript byte count (from GitHub Linguist), URL, primary
+language, and creation date. After collection, duplicate entries and
+repositories failing any inclusion filter are removed.
+
+\textbf{Inclusion filters:}
+\begin{itemize}
+  \item Created on or after \textbf{24 February 2025} (start of the agentic era)
+  \item \textbf{$\geq 4$ stars} (excludes abandoned toy projects)
+  \item \textbf{$\geq 50$ commits} (excludes minimal/tutorial repositories)
+  \item \textbf{Not a fork} (only original codebases)
+  \item \textbf{JS+TS bytes $\geq 175{,}000$} (ensures meaningful code volume)
+\end{itemize}
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}ll@{}}
+Total repos collected after all filters: & \textbf{60,129} \\
+TypeScript repos:                        & 45,314 (75.4\%) \\
+JavaScript repos:                        & 14,815 (24.6\%) \\
+Stars range:                             & 4 -- 391,443 \quad median: 10 \\
+Commits range:                           & 50 -- 1,003,888 \quad median: 177 \\
+JS+TS bytes median:                      & 837 KB \\
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} GitHub GraphQL Search API (live, no local input file)
+
+\textbf{Output:} \texttt{data/stage1/global\_corpus.csv} --- 60,129 rows,
+13 columns: \texttt{full\_name, stars, forks, commits, lang\_bytes, url,
+owner\_login, repo\_name, primary\_language, size\_stratum, created\_at,
+ecosystem\_type, corpus\_source}
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+This script defines the study population. The 24~Feb~2025 threshold ensures
+every repository in the corpus was created during the period when developers
+had simultaneous access to mature AI coding agents (Claude Code, GitHub
+Copilot, Cursor, Aider, etc.). Including pre-threshold repositories would
+mix projects that never had realistic access to agents with those that did,
+artificially suppressing the adoption rate. The 60,129 repositories
+constitute the denominator for all subsequent adoption rate calculations,
+including RQ1's 73.0\% global adoption figure.
+\end{outputbox}
+
+\newpage
+
+\subsection*{\texttt{stage1b\_categorize\_ecosystem.py} --- Package Manager Classification}
+
+\begin{infobox}
+\textbf{Purpose:} Classifies each of the 60,129 repositories into a package
+manager ecosystem by detecting lockfiles and configuration files at the
+repository root via the GitHub GraphQL API.
+\end{infobox}
+
+\textbf{Method.}
+For each repository, a single GraphQL query checks for the presence of known
+lockfiles in order of priority: \texttt{bun.lockb} (Bun), \texttt{deno.lock}
+(Deno), \texttt{pnpm-lock.yaml} (pnpm), \texttt{yarn.lock} (Yarn),
+\texttt{package-lock.json} (npm). If a \texttt{package.json} is present
+without any lockfile the repo is labelled \texttt{npm\_no\_lock}.
+If no \texttt{package.json} is found the repo is labelled \texttt{vanilla}
+(a JavaScript project not using the npm registry). The priority order
+prevents double-counting in polyglot projects that commit multiple lockfiles.
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Ecosystem      & Repositories & Share \\
+\midrule
+npm            & 28,248 & 47.0\% \\
+pnpm           & 12,229 & 20.3\% \\
+vanilla        & 10,177 & 16.9\% \\
+npm\_no\_lock  &  7,979 & 13.3\% \\
+yarn           &  1,091 &  1.8\% \\
+deno           &    250 &  0.4\% \\
+bun            &    107 &  0.2\% \\
+unknown        &     48 &  0.1\% \\
+\midrule
+\textbf{Total} & \textbf{60,129} & \textbf{100\%} \\
+\bottomrule
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} \texttt{data/stage1/global\_corpus.csv} (60,129 repos)
+
+\textbf{Output:} Ecosystem labels written back into \texttt{global\_corpus.csv}
+as the \texttt{ecosystem\_type} column. Also feeds \texttt{stage4c\_breakdowns.py}
+which computes per-ecosystem adoption rates.
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+Ecosystem classification reveals that adoption is not uniform across
+package managers. Stage 4c shows pnpm leads at 82.5\%, followed by npm at
+73.7\% and vanilla at 57.5\%. This variation is discussed in the Results
+chapter as evidence that more engineering-focused package manager choices
+(pnpm requires deliberate configuration) correlate with higher rates of
+AI coding agent adoption. The ecosystem label also enables the Results chapter
+to contextualise why the corpus contains disproportionately many pnpm
+repositories relative to global market share.
+\end{outputbox}
+
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Stage 2 --- Owner Location Inference}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection*{\texttt{stage2a\_location\_fast.py} --- Pass 1: Location Field Lookup}
+
+\begin{infobox}
+\textbf{Purpose:} Infers the country of each repository owner by reading
+the \texttt{location} field of their GitHub profile. This is the cheapest
+and most accurate signal, processed in a single batched pass.
+\end{infobox}
+
+\textbf{Method.}
+The 60,129 repositories have \textbf{50,002 unique owners}. For each owner,
+the script queries the GitHub REST API for the profile \texttt{location}
+string. The raw string is normalised against a country name and alias
+dictionary (covering abbreviations, demonyms, and common misspellings)
+to produce a standardised country name. Owners whose location string is
+empty, clearly fake (e.g.\ ``Earth'', ``Internet''), or ambiguous
+(e.g.\ city name shared by multiple countries) are marked
+\texttt{not\_specified} and passed to Stage~2b.
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}ll@{}}
+Unique owners queried:           & 50,002 \\
+Located via location field:      & \textbf{13,625} (27.2\% of owners) \\
+Marked not\_specified:           & 36,377 (72.8\%) passed to Stage 2b \\
+Top countries (Pass 1):          & China 1,521 \quad US 1,491 \quad India 1,650 \\
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} \texttt{data/stage1/global\_corpus.csv} (owner\_login column)
+
+\textbf{Output:} \texttt{data/stage2/owner\_locations\_fast.csv} ---
+50,002 rows with columns: \texttt{owner\_login, location\_raw,
+inferred\_country, confidence, source}
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+The location field is the only self-reported, unambiguous location signal
+on GitHub. It locates 27.2\% of owners with high confidence in a single
+cheap pass. These are the most reliable country assignments in the study
+and form the foundation of the geographic ranking in Stage~4a.
+The 72.8\% that remain unresolved motivate the design of Stage~2b and
+directly lead to the study's key limitation: 56.1\% of owners cannot
+be assigned a country, which is reported as a validity threat in the
+Methodology chapter.
+\end{outputbox}
+
+\newpage
+
+\subsection*{\texttt{stage2b\_location\_deep.py} --- Pass 2: Bio, TLD, and Network Inference}
+
+\begin{infobox}
+\textbf{Purpose:} Attempts to infer the country of the 36,377 owners that
+Pass~1 could not resolve, using six additional signals extracted from the
+GitHub profile and the owner's social graph.
+\end{infobox}
+
+\textbf{Method.}
+Six inference signals are tried in priority order:
+\begin{itemize}
+  \item \textbf{Bio text} --- scans the profile biography for country names,
+        city names, or language-specific phrases.
+  \item \textbf{Company name} --- maps company names to headquarters country.
+  \item \textbf{Email TLD} --- e.g.\ \texttt{.de} infers Germany.
+  \item \textbf{Website TLD} --- same logic applied to the profile website.
+  \item \textbf{Organisation location} --- if the owner belongs to a GitHub
+        organisation, the organisation's location field is used.
+  \item \textbf{Network majority} --- follows up to 20 mutual followers
+        and takes the majority country of those already resolved.
+\end{itemize}
+A confidence score (low / medium / high) is assigned based on which signal
+resolved the owner and whether signals agreed.
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}ll@{}}
+Input (unresolved from Pass 1):  & 36,377 owners \\
+Located by bio text:             & 232 \\
+Located by company name:         & 144 \\
+Located by email TLD:            & 263 \\
+Located by website TLD:          & 439 \\
+Located by org location:         & 892 \\
+Located by network majority:     & 6,333 \\
+\textbf{Total resolved (Pass 2):}& \textbf{8,323} owners \\
+Still not specified after Pass 2:& 28,054 (56.1\% of all owners) \\
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} Owners marked \texttt{not\_specified} in
+\texttt{owner\_locations\_fast.csv} (36,377 rows)
+
+\textbf{Output:} \texttt{data/stage2/owner\_locations\_deep.csv} and
+\texttt{data/stage2/owner\_locations\_all.csv} (merged Pass~1 + Pass~2,
+50,002 rows) and \texttt{data/stage2/not\_specified\_owners.csv} (28,054 rows)
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+Pass~2 increases the located population from 13,625 to 21,948 owners
+(+61\%), more than doubling geographic coverage. The dominant signal
+is network majority (6,333 recoveries), which exploits the geographic
+clustering of developer social graphs. Together, Passes~1 and~2 enable
+Stage~4a to build a 65-country ranking covering 26,586 repositories
+(44.2\% of the corpus). The 56.1\% that remain unresolved is reported
+transparently as a key limitation: if unresolved owners differ
+systematically from resolved ones (e.g.\ lower-income developers
+less likely to complete profiles), country-level rates will be biased upward
+for higher-income countries.
+\end{outputbox}
+
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Stage 3 --- AI Adoption Detection}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection*{\texttt{stage3a\_config\_files.py} --- Pass 1: Configuration File Detection}
+
+\begin{infobox}
+\textbf{Purpose:} Detects AI coding agent configuration files at the
+repository root for all 60,129 repositories. This is the cheapest signal
+in the pipeline: file existence only, no content reading. Repositories
+classified here are not re-examined by any later pass.
+\end{infobox}
+
+\textbf{Method.}
+A single batched GraphQL query per repository checks whether any of the
+known agent config filenames exist at the root. The checked filenames are:
+\texttt{CLAUDE.md}, \texttt{AGENTS.md}, \texttt{.github/copilot-instructions.md},
+\texttt{.cursorrules}, \texttt{.cursorignore}, \texttt{GEMINI.md},
+\texttt{.windsurfrules}, \texttt{.roomodes}, and several others.
+A positive match immediately classifies the repository as
+\textbf{agentic} under the MEDIUM signal family (\textit{config\_file}).
+Repositories with no match are written to the unclassified list for Pass~2.
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}ll@{}}
+Input:                               & 60,129 repositories \\
+Classified agentic:                  & \textbf{25,010} (41.6\%) \\
+Passed to Pass 2 (unclassified):     & 35,119 (58.4\%) \\[4pt]
+Top config files found: & \\
+\quad CLAUDE.md                      & 15,152 \quad (60.6\% of Pass~1 agentic) \\
+\quad AGENTS.md                      & 8,705 \quad (34.8\%) \\
+\quad .github/copilot-instructions.md & 715 \quad (2.9\%) \\
+\quad .cursorrules                   & 177 \quad (0.7\%) \\
+\quad GEMINI.md                      & 106 \quad (0.4\%) \\
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} \texttt{data/stage1/global\_corpus.csv}
+
+\textbf{Output:}
+\texttt{data/stage3/pass1\_results.csv} (60,129 rows) and
+\texttt{data/stage3/pass1\_unclassified.csv} (35,119 rows for Pass~2)
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+Pass~1 single-handedly detects 41.6\% of the corpus as agentic and accounts
+for the majority of all agentic classifications. The dominance of
+\texttt{CLAUDE.md} (60.6\% of Pass~1 hits) is one of the most striking
+findings in the thesis: Claude Code is by far the most widely adopted
+agent in the JS/TS/npm ecosystem. This pass is also central to RQ2 ---
+comparing Pass~1-only detection (41.6\%) with the full four-pass pipeline
+(73.0\%) reveals the \textbf{+31.4~percentage-point undercounting gap}
+that single-signal methods produce.
+\end{outputbox}
+
+\newpage
+
+\subsection*{\texttt{stage3b\_commit\_trailers.py} --- Pass 2: Commit Trailer and PR Branch Scan}
+
+\begin{infobox}
+\textbf{Purpose:} Scans the commit history and pull request branch names
+of the 35,119 repositories that Pass~1 did not classify.
+Commit trailers are STRONG signals --- they confirm an agent
+\emph{performed} work, not merely that it was configured.
+\end{infobox}
+
+\textbf{Method.}
+For each unclassified repository, the script fetches the most recent
+\textbf{100 commits} via the GitHub REST API and scans each commit message
+for agent-specific trailer patterns using regular expressions:
+\begin{itemize}
+  \item \texttt{Co-authored-by:} lines containing Claude Code, Copilot,
+        OpenAI Codex, Cursor, Gemini, Devin, etc.
+  \item \texttt{Generated by:} / \texttt{Committed by:} patterns
+  \item PR branch names prefixed with \texttt{copilot/}, \texttt{codex/},
+        \texttt{devin/}, \texttt{claude/}, \texttt{jules-}
+\end{itemize}
+Classification rule: $\geq 3$ AI commits or trailers from 2+ distinct agents
+$\rightarrow$ \textbf{agentic}. 1--2 AI commits from 1 agent $\rightarrow$
+\textbf{ai\_assisted}. No match $\rightarrow$ passed to Pass~3.
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}ll@{}}
+Input:                           & 35,119 repositories \\
+Classified agentic:              & \textbf{9,618} (27.4\% of input) \\
+Classified ai-assisted:          & \textbf{3,846} (10.9\%) \\
+Passed to Pass 3:                & 21,655 (61.7\%) \\[4pt]
+Top agents detected in trailers: & \\
+\quad Claude Code                & 8,224 repos \\
+\quad GitHub Copilot             & 1,637 repos \\
+\quad OpenAI Codex               & 1,577 repos \\
+\quad Cursor                     & 775 repos \\
+\quad Claude Code + Cursor (pair)& 517 repos \\
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} \texttt{data/stage3/pass1\_unclassified.csv} (35,119 rows)
+
+\textbf{Output:} \texttt{data/stage3/pass2\_results.csv} and
+\texttt{data/stage3/pass2\_unclassified.csv} (21,655 rows for Pass~3)
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+Pass~2 adds 9,618 agentic repositories that would have been missed by a
+config-file-only approach. Commit trailers are STRONG signals because they
+prove the agent \emph{authored} commits --- the agent did not just sit in a
+config file. The 3,846 ai-assisted repos from this pass all had 1--2 trailer
+hits, which Stage~3d (Pass~4) later re-examines; ultimately \textbf{all
+3,846} are upgraded to agentic because a single commit trailer is a STRONG
+signal. Pass~2 also provides the most granular per-agent breakdown in the
+corpus, directly enabling the tool distribution analysis in Stage~4c.
+\end{outputbox}
+
+\newpage
+
+\subsection*{\texttt{stage3c\_deep\_scan.py} --- Pass 3: Deep GraphQL Scan}
+
+\begin{infobox}
+\textbf{Purpose:} Performs the most thorough examination of the 21,655
+repositories still unclassified after Passes~1 and~2. Uses batched
+GraphQL queries to fetch commit history, pull requests, CI workflows, and
+\texttt{.gitignore} entries, then applies the full three-tier signal hierarchy.
+\end{infobox}
+
+\textbf{Method.}
+Repositories are batched in groups of 5 per GraphQL query (4--5$\times$ faster
+than individual REST calls). For each repository the query fetches:
+\textbf{150 commits} and \textbf{50 pull requests}. The signal families
+checked are:
+\begin{itemize}
+  \item \textbf{STRONG}: \textit{agent\_attribution} (commit trailers / author email),
+        \textit{pr\_branch} (agent-prefixed PR branches),
+        \textit{bot\_author} (known agent bot accounts as commit authors)
+  \item \textbf{MEDIUM}: \textit{pr\_label} (PR label containing agent name),
+        \textit{tool\_configuration} (\texttt{.gitignore} entries for agentic tools)
+  \item \textbf{WEAK}: \textit{pr\_body} (agent mention in PR description),
+        \textit{gitignore\_mixed} (editor-with-agent-mode \texttt{.gitignore} entries)
+\end{itemize}
+Classification rule: $\geq 1$ STRONG $\rightarrow$ \textbf{agentic};
+$\geq 2$ distinct MEDIUM families $\rightarrow$ \textbf{agentic};
+1 MEDIUM only $\rightarrow$ \textbf{ai\_assisted};
+$\geq 1$ WEAK $\rightarrow$ \textbf{ai\_assisted}; nothing $\rightarrow$ \textbf{none}.
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}ll@{}}
+Input:                           & 21,655 repositories \\
+Classified agentic:              & \textbf{764} (3.5\% of input) \\
+Classified ai-assisted:          & \textbf{4,657} (21.5\%) \\
+Classified none:                 & 16,234 (75.0\%) --- final none label \\[4pt]
+Top STRONG signals (agentic):    & \\
+\quad pr\_branch                 & 704 repos \\
+\quad bot\_author                & 45 repos \\
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} \texttt{data/stage3/pass2\_unclassified.csv} (21,655 rows)
+
+\textbf{Output:} \texttt{data/stage3/pass3\_results.csv} and
+\texttt{data/stage3/corpus\_detected\_full.csv} (merged Passes~1--3)
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+Pass~3 is the most computationally expensive pass ($\sim$3--4 hours runtime)
+but essential for completeness. Its 764 agentic and 4,657 ai-assisted
+classifications would all be missed by single-signal approaches. The 16,234
+\textbf{none} labels produced here are the definitive ``no evidence found''
+classification --- these repos passed through three increasingly thorough
+checks and showed no AI signal. The 4,657 ai-assisted repos from this pass
+enter Stage~3d (Pass~4) for a final deep re-examination.
+\end{outputbox}
+
+\newpage
+
+\subsection*{\texttt{stage3d\_reclassify.py} --- Pass 4: Reclassification of AI-Assisted Repos}
+
+\begin{infobox}
+\textbf{Purpose:} Takes every \textbf{ai-assisted} repository produced by
+Passes~2 and~3 (8,503 total) and applies two phases of deeper analysis
+to upgrade as many as possible to \textbf{agentic}. Pass~4 is the final
+classification step; its output is the definitive adoption label for all
+60,129 repositories.
+\end{infobox}
+
+\textbf{Phase 1 (no API calls).}
+Re-applies the tiered classification rule to the 3,846 ai-assisted repos
+from Pass~2. Under the strict rule, a single commit trailer is a STRONG
+(\textit{agent\_attribution}) signal $\rightarrow$ immediately agentic.
+Pass~2 had used a looser count-based rule; Phase~1 corrects this without
+any additional API calls. Result: \textbf{all 3,846} upgraded to agentic.
+
+\textbf{Phase 2 (deep API checks).}
+Runs five new check families on the 4,657 ai-assisted repos from Pass~3:
+\begin{itemize}
+  \item Extended config files in subdirectories (e.g.\ \texttt{.claude/settings.json})
+  \item Bot account authorship in up to 300 commits
+  \item Agent-style PR branch prefixes (expanded set)
+  \item CI workflow files (\texttt{.github/workflows/*.yml}) containing agent actions
+  \item PR labels and PR body patterns (extended regex)
+\end{itemize}
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}ll@{}}
+Input (total ai-assisted):              & 8,503 repositories \\
+Phase 1 --- upgraded (Pass~2 repos):   & \textbf{3,846} $\rightarrow$ agentic (100\%) \\
+Phase 2 --- input:                     & 4,657 repositories (Pass~3 ai-assisted) \\
+Phase 2 --- upgraded to agentic:       & \textbf{258} \\
+Phase 2 --- remain ai-assisted:        & 4,399 \\[4pt]
+Top new signals (Phase 2):             & \\
+\quad \texttt{.mcp.json} (MCP tool)    & 63 repos \\
+\quad \texttt{.claude/settings.json}   & 35 repos \\
+\quad \texttt{.claude/settings.local.json} & 30 repos \\
+\quad Copilot CI workflow              & 13 repos \\
+\quad Jules bot author                 & 10 repos \\
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} \texttt{data/stage3/corpus\_detected\_full.csv} (all ai-assisted rows)
+
+\textbf{Output:} \texttt{data/stage3/reclassification\_results.csv} and
+\texttt{data/stage3/corpus\_detected\_full\_v2.csv} --- the final definitive
+labels for all 60,129 repositories
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+Pass~4 adds the last \textbf{4,104 agentic} repositories (3,846 + 258)
+that no prior pass could confirm. Its output is the ground truth used in
+every table, chart, and statistical test in the thesis. The final
+classification is: 39,496 agentic (65.7\%), 4,399 ai-assisted (7.3\%),
+16,234 none (27.0\%). Combined, 43,895 repositories (73.0\%) show evidence
+of AI coding agent adoption --- the answer to \textbf{RQ1}. The 4,399
+ai-assisted repos represent borderline evidence: configured but unconfirmed.
+They are included in the 73.0\% total; excluding them gives the conservative
+65.7\% agentic-only figure reported alongside.
+\end{outputbox}
+
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Stage 4 --- Geographic and Statistical Analysis}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection*{\texttt{stage4a\_geographic\_analysis.py} --- Country Join and Ranking}
+
+\begin{infobox}
+\textbf{Purpose:} Joins the final adoption labels from Stage~3 with the
+owner locations from Stage~2 to produce a per-country adoption ranking.
+Answers the geographic dimension of \textbf{RQ3}.
+\end{infobox}
+
+\textbf{Method.}
+Each repository's owner is looked up in \texttt{owner\_locations\_all.csv};
+if a country is found, the repository inherits that country label.
+Countries with fewer than 30 repositories are excluded from the ranking
+(the MIN\_REPOS threshold) to ensure statistically meaningful confidence
+intervals. For each eligible country, the script computes: total repos,
+agentic count, ai-assisted count, adoption rate, and Wilson 95\% confidence
+interval. Countries are ranked by adoption rate descending.
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}ll@{}}
+Repos with country (joined):      & 26,586 (44.2\% of corpus) \\
+Repos without country:            & 33,543 (55.8\%) \\
+Countries with $\geq$30 repos:    & \textbf{65} \\
+Countries below threshold:        & 44 (excluded from ranking) \\[4pt]
+Top country:   & Belgium \quad 89 repos \quad 89.9\% \\
+Bottom country:& Rwanda \quad 49 repos \quad 22.4\% \\
+Largest corpus:& United States \quad 3,608 repos \quad 82.5\% \\
+Global (located): & 71.3\% \\
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} \texttt{corpus\_detected\_full\_v2.csv} + \texttt{owner\_locations\_all.csv}
+
+\textbf{Output:} \texttt{data/stage4/corpus\_with\_country.csv} (60,129 rows with
+country column) and \texttt{data/stage4/country\_adoption.csv} (65-row ranking table)
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+This script produces the 65-country ranking that is the centrepiece of the
+geographic analysis. The range from 89.9\% (Belgium) to 22.4\% (Rwanda)
+--- a 67.5~pp spread --- is the primary evidence for \textbf{RQ3}: adoption
+rates vary significantly across countries. The ranking directly feeds the
+choropleth world map, the top/bottom-10 bar charts, and the MENA deep-dive.
+It also reveals the major corpus countries: the US (3,608 repos, 82.5\%),
+China (4,196, 77.2\%), India (3,447, 51.2\%), and Germany (1,155, 78.2\%).
+\end{outputbox}
+
+\newpage
+
+\subsection*{\texttt{stage4b\_statistical\_tests.py} --- Formal Statistical Tests (RQ1--RQ3)}
+
+\begin{infobox}
+\textbf{Purpose:} Runs the three formal statistical tests, one per research
+question, and produces the numerical evidence for each RQ's conclusion.
+\end{infobox}
+
+\textbf{Method and tests:}
+
+\textbf{RQ1 --- Binomial test.} One-sided binomial test against $H_0{:}\ p \leq 5\%$.
+The 5\% null corresponds to incidental one-time agent use. Rejection confirms
+adoption is statistically non-trivial in absolute terms.
+
+\textbf{RQ2 --- McNemar's test.} Paired test comparing per-repository detection
+outcomes under Pass~1-only vs.\ the full four-pass pipeline. Uses the
+continuity-corrected test statistic. The discordant cell $b$ (missed by Pass~1,
+detected by full pipeline) gives the undercounting delta.
+
+\textbf{RQ3 --- Chi-squared + Fisher exact + Benjamini-Hochberg FDR.}
+A chi-squared test of independence across all 65 countries tests whether
+adoption rates differ globally. Followed by 65 pairwise Fisher's exact tests
+(each country vs.\ rest-of-world); multiple comparisons corrected with
+Benjamini-Hochberg FDR at $\alpha = 0.05$.
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}p{3.5cm}p{8.5cm}@{}}
+\toprule
+\textbf{RQ1} & 73.0\% adoption (43,895/60,129). Wilson 95\% CI: [72.65\%, 73.35\%].
+               Binomial $p < 10^{-300}$. \textbf{Reject $H_0$}. \\[3pt]
+\textbf{RQ2} & Single-signal: 41.6\%. Full pipeline: 73.0\%. Delta: \textbf{+31.41 pp}.
+               $b = 18{,}885$, $c = 0$. McNemar $\chi^2 = 18{,}883$, $p < 10^{-300}$.
+               \textbf{Reject $H_0$}. \\[3pt]
+\textbf{RQ3} & $\chi^2 = 2{,}234.55$, $df = 64$, $p < 10^{-300}$.
+               41/65 countries significantly different from global mean
+               after BH FDR correction. \textbf{Reject $H_0$}. \\
+\bottomrule
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} \texttt{data/stage4/corpus\_with\_country.csv} (60,129 rows)
+
+\textbf{Output:} \texttt{data/stage4/statistical\_tests.txt} (full test output),
+\texttt{data/stage4/pairwise\_fisher.csv} (per-country Fisher results with BH correction)
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+This is the script that directly answers all three research questions with
+formal statistical evidence. The results are the final answers reported in
+the Results chapter and the Research Questions table in \texttt{results\_summary.tex}.
+Notably, $c = 0$ in the McNemar table means there is \textbf{not a single
+repository} that the full pipeline missed but Pass~1 found --- every
+additional detection by the full pipeline is a genuine new discovery.
+\end{outputbox}
+
+\newpage
+
+\subsection*{\texttt{stage4c\_breakdowns.py} --- Ecosystem, Language, and Tool Breakdowns}
+
+\begin{infobox}
+\textbf{Purpose:} Produces adoption breakdowns by ecosystem (package manager),
+primary language (TypeScript vs.\ JavaScript), repository size, and AI coding
+tool. Also analyses tool co-adoption (how many repos use multiple tools).
+\end{infobox}
+
+\textbf{Method.}
+For each grouping variable, the script computes: total repos, agentic count,
+ai-assisted count, adoption rate, Wilson~95\%~CI, and agentic-only rate.
+For the tool breakdown, the script parses the \texttt{agents\_found} column
+across all passes, splits multi-agent strings (e.g.\ \texttt{Claude Code|Cursor})
+into individual tool counts, and counts how many unique tools each repository uses.
+Tool pairs are generated by computing all unordered pairs from the multi-tool
+string and counting pair frequencies.
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}ll@{}}
+Language breakdown: & TypeScript 77.1\% \quad JavaScript 60.5\% \\[2pt]
+Ecosystem rates (top): & pnpm 82.5\% \quad deno 80.4\% \quad npm 73.7\% \quad vanilla 57.5\% \\[2pt]
+Top tools (all repos): & Claude Code 26,854 (44.7\%) \quad Copilot 2,976 (4.9\%) \\
+                       & Cursor 2,248 (3.7\%) \quad OpenAI Codex 2,127 (3.5\%) \\[2pt]
+Tool loyalty:          & 1 tool: 40,532 (95.4\%)\quad 2 tools: 1,715 (4.0\%)\quad 3+: 176 (0.4\%) \\[2pt]
+Top tool pair:         & Claude Code + Cursor (628 repos, 1.0\% of corpus) \\
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} \texttt{data/stage4/corpus\_with\_country.csv}
+
+\textbf{Output:} \texttt{breakdown\_ecosystem.csv}, \texttt{breakdown\_language.csv},
+\texttt{breakdown\_size.csv}, \texttt{coadoption\_tool\_counts.csv},
+\texttt{coadoption\_tool\_pairs.csv}, \texttt{coadoption\_per\_repo.csv}
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+This script provides the data behind several key Discussion chapter arguments:
+the TypeScript/JavaScript gap (77.1\% vs.\ 60.5\%) supports the argument
+that typed codebases benefit more from AI suggestions due to richer context.
+The pnpm lead (82.5\%) links engineering-focused tooling choices to AI adoption.
+Claude Code's 44.7\% corpus share (59.2\% of adopters) establishes its
+dominance in the npm ecosystem and motivates a discussion of why a
+terminal-first CLI fits the npm development workflow. The 95.4\% single-tool
+loyalty figure shows that despite many options, developers overwhelmingly
+commit to one agent.
+\end{outputbox}
+
+\newpage
+
+\subsection*{\texttt{stage4d\_size\_analysis.py} --- Repository Size and Adoption Rate}
+
+\begin{infobox}
+\textbf{Purpose:} Tests whether larger repositories have higher AI coding
+agent adoption rates. Uses three independent operationalisations of
+``size'' to rule out artefacts of any single metric.
+\end{infobox}
+
+\textbf{Method.}
+Three size proxies are computed independently:
+\begin{itemize}
+  \item \textbf{Approach A --- Stars} (popularity proxy): fixed thresholds
+        $\leq$50 (small), 51--500 (medium), $>$500 (large). Thresholds
+        inherited from Stage~1a filters.
+  \item \textbf{Approach B --- Commits} (development activity proxy):
+        corpus tertiles. P33 = 114, P66 = 286 commits.
+  \item \textbf{Approach C --- Code volume} (lang\_bytes proxy):
+        corpus tertiles. P33 = 0.50~MB, P66 = 1.45~MB.
+\end{itemize}
+Approaches B and C use corpus tertiles so each stratum holds $\approx$33\%
+of repositories, giving balanced groups. Approach A uses fixed thresholds
+because the star distribution is extremely skewed (82.4\% have $\leq$50 stars).
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Approach & Small & n(small) & Medium & n(med) & Large \\
+\midrule
+A: Stars          & 70.5\% & 49,562 & 82.7\% & 8,375 & 91.7\% \\
+B: Commits        & 64.8\% & 19,891 & 73.4\% & 19,863 & 80.6\% \\
+C: Code volume    & 59.7\% & 19,843 & 73.3\% & 19,842 & 85.6\% \\
+\bottomrule
+\end{tabular}\\[4pt]
+Range (large minus small): A: $+$21.2~pp \quad B: $+$15.8~pp \quad C: $+$26.0~pp
+\end{numbersbox}
+
+\textbf{Input:} \texttt{data/stage4/corpus\_with\_country.csv}
+
+\textbf{Output:} \texttt{size\_stars.csv}, \texttt{size\_commits.csv},
+\texttt{size\_langbytes.csv}, \texttt{size\_comparison.csv}
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+All three independent operationalisations confirm the same monotonic pattern:
+larger repositories adopt AI coding agents at higher rates. The consistency
+across three different metrics rules out the possibility that the pattern
+is an artefact of a particular size definition. The +26.0~pp range for code
+volume (Approach~C) is the largest gap, suggesting that developers with
+substantial codebases benefit most from --- and therefore are more likely
+to adopt --- AI agents. This finding is discussed in the Discussion chapter
+as evidence that adoption is driven partly by the perceived utility of agents
+for complex, large-scale work.
+\end{outputbox}
+
+\newpage
+
+\subsection*{\texttt{stage4e\_mena\_analysis.py} --- MENA Regional Deep-Dive}
+
+\begin{infobox}
+\textbf{Purpose:} Applies the same statistical analysis pipeline as the global
+study to the MENA (Middle East and North Africa) region, enabling a focused
+examination of within-region variation and a comparison of MENA against the
+global benchmark.
+\end{infobox}
+
+\textbf{Method.}
+The MENA region is defined as 19 countries across five sub-regions:
+Gulf (UAE, Saudi Arabia, Kuwait, Qatar, Bahrain, Oman),
+Levant (Israel, Jordan, Lebanon, Syria, Iraq),
+North Africa (Egypt, Morocco, Algeria, Tunisia, Libya),
+Turkey, and Iran. The same MIN\_REPOS = 30 threshold as the global analysis
+is applied; 9 countries are eligible, 10 fall below the threshold.
+Statistical tests: Fisher's exact (MENA aggregate vs.\ global 73.0\%),
+chi-squared within MENA (9~$\times$~2 contingency table), and pairwise
+Fisher's exact per country vs.\ MENA mean with BH FDR correction.
+
+\begin{numbersbox}
+\textbf{Key numbers generated:}\\[2pt]
+\begin{tabular}{@{}ll@{}}
+Total MENA repos (located):      & 1,446 (2.4\% of corpus, 5.4\% of located) \\
+Eligible countries:              & 9 of 19 \\
+MENA overall adoption:           & \textbf{65.1\%} [62.6\%, 67.5\%] \\
+vs.\ global (Fisher):            & $p < 10^{-10}$, OR = 0.68 \\
+Within-MENA ($\chi^2$):          & 147.52, $df=8$, $p \approx 10^{-28}$ \\
+Countries significant (BH FDR):  & 7 of 9 \\[4pt]
+Sub-region rates:                & Gulf 85.0\% \quad Levant 81.5\% \quad Turkey 70.7\% \\
+                                 & North Africa 50.1\% \quad Iran 44.8\% \\[4pt]
+Highest MENA country:            & Israel 85.6\% (n=181) \\
+Lowest MENA country:             & Morocco 39.2\% (n=79) \\
+Claude Code loyalty (MENA):      & 58.6\% (global: 59.2\%) \\
+\end{tabular}
+\end{numbersbox}
+
+\textbf{Input:} \texttt{data/stage4/corpus\_with\_country.csv}
+
+\textbf{Output:} \texttt{data/stage4/mena/} directory: \texttt{mena\_country\_ranking.csv},
+\texttt{mena\_subregion\_breakdown.csv}, \texttt{mena\_statistical\_tests.txt},
+\texttt{mena\_size\_breakdown.csv}, \texttt{mena\_tool\_breakdown.csv},
+and additional CSV files for coverage and co-adoption.
+
+\begin{outputbox}
+\textbf{Thesis contribution.}
+The MENA analysis demonstrates that the global geographic variation found in
+RQ3 is replicated within a single cultural/geographic macro-region: a 46.4~pp
+spread exists within MENA alone (Israel 85.6\% to Morocco 39.2\%).
+The Gulf--Levant sub-regions (85.0\%, 81.5\%) outperform the global average
+(73.0\%), while North Africa (50.1\%) and Iran (44.8\%) lag significantly
+behind. Crucially, Claude Code loyalty is nearly identical inside MENA
+(58.6\%) and globally (59.2\%), showing that tool preferences do not drive
+the regional gap --- structural factors (internet access, GPU access,
+economic constraints, language barriers) are more likely explanations,
+discussed in the Discussion chapter.
+\end{outputbox}
+
+\end{document}
