@@ -287,6 +287,44 @@ def resolve_combined(tz_candidates: list[str] | None,
     return "not_specified", "none", "not_specified"
 
 
+# ── ISO 3166-1 alpha-2 → canonical country name ───────────────────────────────
+# Nominatim always returns country_code in ASCII regardless of UI language.
+ISO2_COUNTRY = {
+    "af": "Afghanistan",   "al": "Albania",      "dz": "Algeria",
+    "ar": "Argentina",     "am": "Armenia",       "au": "Australia",
+    "at": "Austria",       "az": "Azerbaijan",    "bh": "Bahrain",
+    "bd": "Bangladesh",    "be": "Belgium",       "bo": "Bolivia",
+    "ba": "Bosnia",        "br": "Brazil",        "bg": "Bulgaria",
+    "kh": "Cambodia",      "ca": "Canada",        "cl": "Chile",
+    "cn": "China",         "co": "Colombia",      "hr": "Croatia",
+    "cz": "Czech Republic","dk": "Denmark",       "ec": "Ecuador",
+    "eg": "Egypt",         "et": "Ethiopia",      "fi": "Finland",
+    "fr": "France",        "ge": "Georgia",       "de": "Germany",
+    "gh": "Ghana",         "gr": "Greece",        "hk": "Hong Kong",
+    "hu": "Hungary",       "in": "India",         "id": "Indonesia",
+    "ir": "Iran",          "iq": "Iraq",          "ie": "Ireland",
+    "il": "Israel",        "it": "Italy",         "jp": "Japan",
+    "jo": "Jordan",        "kz": "Kazakhstan",    "ke": "Kenya",
+    "kr": "South Korea",   "kw": "Kuwait",        "lb": "Lebanon",
+    "ly": "Libya",         "lu": "Luxembourg",    "my": "Malaysia",
+    "mx": "Mexico",        "ma": "Morocco",       "mm": "Myanmar",
+    "np": "Nepal",         "nl": "Netherlands",   "nz": "New Zealand",
+    "ng": "Nigeria",       "no": "Norway",        "om": "Oman",
+    "pk": "Pakistan",      "ps": "Palestine",     "pe": "Peru",
+    "ph": "Philippines",   "pl": "Poland",        "pt": "Portugal",
+    "qa": "Qatar",         "ro": "Romania",       "ru": "Russia",
+    "sa": "Saudi Arabia",  "sn": "Senegal",       "rs": "Serbia",
+    "sg": "Singapore",     "sk": "Slovakia",      "za": "South Africa",
+    "es": "Spain",         "lk": "Sri Lanka",     "se": "Sweden",
+    "ch": "Switzerland",   "sy": "Syria",         "tw": "Taiwan",
+    "tz": "Tanzania",      "th": "Thailand",      "tn": "Tunisia",
+    "tr": "Turkey",        "ug": "Uganda",        "ua": "Ukraine",
+    "ae": "United Arab Emirates", "gb": "United Kingdom",
+    "us": "United States", "uy": "Uruguay",       "uz": "Uzbekistan",
+    "ve": "Venezuela",     "vn": "Vietnam",       "ye": "Yemen",
+    "zw": "Zimbabwe",      "dz": "Algeria",       "rw": "Rwanda",
+}
+
 # ── Nominatim geocoding (Signal 0) ────────────────────────────────────────────
 _nominatim_cache: dict[str, str | None] = {}   # location_raw → country or None
 
@@ -314,24 +352,20 @@ def nominatim_geocode(location_raw: str) -> str | None:
         )
         time.sleep(1.1)   # Nominatim: max 1 req/s
         if r.status_code == 200 and r.json():
-            hit     = r.json()[0]
-            address = hit.get("address", {})
-            # 'country' key is the full English country name
-            country_raw = address.get("country", "")
-            country = None
-            if country_raw:
-                cl = country_raw.lower()
-                for key2, val in COUNTRY_MAP.items():
-                    if key2 in cl or cl in key2:
-                        country = val
-                        break
-                if not country:
-                    # Nominatim's country name might not be in our map —
-                    # use it directly (title-cased) as a best-effort result
-                    country = country_raw.strip().title()
+            hit          = r.json()[0]
+            address      = hit.get("address", {})
+            # country_code is always ASCII (ISO 3166-1 alpha-2) — language independent
+            country_code = address.get("country_code", "").lower()
+            country      = ISO2_COUNTRY.get(country_code)
+            # Fallback: use Nominatim's display_name country portion
+            if not country:
+                country_raw = address.get("country", "")
+                if country_raw:
+                    country = country_raw.strip()
             _nominatim_cache[key] = country
             return country
-    except Exception:
+    except Exception as e:
+        print(f"    [nominatim error] {location_raw!r}: {e}")
         time.sleep(2)
 
     _nominatim_cache[key] = None
@@ -744,10 +778,15 @@ def main():
 
 def _flush(rows: list[dict]) -> None:
     """Append rows to OUT_C, creating file if needed."""
+    if not rows:
+        return
     new_chunk = pd.DataFrame(rows)
-    if OUT_C.exists():
-        existing = pd.read_csv(OUT_C)
-        new_chunk = pd.concat([existing, new_chunk], ignore_index=True)
+    if OUT_C.exists() and OUT_C.stat().st_size > 0:
+        try:
+            existing  = pd.read_csv(OUT_C)
+            new_chunk = pd.concat([existing, new_chunk], ignore_index=True)
+        except Exception:
+            pass   # corrupted/empty file — overwrite cleanly
     new_chunk.to_csv(OUT_C, index=False)
 
 
