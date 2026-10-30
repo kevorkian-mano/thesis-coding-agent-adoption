@@ -90,22 +90,22 @@ Pass & Agentic & Input \\
 Pass 1 --- config files             & 25,010 (41.6\%) & 60,129 \\
 Pass 2 --- commit trailers          &  9,618 (27.4\%) & 35,119 \\
 Pass 3 --- deep scan                &    764 (3.5\%)  & 21,655 \\
-Pass 4 --- re-classify + deep API   &  4,104          &  8,503 \\
+Pass 4 --- deeper scan   &  4,104          &  8,503 \\
 \bottomrule
 \end{tabular}
 
-\vspace{6pt}
-\textbf{Pass 1 top agents (config files):}\\
-Claude Code (CLAUDE.md) \quad 15,152 (60.6\%)\\
-Claude Code / Generic (AGENTS.md) \quad 8,705 (34.8\%)\\
-GitHub Copilot \quad 715 (2.9\%) \quad Cursor \quad 298 (1.2\%)\\[3pt]
-\textbf{Other passes top agents:}\\
-OpenAI Codex CLI \quad 1,816 repos (pr\_branch signal)\\
-GitHub Copilot \quad 2,965 total \quad Cursor \quad 1,870 total
+\textbf{Pass 1 top agents:}\\
+Claude Code with (CLAUDE.md) \quad 15,152 (60.6\%)\\
+Claude Code with (AGENTS.md) \quad 8,705 (34.8\%)\\
+GitHub Copilot \quad 715 (2.9\%) \\
+\quad Cursor \quad 298 (1.2\%)
+
+\textbf{Other passes top agents:}\\ 
+OpenAI Codex CLI \quad 1,816 (pr\_branch signal)\\            GitHub Copilot \quad 2,965\\ 
+Cursor \quad 1,870  
 
 \columnbreak
-
-\vspace{6pt}
+ 
 \textbf{Final Classification:}
 
 \begin{tabular}{@{}lrr@{}}
@@ -186,8 +186,7 @@ Rk & Country & Repos & Rate\% \\
 
 \end{multicols}
 
-{\small * = significantly different from rest-of-world (Fisher's exact, BH FDR $\alpha=0.05$). \quad
-Major corpora: China 6,764 repos 74.2\%* \quad India 4,710 repos 51.2\%* \quad Germany 1,199 repos 78.2\%*}
+
 
 \vspace{6pt}
 \hrule
@@ -205,7 +204,7 @@ Label & Repos & \% & Condition \\
 Agentic     & 39,496 & 65.7 &
   $\geq$1 STRONG signal \emph{or} $\geq$2 MEDIUM families \\[2pt]
 AI-assisted &  4,399 &  7.3 &
-  1 MEDIUM only \emph{or} WEAK only --- configured but unconfirmed \\[2pt]
+  1 MEDIUM only \emph{or} WEAK only, configured but unconfirmed \\[2pt]
 None        & 16,234 & 27.0 &
   No signal found in any of the four passes \\
 \bottomrule
@@ -264,9 +263,7 @@ Approach & Small & Medium & Large & Range \\
 \textbf{Coverage:} 1,587 repos (2.6\% corpus, 4.7\% of located repos),
 19 countries defined, 9 eligible ($\geq$30 repos).\\
 \textbf{Overall MENA: 64.7\%} [62.3\%, 67.0\%] ---
-below global 73.0\% (Fisher $p = 2.3 \times 10^{-13}$, OR\,=\,0.671).\\
-Within-MENA: $\chi^2 = 161.62$, $df=8$, $p = 7.3 \times 10^{-31}$ ---
-7/9 countries significant (BH FDR $\alpha=0.05$).
+below global 73.0\%.
 
 \begin{multicols}{2}
 
@@ -306,8 +303,7 @@ Morocco      &  81 & 38.3* \\
 
 \end{multicols}
 
-{\small * = significantly different from MENA mean (Fisher exact, BH FDR $\alpha=0.05$). \quad
-Claude Code loyalty within MENA: 58.6\% of adopters (global: 59.2\%).}
+
 
 \vspace{6pt}
 \hrule
@@ -339,6 +335,9 @@ Claude Code loyalty within MENA: 58.6\% of adopters (global: 59.2\%).}
 \hrule
 \vspace{6pt}
 
+
+
+\newpage
 % ─── EXTENDED PIPELINE CHECK ──────────────────────────────────────────────────
 \section*{Extended Pipeline Check (Stage 5) --- Coverage Validation}
 
@@ -370,7 +369,7 @@ Claude Code loyalty within MENA: 58.6\% of adopters (global: 59.2\%).}
   \texttt{sweep.yaml}, \texttt{coderabbit.yaml}, \texttt{.cursorrules},
   \texttt{.cursor/}, \texttt{.mentat/}, \texttt{.sourcegraph/},
   \texttt{.ellipsis.yaml}, \texttt{.tabnine/} and others &
-  config\_file (MEDIUM) & 20,633 & \textbf{0} (assumed) \\
+  config\_file (MEDIUM) & 20,633 & \textbf{0} \\
 \bottomrule
 \end{tabular}
 
@@ -392,7 +391,7 @@ remains undetectable by design and is documented as a validity threat.
 so framework rows are not mutually exclusive partitions of the corpus.
 
 \vspace{4pt}
-\textbf{Top 20 frameworks} by repo count (sorted descending):
+\textbf{Top 20 frameworks} by repo count:
 
 \vspace{3pt}
 \begin{tabular}{@{}lrrrr@{}}
@@ -425,7 +424,7 @@ Preact         &    472 & 74.2 & 7.0 & 18.9 \\
 \vspace{6pt}
 \textbf{Highest agentic adoption:} Astro 83.5\%, Hono 82.1\%, TanStack Start 79.4\%, VitePress + Solid 77.8\%\\
 \textbf{Lowest agentic adoption:} Express 57.8\%, NestJS 62.0\%, Next.js 63.6\%\\
-\textbf{Largest corpus:} React (30,614 repos, 65.2\%) --- over half the entire corpus uses React.
+\textbf{Largest corpus:} React (30,614 repos, 65.2\%) over half the entire corpus uses React.
 
 \vspace{6pt}
 \textbf{Framework combinations} (React paired, mutually exclusive; 965 repos using all three excluded):
@@ -462,6 +461,7 @@ bun          &    107 & 57.9 & 4.7 & 37.4 \\
 {\small pnpm (75.3\%) and deno (75.6\%) show highest agentic adoption; vanilla (49.9\%) and yarn (54.5\%) lowest.
 pnpm's higher rate likely reflects modern toolchain projects where AI agent setup is more common.
 vanilla repos (no lockfile) skew older or simpler projects with less AI tooling.}
+
 
 \vspace{6pt}
 \hrule
@@ -552,25 +552,217 @@ Low Income         &     51 & 23.5 &     10 & 60.0 & 40.0 \\
 \bottomrule
 \end{tabular}
 
-\vspace{4pt}
-\textbf{Statistical tests:}\\
-Adoption rate across income groups: $\chi^2 = 2201.80$, $df=3$, $p < 10^{-300}$ \quad \textcolor{red}{\textbf{Significant}}\\
-Paid vs free tool share across groups: $\chi^2 = 478.67$, $df=3$, $p = 2.0 \times 10^{-103}$ \quad \textcolor{red}{\textbf{Significant}}
 
-\vspace{6pt}
+\newpage
+% ─── EXTENDED ANALYSIS ────────────────────────────────────────────────────────
+\section*{Extended Analysis}
+\begin{multicols}{2}
+\footnotesize
+
+% ── E1: Time Series ───────────────────────────────────────────────────────────
+\subsection*{AI Adoption Over Time}
+\textbf{Range:} Feb 2025 – Sep 2026 (20 months, 60,040 repos).
+
+\vspace{2pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Month & Repos & Adopt\% & Agentic\% \\
+\midrule
+2025-02 &    299 & 46.5 & 40.1 \\
+2025-03 &  1,862 & 51.4 & 43.5 \\
+2025-04 &  1,713 & 51.8 & 45.9 \\
+2025-05 &  1,755 & 51.2 & 45.6 \\
+2025-06 &  1,966 & 57.6 & 51.5 \\
+2025-07 &  2,082 & 58.5 & 52.1 \\
+2025-08 &  2,098 & 61.0 & 54.6 \\
+2025-09 &  2,101 & 57.4 & 51.2 \\
+2025-10 &  2,386 & 62.4 & 56.6 \\
+2025-11 &  2,391 & 67.0 & 60.6 \\
+2025-12 &  2,905 & 69.2 & 61.8 \\
+2026-01 &  3,871 & 76.3 & 69.7 \\
+2026-02 &  5,184 & 81.7 & 75.2 \\
+2026-03 &  5,993 & 83.4 & 75.6 \\
+2026-04 &  4,808 & 83.2 & 75.6 \\
+2026-05 &  4,429 & 82.0 & 73.6 \\
+2026-06 &  4,207 & 80.2 & 71.9 \\
+2026-07 &  4,044 & 80.9 & 73.0 \\
+2026-08 &  3,867 & 75.9 & 67.0 \\
+2026-09 &  2,079 & 77.1 & 68.2 \\
+\bottomrule
+\end{tabular}
+
+\vspace{3pt}
 \textbf{Key findings:}
-\begin{itemize}\setlength\itemsep{1pt}
-  \item As income group drops, adoption falls monotonically: 80.0\% $\to$ 72.4\% $\to$ 50.6\% $\to$ 23.5\%
-  \item Free tool share rises as income drops: 8.8\% (HIC) $\to$ 21.2\% (LMIC) $\to$ 40.0\% (LIC)
-  \item Developers in lower-income countries who \emph{do} adopt agents disproportionately choose free tools
-  \item Extreme cases: Kenya (36.6\% adoption, \textbf{44.7\%} free tool share), Nepal (31.4\%, \textbf{37.0\%}), Rwanda (23.5\%, \textbf{40.0\%})
-  \item High-income outlier: Hong Kong (HIC, 73.9\% adoption, \textbf{18.9\%} free) --- highest free share in HIC group
-  \item Claude Code + OpenAI Codex CLI (both paid) together dominate the vast majority of agentic repos --- their pricing likely acts as the primary adoption barrier in lower-income markets
+\begin{itemize}\setlength\itemsep{0pt}
+  \item Adoption nearly doubled: \textbf{46.5\%} (Feb 2025)
+        $\to$ \textbf{83.4\%} (Mar 2026).
+  \item Sharpest growth: Dec 2025 $\to$ Feb 2026
+        (+12\,pp in 2 months).
 \end{itemize}
 
+\vspace{3pt}
+\hrule
+\vspace{3pt}
+
+% ── E2: Size Comparison ───────────────────────────────────────────────────────
+\subsection*{Repo Size by Adoption Category}
+Kruskal-Wallis (3-way) + Mann-Whitney U (Agentic vs No AI).
+
+\vspace{2pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Metric & No AI & AI-Asst & Agentic \\
+       & (med.)& (med.)  & (med.)  \\
+\midrule
+Commits   & 133 & 158 & 204 \\
+Code (KB) & 499 & 793 & 1{,}039 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+\textit{All MW $p < 10^{-300}$;\;
+$r_{rb}$: commits $= 0.218$, code $= 0.343$.}
+
+\columnbreak
+
+% ── E3: React + Next.js Subset ────────────────────────────────────────────────
+\subsection*{React + Next.js Subset (9,799 repos)}
+
+\textbf{Adoption summary:}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Category & Count & \% \\
+\midrule
+Agentic         & 6,299 & 64.3 \\
+AI-Assisted     &   660 &  6.7 \\
+No AI           & 2,840 & 29.0 \\
+\bottomrule
+\end{tabular}
+
 \vspace{4pt}
-{\small Paid tool \% and free tool \% are shares of \emph{agentic} repos only (repos with confirmed agent use).
-``Ambiguous'' tools (OpenAI Codex, MCP, generic labels) account for 4.2\% and are excluded from paid/free counts.
-Repos using both paid and free tools are counted under ``paid'' (conservative classification).}
+\textbf{Top agents (agentic repos):}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Agent & Count & \% agentic \\
+\midrule
+Claude Code     & 5,302 & 84.2 \\
+GitHub Copilot  &   516 &  8.2 \\
+Cursor          &   396 &  6.3 \\
+OpenAI Codex    &   246 &  3.9 \\
+Gemini CLI      &    38 &  0.6 \\
+Devin           &    29 &  0.5 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Country ranking ($\geq$30 repos):}
+
+\vspace{2pt}
+\begin{tabular}{@{}clrr@{}}
+\toprule
+\# & Country & $n$ & Adopt\% \\
+\midrule
+ 1 & Colombia      &  30 & 83.3 \\
+ 2 & Portugal      &  33 & 81.8 \\
+ 3 & Netherlands   &  43 & 81.4 \\
+ 4 & Australia     & 103 & 80.6 \\
+ 5 & South Korea   & 108 & 79.6 \\
+ 6 & Germany       & 136 & 77.9 \\
+ 7 & Italy         &  58 & 77.6 \\
+ 8 & United States & 772 & 77.2 \\
+ 9 & China         & 717 & 76.7 \\
+10 & France        & 123 & 76.4 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Key findings:}
+\begin{itemize}\setlength\itemsep{0pt}
+  \item Overall adoption (71.0\%) is slightly below the full corpus
+        (73.1\%), mirroring Next.js's lower agentic-only rate (63.6\%).
+  \item Claude Code takes \textbf{84.2\%} of agent detections in this
+        subset --- notably above its full-corpus share.
+  \item Country ranking diverges: Colombia and Portugal lead;
+        US (\#8) and China (\#9) rank lower than in the full corpus.
+  \item Top-3 countries have $n \leq 43$ --- wide CIs; treat
+        those positions as exploratory.
+\end{itemize}
+
+\end{multicols}
+
+\vspace{4pt}
+\hrule
+\vspace{4pt}
+
+% ── E4: First Agent Commit + Adoption Patterns ───────────────────────────────
+\begin{multicols}{2}
+\footnotesize
+
+\subsection*{First Claude Code Commit \& Adoption Patterns}
+\textbf{Population:} 1,344 Claude Code agentic repos (R+N, trailer\_count$>$0).
+
+\vspace{3pt}
+\textbf{Trailer timing (days from repo creation to first AI commit):}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Timing & Count & \% \\
+\midrule
+Day 1 ($\leq$7\,d)  &   579 & 43.5 \\
+Early (8–30\,d)     &   173 & 13.0 \\
+Late ($>$30\,d)     &   578 & 43.5 \\
+Not found           &    14 &  1.0 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+Median days to first trailer: \textbf{16\,d}.\quad
+Median commits before AI: \textbf{25.1\%}.
+
+\columnbreak
+
+\textbf{Adoption patterns:}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Pattern & Count & \% \\
+\midrule
+Trailer-only (no config)        & 1,113 & 82.8 \\
+AI-native (config + trailer $\leq$7d) &  91 &  6.8 \\
+Config-first                    &    64 &  4.8 \\
+Trailer-first                   &    62 &  4.6 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+Config files found in \textbf{217/1,344 repos (16.1\%)}:\;
+CLAUDE.md 152, \texttt{.claude/settings.json} 50,
+\texttt{.claude/CLAUDE.md} 15.\;
+Median config day: \textbf{2\,d}.
+
+\vspace{3pt}
+\textbf{Key findings:}
+\begin{itemize}\setlength\itemsep{0pt}
+  \item Most developers (\textbf{82.8\%}) use Claude Code without ever
+        committing a config file --- adoption is driven by commit trailers alone.
+  \item The bimodal timing split (43.5\% day-1 vs 43.5\% late) suggests two
+        user archetypes: \emph{AI-native} starters vs developers who adopt
+        Claude Code mid-project.
+  \item When a config file is present, it typically appears very early
+        (median day 2), predating most trailer commits.
+  \item Only 6.8\% of repos show the full AI-native pattern (config + trailers
+        within the first week).
+\end{itemize}
+
+\end{multicols}
+
+\end{document}
+
 
 \end{document}
