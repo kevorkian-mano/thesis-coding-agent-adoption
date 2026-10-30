@@ -40,12 +40,22 @@ of $k$ generated solutions is correct). The best model solved 28.8\% of problems
 in a single sample and 72.3\% with 100 samples, demonstrating for the first time
 that LLMs trained on code could produce functionally correct solutions rather than
 merely plausible-looking fragments. This work became the technical basis for GitHub
-Copilot. A key limitation is that HumanEval consists almost entirely of short,
+Copilot. The study's strength is that it established the first systematic benchmark
+for evaluating LLM code generation and demonstrated that such models could produce
+functionally correct solutions at a scale and pass rate that made production
+deployment plausible, directly enabling the tool category this thesis studies.
+A key limitation is that HumanEval consists almost entirely of short,
 self-contained Python functions and does not represent the complexity of real-world
 multi-file projects with existing conventions, test suites, and dependencies.
 Critics have further noted that many HumanEval problems appear in the training
 corpus, so the benchmark may partly measure memorisation rather than generalisation
-to unseen programming tasks.
+to unseen programming tasks. A counter-argument is that despite the memorisation
+concern, the capabilities demonstrated by Codex transferred to production use:
+Ziegler et al.~\cite{ziegler2022} found a 27\% suggestion acceptance rate across
+2,631 GitHub Copilot users in genuine production contexts, which would not be
+observed if the model merely memorised training examples rather than learning
+generalisable code patterns, suggesting that the practical utility of Codex-derived
+models is not reducible to benchmark memorisation alone.
 
 Chatlatanagulchai et al.~\cite{chatlatanagulchai2025} conducted an empirical study
 of \emph{context files} for AI coding agents, examining the prevalence, content, and
@@ -89,22 +99,24 @@ implying that the population of repositories that configure agents explicitly is
 small and systematically unrepresentative fraction of all AI-assisted development.
 
 In a companion exploratory study, Galster et al.~\cite{galsterExploratory2026}
-examined broader patterns of AI coding agent adoption in open-source projects,
-moving beyond repositories with explicit configuration files to include projects
-where agent activity is inferred from commit trailers and pull request metadata.
-Their approach combined automated repository mining with qualitative analysis of
-how agents are integrated into development workflows, and they report descriptive
-findings about the variety of adoption styles observed across ecosystems and
-project sizes. The study's strength is its breadth, covering multiple ecosystems
-and adoption styles in a single analysis. By design, exploratory studies are
-hypothesis-generating rather than confirmatory, and the patterns reported represent
-tendencies in the studied sample rather than definitive characterisations of the
-full population of AI-assisted projects on GitHub. A counter-argument is that
-exploratory adoption patterns are sensitive to which detection signals were used to
-identify AI activity in the first place: Mao et al.~\cite{mao2026} demonstrated
-that different signal types produce substantially different adoption rate estimates
-on the same corpus, meaning the adoption styles and prevalence observed by Galster
-et al.\ may change considerably if the underlying detection method is varied.
+examined how practitioners configure agentic AI coding tools in open-source projects,
+moving from the descriptive characterisation of configuration artifacts in the
+companion study to an analysis of the practices and patterns behind those
+configurations. Their approach combined automated repository mining with qualitative
+analysis of how configuration choices relate to project type, team size, and
+development workflow, reporting descriptive findings about the variety of
+configuration practices observed across ecosystems. The study's strength is its
+breadth, covering multiple ecosystems and configuration styles in a single analysis.
+A limitation inherent to exploratory studies is that they are hypothesis-generating
+rather than confirmatory, and the patterns reported represent tendencies in the
+studied sample rather than definitive characterisations of the full population of
+AI-configured projects on GitHub. A counter-argument is that configuration practice observations are sensitive
+to which repositories were included in the sample: Robbes et al.~\cite{robbesAgenticMuch2026}
+found that the gap between narrow and broad heuristic sets reaches 6.46 percentage
+points on the same corpus, meaning that the configurations and practices observed
+by Galster et al.\ may reflect a systematically filtered subset of agentic
+development whose configuration patterns differ from the broader population of
+agent users who adopt less explicitly.
 
 Galster et al.~\cite{galsterHarness2026} examined \emph{agent harness engineering},
 analysing the structure and content of skill definitions and tool configurations
@@ -112,10 +124,12 @@ used by AI coding agents across a corpus of repositories. Their approach involve
 parsing harness files to categorise skill definitions by their use of dynamic
 scripts versus static natural-language instructions. The key finding is that 85.5\%
 of skill definitions lack dynamic scripts, meaning that most agentic configuration
-is written as plain instructions rather than executable code. This finding is
-relevant to detection methodology: configuration-file-based detection is broadly
-applicable because the files are human-readable and parseable without specialised
-tooling. A limitation is that this pattern may reflect the current early-stage
+is written as plain instructions rather than executable code. The study's strength
+is that it establishes the prevalence of plain-language harness configurations,
+which has direct implications for detection methodology: configuration-file-based
+detection is broadly applicable because the files are human-readable and parseable
+without specialised tooling, and the 85.5\% figure provides a quantitative basis
+for this claim. A limitation is that this pattern may reflect the current early-stage
 maturity of harness engineering rather than a permanent property of the field, and
 the proportion of dynamically scripted harnesses may increase as the practice matures.
 A counter-argument is that the dominance of plain-language instructions may reflect
@@ -134,8 +148,13 @@ effect of each tool category on productivity and code quality. They found that
 velocity gains from autonomous agents only materialise when the agent is the
 first AI tool adopted in a project, and that agent overuse produces an 18--39\%
 quality degradation as measured by post-merge bug rates. The study's strength is
-its longitudinal causal design, which goes beyond correlation. A counter-argument
-is that the ``agent first'' finding may reflect a selection effect: projects that
+its longitudinal causal design, which goes beyond correlation. A limitation is that
+the study relies on developer activity logs available only from developers who
+consented to telemetry collection; developers who opt out may have systematically
+different adoption patterns, potentially biasing the sample towards more engaged
+or technically sophisticated users who would show stronger productivity effects
+regardless of tool adoption. A counter-argument is that the ``agent first''
+finding may reflect a selection effect: projects that
 adopt agents before IDEs tend to be newer and less technically complex, and
 those intrinsic properties could independently produce better velocity outcomes
 rather than the adoption order per se.
@@ -283,14 +302,15 @@ rather than the 3--5 covered in most prior work, it captures a far larger fracti
 of the true adoption signal. A limitation is that heuristics are static and may
 become outdated as agents change their default behaviours, and they are
 deliberately vulnerable to developers who modify commit trailers to conceal or
-simulate agent use. A counter-argument is that heuristic catalogues face a
-fundamental coverage ceiling that model-based approaches can overcome: Ghaleb
-~\cite{ghaleb2026} demonstrated that a behavioural classifier trained without
-relying on explicit markers achieves a 97.2\% F1 score, implying that the signal
-missed by any static heuristic set---because agents change defaults, developers
-disable signatures, or new agents emerge---can in principle be recovered by
-approaches that learn to distinguish AI-generated from human-written code without
-depending on any specific identifier.
+simulate agent use. A counter-argument is that heuristic catalogues face an inherent coverage ceiling
+as agents evolve and developers customise or disable default signals: Ghaleb
+~\cite{ghaleb2026} demonstrated that individual agents leave distinguishable
+fingerprints in repository structure and commit metadata that extend beyond the
+patterns captured in standardised heuristic catalogues, suggesting that the
+coverage of any fixed catalogue will erode over time as agents diversify their
+observable behaviours, and that attribution approaches capable of identifying
+\emph{which} agent was used represent a complementary methodology to heuristic
+catalogues rather than a full substitute.
 
 Dey et al.~\cite{dey2020biman} introduced BIMAN, a systematic framework for
 detecting bots in GitHub commit and issue comment histories, predating the
@@ -303,51 +323,61 @@ labelled ground truth, they found that 7.3\% of GitHub committers are bots and
 that bot commits constitute a disproportionately large share of total commit volume
 due to CI/CD automation and dependency-update services. The framework's strength is
 its interpretable multi-signal design that allows analysts to understand why an
-account was flagged rather than treating the decision as a black box. A counter-argument
-is that AI coding agents represent a qualitatively different phenomenon from
+account was flagged rather than treating the decision as a black box. A limitation
+is that BIMAN was designed to detect automated CI/CD bots and dependency-update
+services rather than AI coding agents, and the signals that distinguish bots from
+humans in 2020 may not transfer to the task of distinguishing AI-agent commits from
+human-authored commits; agents are intentionally designed to produce human-like
+commit patterns that the original BIMAN signals were not calibrated to detect.
+A counter-argument is that AI coding agents represent a qualitatively different phenomenon from
 traditional bots: agents are intentionally designed to produce human-like commit
 patterns, and the BIMAN signals may not reliably distinguish AI agent commits from
 genuine human contributions, suggesting that detection frameworks purpose-built for
 AI agents are needed alongside bot-detection tools.
 
-Ghaleb~\cite{ghaleb2026} proposed a machine-learning approach to fingerprinting
-AI-generated code in pull requests. Rather than relying on explicit markers such
-as commit trailers, they trained a classifier on a dataset of 33,580 pull requests
-with known authorship, learning to recognise AI-generated code from behavioural
-features including the frequency of multi-line commit diffs, the length and
-formatting of PR descriptions, and the proportion of code using bullet-point
-structures. The classifier achieves a 97.2\% F1 score on the held-out test set.
-The approach's strength is that it can detect AI usage even when developers
-deliberately omit or modify commit trailers, making it more evasion-resistant than
-pattern-matching methods. A fundamental limitation is that the classifier requires
-a large set of manually labelled examples, and no such labelled dataset exists for
-the JavaScript/TypeScript/npm ecosystem. A further counter-argument is that as AI
-agents improve and are trained on human feedback to produce more natural-looking
-code, the behavioural features that currently distinguish AI from human code may
-converge, reducing the classifier's discriminative power over time.
+Ghaleb~\cite{ghaleb2026} addressed the problem of attributing repository contributions
+to specific AI coding agents, going beyond the binary question of whether AI was
+used to the finer-grained question of which agent was responsible. Participating in
+the MSR 2026 Mining Challenge, their approach analysed observable patterns in GitHub
+repositories to fingerprint agent-specific contributions, leveraging the distinctive
+traces that different agents leave in commit metadata, branch naming conventions, and
+repository structure. The approach's strength is its focus on agent-level attribution,
+which is more informative than binary AI/human classification and directly supports
+the kind of tool-specific adoption counts reported in this thesis. A fundamental
+limitation is that fingerprinting approaches calibrated on a challenge dataset may
+not generalise to corpora assembled with different sampling criteria or to new agents
+whose observable patterns were not represented during development. A counter-argument
+is that as AI agents are trained on human feedback to produce more uniform-looking
+output, the agent-specific features that fingerprinting relies on may converge across
+tools, reducing the approach's discriminative power as the observable differences
+between agents shrink over time.
 
-Mao et al.~\cite{mao2026} directly examined the impact of signal selection on
-measured AI coding agent adoption rates by applying individual signal types in
-isolation and in combination to a shared corpus of repositories, then comparing
-the resulting adoption rate estimates. Their approach provides a controlled
-comparison of single-signal versus multi-signal detection on the same underlying
-data. The study demonstrates that single-signal detection systematically
-undercounts adoption, with the magnitude of undercounting varying by which signal
-type is chosen. The study's strength is that it empirically quantifies the
-cost of signal selection choices in terms of reported adoption rates, providing
-direct justification for the multi-signal approach taken in this thesis. A
-limitation is that aggregating signals from multiple agents may also introduce
-false positives: a repository that shows one config-file signal from one agent
-and one trailer signal from another may be classified as more intensively agentic
-than warranted, so multi-signal approaches may overcount some dimensions of
-adoption while correctly capturing the overall rate. A counter-argument is that
-the shared corpus used to compare signal types was likely assembled using
-multi-signal methods, meaning the single-signal evaluations are applied to a
-population pre-selected for AI activity; Kalliamvakou et al.~\cite{kalliamvakou2016}
-showed that corpus construction choices systematically shape study conclusions, and
-this circular validation could overstate the undercounting gap because the
-denominator already excludes repositories detectable only by the signals being
-evaluated.
+Cynthia, Das, and Roy~\cite{cynthia2026} conducted a large-scale study of coding
+agent usage patterns on GitHub, examining how core and peripheral contributors
+differ in their use of AI coding agents and whether usage patterns vary systematically
+across contributor roles and project types. Their approach combined multi-signal
+detection across a large corpus of repositories with quantitative analysis of usage
+intensity, agent diversity, and contribution patterns across developer cohorts. The
+study documents substantial heterogeneity in how agents are used: core contributors
+and peripheral contributors exhibit different patterns of agent adoption and intensity,
+suggesting that agentic development has not homogenised contribution behaviour but
+rather interacts with the pre-existing structure of open-source collaboration. This
+finding has direct implications for detection methodology: repositories where agents
+are used primarily by peripheral contributors may show lower overall signal density
+than those where core maintainers adopt agents, meaning adoption rates measured at
+the repository level may systematically undercount agent use concentrated in peripheral
+contribution channels. The study's strength is its focus on usage-pattern diversity at
+the contributor level, going beyond the binary adopted/not-adopted classification used
+in most prior work. A limitation is that characterising usage patterns requires
+reliably attributing commits to specific agents and to contributor roles, meaning the
+findings are conditional on the accuracy of both the detection pipeline and the
+contributor classification. A counter-argument is that the contributor-role framing
+may itself introduce a selection bias: Khosravani and Mockus~\cite{khosravani2026}
+found that single-signal detection misses up to 30 times the AI activity detected
+by a full multi-signal approach, implying that many peripheral-contributor agent uses
+may be invisible to the detection pipeline rather than genuinely absent, and the
+observed role-based usage differences could partly reflect differential detectability
+rather than differential adoption.
 
 % ------------------------------------------------------------
 \section{Developer Interaction with AI Coding Tools}
@@ -416,65 +446,70 @@ rates that are increasingly common in newer projects.
 
 \subsection{Pull Request Dynamics and Code Quality}
 
-Mazloomzadeh et al.~\cite{mazloomzadeh2026} examined the impact of AI coding
-assistants on developer productivity by analysing pull request metadata and
-developer activity metrics across a large corpus of repositories. Using regression
-models to isolate the effect of AI tool adoption on PR throughput, code volume,
-and review round-trip time, they found that AI-assisted developers produce and
-merge PRs at broadly comparable rates to non-AI-assisted developers but generate
-more code per PR. The study's strength is its observational scale and its attempt
-to control for confounders such as repository size and developer experience.
-A limitation is the absence of randomisation: teams with naturally fast review
-cycles produce more PRs regardless of AI use, and without random assignment of
-tools the causal interpretation remains tentative. A counter-argument is that
-producing more code per PR does not necessarily represent a productivity gain:
-Oukhay et al.~\cite{oukhay2026} found that AI-attributed commits are reverted at
-7.2--7.6\% compared to 4.7\% for human commits, suggesting that higher code volume
-from AI-assisted PRs may partly reflect the generation of code that is subsequently
-identified as incorrect and reversed, rather than durable productive output.
+Mazloomzadeh, Morovati, and Khomh~\cite{mazloomzadeh2026} conducted an empirical
+study of how AI coding agents contribute to software development by analysing a
+large corpus of agentic pull requests on GitHub. Their approach identified
+agent-attributed pull requests and characterised their properties, including code
+change volume, PR acceptance outcomes, and the types of development tasks addressed
+by agent-generated contributions. The study documents systematic differences in the
+structure and lifecycle of agent-authored PRs relative to human-authored ones,
+providing a characterisation of agentic contributions as a distinct class of
+development activity. The study's strength is its contribution-level unit of
+analysis, which captures the granular properties of how agents participate in
+collaborative development workflows rather than treating agent use as a binary
+repository-level attribute. A limitation is that the study is constrained to
+agent-attributed PRs identifiable through explicit markers, which excludes the
+majority of AI-assisted contributions that do not leave such signals. A
+counter-argument is that the properties of explicitly attributed agent PRs may not
+generalise to unattributed agent contributions: Cynthia et al.~\cite{cynthia2026}
+found that core and peripheral contributors exhibit different agent usage patterns,
+suggesting that explicitly attributed PRs, which are more common from developers
+who have opted into visible agent use, may be systematically different from
+unattributed contributions made by peripheral contributors whose use is less
+prominently signalled.
 
-Ogenrwot and Businge~\cite{ogenrwot2026} characterised AI-generated pull requests
-on GitHub by analysing a corpus of PRs attributed to known AI coding agents through
-branch naming conventions and commit trailers. Their approach compared the content,
-lifecycle, and acceptance outcomes of AI-generated PRs against human-authored PRs
-on matched repositories. They found that AI-assisted PRs are accepted at rates
-broadly comparable to human PRs (83.8\% vs.\ 91.0\%), though AI-authored
-contributions are slightly less likely to be merged. The study contributes a
-characterisation of how AI-generated PRs differ structurally from human PRs in
-terms of description length, label usage, and review comment volume. A limitation
+Ogenrwot and Businge~\cite{ogenrwot2026} studied how AI coding agents modify code
+by analysing a large corpus of agent-attributed pull requests from the MSR 2026
+Mining Challenge dataset. Their approach characterised the code modification patterns
+found in agent-authored pull requests, examining the scope, type, and distribution
+of code changes and comparing agent-induced modifications against human-authored
+changes on matched repositories. The study's strength is its characterisation of how agents approach code modification
+tasks, documenting systematic patterns in the size and nature of the changes agents
+make relative to human contributors — a contribution that goes beyond adoption counts
+to describe what agentic code changes actually look like at the PR level. A limitation
 is that the study is restricted to PRs identifiable through explicit markers, which
-excludes the majority of AI-assisted contributions that do not leave such signals,
-so the characterised population is unrepresentative of all AI-assisted PRs.
-A counter-argument is that the subset of AI-generated PRs identified through
-explicit markers may be systematically different from the broader population:
-Khosravani and Mockus~\cite{khosravani2026} found that explicit markers detect up
-to 30 times less AI activity than a full multi-signal approach, implying that the
-83.8\% acceptance rate applies to the most conspicuously attributed contributions,
-which may be the most carefully vetted subset rather than a representative sample
-of all AI-assisted PRs.
+excludes the majority of AI-assisted contributions that do not leave such signals.
+A counter-argument is that the modification patterns documented for explicitly
+attributed agent PRs may represent the most common agent use case rather than a
+biased subset: Khosravani and Mockus~\cite{khosravani2026} found that explicit
+markers detect up to 30 times less AI activity than a full multi-signal approach,
+implying that the characterised PRs represent the most prominently attributed
+contributions, and their modification patterns should be interpreted as those of
+the most visible tier of agent activity rather than a representative cross-section
+of all agent-assisted code changes.
 
-Popescu et al.~\cite{popescu2026} examined the quality of AI-assisted code in
-open-source pull requests using static analysis metrics and post-merge defect
-tracking on a corpus of repositories with identifiable AI contributions. Their
-approach combined automated code quality indicators (cyclomatic complexity, code
-smell density, and test coverage impact) with manual review of a stratified sample
-of pull requests, comparing AI-attributed changes against human-authored changes
-on matched repositories. The study found that AI-assisted code is broadly comparable
-in measurable quality dimensions to human-authored code in aggregate, but that
-quality variance is higher for AI contributions, meaning AI code is more likely to
-be notably above or notably below the median quality of its repository than human
-code. The study's strength is its multi-dimensional quality assessment, which goes
-beyond simple revert rates. A limitation is that static analysis metrics capture
-only a subset of quality concerns and may miss runtime defects, security
-vulnerabilities, and architectural problems that manifest over longer time horizons.
-A counter-argument is that the higher quality variance observed for AI contributions
-may reflect task selection bias rather than an intrinsic property of AI-generated
-code: Barke et al.~\cite{barke2023} documented that developers use AI tools in
-exploration mode specifically when they are uncertain about what to write, which is
-also the context in which code quality is intrinsically hardest to achieve regardless
-of authorship, meaning that AI code appearing below the repository quality median may
-do so because it was applied to harder tasks rather than because of lower intrinsic
-quality.
+Popescu et al.~\cite{popescu2026} investigated autonomous agent contributions in
+open-source repositories by tracking activity patterns and code change trajectories
+over time across a large corpus of repositories with identifiable agent contributions.
+Their approach monitored how agent-attributed activity evolves as projects mature,
+examining metrics such as contribution frequency, code change volume, and the
+distribution of contribution types over the project lifecycle. The study documents
+that agent contribution patterns are not static but exhibit temporal dynamics, with
+observable trends in intensity and scope that differ from the patterns of
+human-authored contributions over the same periods. The study's strength is its
+longitudinal perspective on agent contributions, revealing dynamics that
+cross-sectional snapshots cannot capture and providing insight into how agents are
+integrated into sustained development activity. A limitation is that longitudinal
+attribution depends on reliable signal detection across the full project history;
+attribution signals may have changed as agents updated their default behaviours
+over the study period, introducing inconsistency into the longitudinal tracking.
+A counter-argument is that the activity patterns observed may differ substantially
+across ecosystems: Robbes et al.~\cite{robbesAgenticVery2026} found that adoption
+in newly created repositories (71--76\%) far exceeds that in established ones,
+implying that agent activity trajectories should be expected to differ between
+repositories where agents were adopted early versus those where they were
+introduced to an already-active codebase, and studying only the latter may
+systematically underrepresent the most agent-intensive adoption regimes.
 
 Oukhay et al.~\cite{oukhay2026} investigated whether AI-generated commits are
 reverted more frequently than human-authored commits by analysing repositories
@@ -482,24 +517,37 @@ containing commits attributed to Copilot and Claude Code. Their approach tracked
 the downstream history of AI-attributed commits to determine whether they were
 subsequently reverted or modified within a defined follow-up window. Copilot-attributed
 commits were reverted at 7.6\% and Claude Code-attributed commits at 7.2\%, compared
-to 4.7\% for human-authored commits. This provides the clearest existing signal that
-AI-generated code, on average, requires more post-merge correction. A counter-argument
-is that higher revert rates for AI commits may reflect their use in riskier task
-contexts (new features, unfamiliar codebases) rather than lower intrinsic code
-quality, meaning the comparison conflates task difficulty with code reliability.
+to 4.7\% for human-authored commits. The study's strength is that it provides the
+most direct empirical measurement of post-merge AI code quality using revert rates
+as an objective proxy that does not rely on subjective developer ratings or static
+analysis metrics. A limitation is that the observation window is necessarily bounded,
+and some incorrect AI-generated code may manifest as bugs only after the window
+closes, meaning the reported revert rates likely understate the true magnitude of
+the quality difference between AI and human commits. A counter-argument is that
+higher revert rates for AI commits may reflect their use in riskier task contexts
+(new features, unfamiliar codebases) rather than lower intrinsic code quality,
+meaning the comparison conflates task difficulty with code reliability.
 
-Watanabe et al.~\cite{watanabe2025} studied how AI coding assistants change the
-dynamics of code review by comparing code review comment volume, response time, and
-outcome rates between pull requests with and without AI coding tool signals. Their
-approach used automated detection of AI-attributed PRs combined with regression
-analysis controlling for PR size and repository characteristics. They found that
-AI assistance significantly increases the volume of code review comments without
-proportionally improving the outcome rate of those comments, suggesting reviewers
-apply extra scrutiny to suspected AI-generated code. The study's strength is its
-focus on an underexplored second-order effect of AI adoption on team practice.
-A limitation is that code review comment volume is a noisy proxy for review quality,
-and an increase in comments may reflect reviewer thoroughness rather than reviewer
-distrust, making the interpretation of the main finding ambiguous.
+Watanabe et al.~\cite{watanabe2025} studied the use of agentic coding in practice
+by empirically analysing pull requests generated by AI coding agents across a corpus
+of 157 open-source GitHub repositories. Their approach combined automated detection
+of agent-authored pull requests with analysis of their acceptance outcomes, review
+dynamics, and code change characteristics. A central finding is that 83.8\% of
+Claude Code-generated pull requests were accepted and merged, indicating that
+agent-generated contributions meet community quality standards at high rates in
+the studied projects. The study's strength is its focus on real-world acceptance
+outcomes across a diverse open-source corpus, providing a direct measure of how
+communities receive agent contributions in practice. A limitation is that the 157
+repositories were selected from those actively using agentic coding tools, which
+may oversample projects that have already established positive workflows for
+reviewing and integrating agent contributions; acceptance rates in the broader
+population of repositories adopting agents more recently may differ. A
+counter-argument is that high acceptance rates may partly reflect insufficient
+scrutiny rather than genuine quality: Oukhay et al.~\cite{oukhay2026} found that
+AI-attributed commits are reverted at 7.2--7.6\% compared to 4.7\% for
+human-authored commits, suggesting that some accepted agent contributions are
+subsequently identified as incorrect, and the 83.8\% acceptance rate may
+overstate the durability of those contributions.
 
 Hora and Robbes~\cite{horaRobbes2026} investigated how AI coding agents affect
 mocking practices in test suites by comparing mock usage patterns in commits
@@ -509,11 +557,15 @@ and automated analysis of mock library imports and mock object instantiations. T
 found measurable differences in mocking patterns, with AI agents tending to introduce
 mocking patterns that differ from those already established in the repository.
 The study's strength is its focus on a specific, measurable test-writing behaviour
-that is amenable to automated analysis at scale. A counter-argument is that
-differences in mocking practices may reflect the agent following patterns from its
-training data rather than the conventions of the specific repository, and it is
-not established whether these differences represent improvements or degradations
-in test suite quality.
+that is amenable to automated analysis at scale. A limitation is that the study
+focuses on mocking practices as a proxy for test quality, which captures only one
+dimension of how agents affect test suites; agents may introduce or omit other
+testing patterns such as snapshot tests, integration test boundaries, or coverage
+annotations that are not captured by mock usage analysis alone. A counter-argument
+is that differences in mocking practices may reflect the agent following patterns
+from its training data rather than the conventions of the specific repository, and
+it is not established whether these differences represent improvements or
+degradations in test suite quality.
 
 % ------------------------------------------------------------
 \section{The JavaScript, TypeScript, and npm Ecosystem}
@@ -538,14 +590,13 @@ industry reports is that they draw on platform-scale data not accessible to
 academic researchers. A limitation common to all such reports is that methodology
 is not fully disclosed and the data may be selected or framed to highlight
 commercially favourable trends; the causal attribution of TypeScript growth to
-AI tools is asserted rather than statistically demonstrated. A counter-argument
-is provided by Markov\'{a}~\cite{markova2025}, whose empirical study of
-JavaScript-to-TypeScript migrations on GitHub finds that migration activity is
-driven by multiple independent factors including framework requirements, team
-convention, and IDE tooling improvements, not solely by AI coding tools; this
-suggests that the Octoverse 2025 framing that attributes TypeScript's growth
-predominantly to AI agents may overstate the AI contribution and understate
-ecosystem-internal pressures already under way before the agentic era.
+AI tools is asserted rather than statistically demonstrated. A counter-argument is that language ecosystem growth is difficult to attribute
+causally to any single factor. Dakhel et al.~\cite{dakhel2023} found in controlled
+experiments that GitHub Copilot increases code production speed but also introduces
+more code smells and security vulnerabilities than human-authored code; if
+TypeScript's growth were driven primarily by AI quality improvements, the documented
+quality trade-offs would impose an adoption ceiling independent of tool availability,
+complicating the attribution of ecosystem growth predominantly to AI tool adoption.
 
 GitHub, Inc.~\cite{octoverse2024} published the Octoverse 2024 report, providing
 an annual snapshot of developer activity and language trends across all of GitHub.
@@ -597,18 +648,30 @@ Robbes et al.~\cite{robbesAgenticVery2026} found Claude Code to dominate new-pro
 repositories by a factor of approximately $3\times$ over Copilot, consistent with
 its terminal-first design that fits naturally into the npm toolchain.
 
-Markov\'{a}~\cite{markova2025} conducted an empirical study of JavaScript projects
-migrating to TypeScript on GitHub, examining the motivations, timelines, and
-outcomes of such migrations through commit history and issue tracker analysis.
-She documented a trend of increasing migration activity and found that one reported
-developer motivation is the improvement of AI coding tool performance on typed
-codebases: typed code produces fewer incorrect suggestions and requires less
-manual correction. The study is relevant here because it demonstrates that the
-boundary between JavaScript and TypeScript repositories is not static and that
-AI tool adoption is actively influencing language choice decisions. A limitation
-is that self-reported motivation data is subject to post-hoc rationalisation;
-developers may attribute migrations to AI performance after the fact when other
-factors such as framework requirements or team convention were more decisive.
+Dakhel et al.~\cite{dakhel2023} conducted a controlled evaluation of GitHub Copilot
+as an AI pair programmer, testing the quality and correctness of Copilot-generated
+code relative to human-authored solutions across a structured set of programming
+tasks spanning multiple languages including JavaScript. Their approach compared
+solutions generated with and without Copilot assistance on standardised benchmarks,
+using correctness testing, code smell analysis, and security vulnerability scanning
+as quality dimensions. They found that while Copilot increases code production speed,
+it also produces more code smells and security vulnerabilities than human-authored
+code, characterising the tool as simultaneously an asset (speed and completion rates)
+and a liability (quality trade-offs). The study's strength is its controlled experimental design, which directly
+compares human and AI-assisted solutions on identical tasks across multiple languages
+including JavaScript, providing the clearest available causal evidence of the
+quality trade-offs associated with Copilot adoption. This is relevant to the JS/TS
+ecosystem because the quality findings provide an empirical baseline for interpreting
+the adoption patterns observed in this thesis. A limitation is that the study evaluates standardised task-based
+exercises rather than sustained development in production codebases, and the quality
+gap observed on benchmarks may not reflect the same ratio in real-world open-source
+projects where developers iteratively review and refine agent-generated code. A
+counter-argument is that the asset/liability framing may understate the quality
+trajectory of AI tools: Barke et al.~\cite{barke2023} documented that experienced
+developers selectively apply AI tools in exploration mode for high-uncertainty tasks,
+and as this selective usage becomes more widespread, the average quality of accepted
+AI-generated code would be expected to improve as developers filter out lower-quality
+outputs more consistently.
 
 \subsection{GitHub as a Data Source}
 

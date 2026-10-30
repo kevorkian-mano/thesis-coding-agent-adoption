@@ -90,18 +90,22 @@ Pass & Agentic & Input \\
 Pass 1 --- config files             & 25,010 (41.6\%) & 60,129 \\
 Pass 2 --- commit trailers          &  9,618 (27.4\%) & 35,119 \\
 Pass 3 --- deep scan                &    764 (3.5\%)  & 21,655 \\
-Pass 4 --- Phase 1 (re-classify)    &  3,846          &  8,503 \\
-Pass 4 --- Phase 2 (deep API)       &    258          &  4,657 \\
+Pass 4 --- re-classify + deep API   &  4,104          &  8,503 \\
 \bottomrule
 \end{tabular}
 
-\textbf{Pass 1 top agents:}\\
+\vspace{6pt}
+\textbf{Pass 1 top agents (config files):}\\
 Claude Code (CLAUDE.md) \quad 15,152 (60.6\%)\\
 Claude Code / Generic (AGENTS.md) \quad 8,705 (34.8\%)\\
-GitHub Copilot \quad 715 (2.9\%) \quad Cursor \quad 298 (1.2\%)
+GitHub Copilot \quad 715 (2.9\%) \quad Cursor \quad 298 (1.2\%)\\[3pt]
+\textbf{Other passes top agents:}\\
+OpenAI Codex CLI \quad 1,816 repos (pr\_branch signal)\\
+GitHub Copilot \quad 2,965 total \quad Cursor \quad 1,870 total
 
 \columnbreak
 
+\vspace{6pt}
 \textbf{Final Classification:}
 
 \begin{tabular}{@{}lrr@{}}
@@ -134,9 +138,9 @@ Top pair: Claude Code + Cursor (628 repos, 1.04\%)
 % ─── STAGE 4 ──────────────────────────────────────────────────────────────────
 \section*{Stage 4 --- Geographic Analysis}
 
-\textbf{Coverage:} 65 countries with $\geq 30$ repos \quad
-26,586 repos with country (44.2\% of corpus) \quad
-Global adoption (located): 71.3\%
+\textbf{Coverage:} 66 countries with $\geq 30$ repos \quad
+33,848 repos with country (56.3\% of corpus) \quad
+Global adoption (located): 70.6\%
 
 \begin{multicols}{2}
 
@@ -146,16 +150,16 @@ Global adoption (located): 71.3\%
 \toprule
 Rk & Country & Repos & Rate\% \\
 \midrule
- 1 & Belgium       &    89 & 89.9* \\
- 2 & South Korea   &   643 & 86.2* \\
- 3 & Israel        &   181 & 85.6* \\
- 4 & UAE           &   114 & 85.1* \\
- 5 & Malaysia      &    84 & 84.5* \\
- 6 & Taiwan        &   323 & 84.2* \\
- 7 & New Zealand   &    84 & 83.3* \\
- 8 & Sweden        &   197 & 82.7* \\
- 9 & United States & 3,608 & 82.5* \\
-10 & Netherlands   &   329 & 82.1* \\
+ 1 & Belgium       &    94 & 90.4* \\
+ 2 & UAE           &   119 & 85.7* \\
+ 3 & South Korea   &   786 & 85.4* \\
+ 4 & Israel        &   192 & 84.9* \\
+ 5 & Saudi Arabia  &    33 & 84.8* \\
+ 6 & Taiwan        &   326 & 84.0* \\
+ 7 & Malaysia      &    92 & 83.7* \\
+ 8 & Sweden        &   205 & 82.9* \\
+ 9 & New Zealand   &   111 & 82.0* \\
+10 & United States & 4,926 & 81.8* \\
 \bottomrule
 \end{tabular}
 
@@ -167,23 +171,23 @@ Rk & Country & Repos & Rate\% \\
 \toprule
 Rk & Country & Repos & Rate\% \\
 \midrule
-56 & Bangladesh &   303 & 44.2* \\
-57 & Iran       &   217 & 43.8* \\
-58 & Pakistan   &   268 & 41.8* \\
-59 & Ghana      &    40 & 40.0* \\
-60 & Morocco    &    79 & 39.2* \\
-61 & Kenya      &   163 & 36.8* \\
-62 & Nepal      &    52 & 34.6* \\
-63 & Sri Lanka  &    92 & 33.7* \\
-64 & Ethiopia   &    91 & 31.9* \\
-65 & Rwanda     &    49 & 22.4* \\
+57 & Iran        &   287 & 45.0* \\
+58 & Bangladesh &   308 & 43.8* \\
+59 & Pakistan   &   275 & 41.8* \\
+60 & Ghana      &    40 & 40.0* \\
+61 & Morocco    &    81 & 38.3* \\
+62 & Kenya      &   164 & 36.6* \\
+63 & Ethiopia   &   102 & 36.3* \\
+64 & Sri Lanka  &   107 & 34.6* \\
+65 & Nepal      &   105 & 31.4* \\
+66 & Rwanda     &    51 & 23.5* \\
 \bottomrule
 \end{tabular}
 
 \end{multicols}
 
 {\small * = significantly different from rest-of-world (Fisher's exact, BH FDR $\alpha=0.05$). \quad
-Major corpora: China 4,196 repos 77.2\%* \quad India 3,447 repos 51.2\%* \quad Germany 1,155 repos 78.2\%*}
+Major corpora: China 6,764 repos 74.2\%* \quad India 4,710 repos 51.2\%* \quad Germany 1,199 repos 78.2\%*}
 
 \vspace{6pt}
 \hrule
@@ -257,11 +261,11 @@ Approach & Small & Medium & Large & Range \\
 % ─── MENA ─────────────────────────────────────────────────────────────────────
 \section*{MENA Regional Analysis}
 
-\textbf{Coverage:} 1,446 repos (2.4\% corpus, 5.4\% of located repos),
+\textbf{Coverage:} 1,587 repos (2.6\% corpus, 4.7\% of located repos),
 19 countries defined, 9 eligible ($\geq$30 repos).\\
-\textbf{Overall MENA: 65.1\%} [62.6\%, 67.5\%] ---
-below global 73.0\% (Fisher $p < 10^{-10}$, OR\,=\,0.68).\\
-Within-MENA: $\chi^2 = 147.52$, $df=8$, $p \approx 10^{-28}$ ---
+\textbf{Overall MENA: 64.7\%} [62.3\%, 67.0\%] ---
+below global 73.0\% (Fisher $p = 2.3 \times 10^{-13}$, OR\,=\,0.671).\\
+Within-MENA: $\chi^2 = 161.62$, $df=8$, $p = 7.3 \times 10^{-31}$ ---
 7/9 countries significant (BH FDR $\alpha=0.05$).
 
 \begin{multicols}{2}
@@ -272,11 +276,11 @@ Within-MENA: $\chi^2 = 147.52$, $df=8$, $p \approx 10^{-28}$ ---
 \toprule
 Sub-region & Repos & Rate\% & 95\% CI \\
 \midrule
-Gulf (UAE, SA, \ldots)  & 173 & 85.0* & [78.9, 89.5] \\
-Levant (IL, JO, \ldots) & 227 & 81.5* & [75.9, 86.0] \\
-Turkey                  & 468 & 70.7* & [66.5, 74.7] \\
-North Africa            & 355 & 50.1* & [45.0, 55.3] \\
-Iran                    & 223 & 44.8* & [38.5, 51.4] \\
+Gulf (UAE, SA, \ldots)  & 181 & 85.6* & [79.8, 90.0] \\
+Levant (IL, JO, \ldots) & 238 & 81.1* & [75.6, 85.6] \\
+Turkey                  & 509 & 71.1* & [67.0, 74.9] \\
+North Africa            & 366 & 50.0* & [44.9, 55.1] \\
+Iran                    & 293 & 45.7* & [40.1, 51.5] \\
 \bottomrule
 \end{tabular}
 
@@ -288,15 +292,15 @@ Iran                    & 223 & 44.8* & [38.5, 51.4] \\
 \toprule
 Country & Repos & Rate\% \\
 \midrule
-Israel       & 181 & 85.6* \\
-UAE          & 114 & 85.1* \\
-Saudi Arabia &  31 & 83.9* \\
-Turkey       & 468 & 70.7* \\
-Algeria      &  44 & 54.5  \\
-Egypt        & 173 & 53.2* \\
+UAE          & 119 & 85.7* \\
+Israel       & 192 & 84.9* \\
+Saudi Arabia &  33 & 84.8* \\
+Turkey       & 509 & 71.1* \\
+Egypt        & 176 & 54.0* \\
 Tunisia      &  59 & 52.5  \\
-Iran         & 217 & 43.8* \\
-Morocco      &  79 & 39.2* \\
+Algeria      &  49 & 51.0  \\
+Iran         & 287 & 44.9* \\
+Morocco      &  81 & 38.3* \\
 \bottomrule
 \end{tabular}
 
@@ -325,8 +329,8 @@ Claude Code loyalty within MENA: 58.6\% of adopters (global: 59.2\%).}
   McNemar $\chi^2 = 18{,}883$ \newline $p < 10^{-300}$ &
   \textcolor{red}{\textbf{Reject $H_0$}} \\[4pt]
 \textbf{RQ3} Geographic variation &
-  Rates range from 89.9\% (Belgium) to 22.4\% (Rwanda). 41/65 countries significantly differ from global mean &
-  $\chi^2 = 2234.55$, $df=64$ \newline $p < 10^{-300}$ &
+  Rates range from 90.4\% (Belgium) to 23.5\% (Rwanda). 44/66 countries significantly differ from global mean &
+  $\chi^2 = 2545.80$, $df=65$ \newline $p < 10^{-300}$ &
   \textcolor{red}{\textbf{Reject $H_0$}} \\
 \bottomrule
 \end{tabular}
@@ -375,5 +379,198 @@ Claude Code loyalty within MENA: 58.6\% of adopters (global: 59.2\%).}
 has reached \textbf{saturation}. The remaining 20,633 repos show no detectable agentic footprint using any
 publicly observable signal. Silent IDE usage (e.g.\ Cursor, Copilot inline completions with no config file)
 remains undetectable by design and is documented as a validity threat.
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── FRAMEWORK ANALYSIS ───────────────────────────────────────────────────────
+\section*{AI Adoption by Framework \& Package Ecosystem}
+
+\textbf{Note:} Frameworks are multi-label per repo (e.g.\ React + Electron counts in both rows),
+so framework rows are not mutually exclusive partitions of the corpus.
+
+\vspace{4pt}
+\textbf{Top 20 frameworks} by repo count (sorted descending):
+
+\vspace{3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Framework & Repos & Agentic\% & AI-assist\% & No AI\% \\
+\midrule
+React          & 30,614 & 65.2 & 7.1 & 27.7 \\
+Next.js        & 10,807 & 63.6 & 6.8 & 29.6 \\
+Express        &  7,131 & 57.8 & 7.1 & 35.1 \\
+Electron       &  4,366 & 75.6 & 8.2 & 16.2 \\
+Tauri          &  2,777 & 73.4 & 9.2 & 17.5 \\
+Hono           &  2,672 & 82.1 & 6.6 & 11.2 \\
+Vue            &  1,911 & 68.3 & 8.1 & 23.6 \\
+Astro          &  1,417 & 83.5 & 6.5 & 10.0 \\
+React Native   &  1,387 & 67.6 & 7.2 & 25.2 \\
+Fastify        &  1,339 & 77.3 & 8.4 & 14.3 \\
+Expo           &  1,110 & 69.0 & 5.9 & 25.1 \\
+Svelte         &  1,076 & 74.9 & 8.4 & 16.7 \\
+NestJS         &    933 & 62.0 & 8.4 & 29.7 \\
+VitePress      &    923 & 77.8 & 6.5 & 15.7 \\
+TanStack Start &    670 & 79.4 & 4.5 & 16.1 \\
+Capacitor      &    588 & 68.2 & 7.1 & 24.7 \\
+Solid          &    573 & 77.8 & 8.0 & 14.1 \\
+SvelteKit      &    544 & 75.6 & 9.0 & 15.4 \\
+tRPC           &    528 & 70.3 & 7.6 & 22.2 \\
+Preact         &    472 & 74.2 & 7.0 & 18.9 \\
+\bottomrule
+\end{tabular}
+
+\vspace{6pt}
+\textbf{Highest agentic adoption:} Astro 83.5\%, Hono 82.1\%, TanStack Start 79.4\%, VitePress + Solid 77.8\%\\
+\textbf{Lowest agentic adoption:} Express 57.8\%, NestJS 62.0\%, Next.js 63.6\%\\
+\textbf{Largest corpus:} React (30,614 repos, 65.2\%) --- over half the entire corpus uses React.
+
+\vspace{6pt}
+\textbf{Framework combinations} (React paired, mutually exclusive; 965 repos using all three excluded):
+
+\vspace{3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Combination & Repos & Agentic\% & AI-assist\% & No AI\% \\
+\midrule
+React + Next.js (no Express) & 9,799 & 64.3 & 6.7 & 29.0 \\
+React + Express (no Next.js) & 3,392 & 56.0 & 6.9 & 37.1 \\
+\bottomrule
+\end{tabular}
+
+\vspace{6pt}
+\textbf{AI adoption by package ecosystem:}
+
+\vspace{3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Ecosystem & Repos & Agentic\% & AI-assist\% & No AI\% \\
+\midrule
+npm          & 28,248 & 66.2 & 7.5 & 26.3 \\
+pnpm         & 12,229 & 75.3 & 7.2 & 17.5 \\
+vanilla      & 10,177 & 49.9 & 7.7 & 42.4 \\
+npm\_no\_lock &  7,979 & 71.0 & 6.5 & 22.4 \\
+yarn         &  1,091 & 54.5 & 7.4 & 38.0 \\
+deno         &    250 & 75.6 & 4.8 & 19.6 \\
+bun          &    107 & 57.9 & 4.7 & 37.4 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\small pnpm (75.3\%) and deno (75.6\%) show highest agentic adoption; vanilla (49.9\%) and yarn (54.5\%) lowest.
+pnpm's higher rate likely reflects modern toolchain projects where AI agent setup is more common.
+vanilla repos (no lockfile) skew older or simpler projects with less AI tooling.}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── PRICING ANALYSIS ─────────────────────────────────────────────────────────
+\section*{AI Tool Pricing vs Country Income --- Adoption Analysis}
+
+\textbf{Hypothesis:} Does tool pricing (paid vs free) explain lower adoption rates in lower-income countries?
+
+\vspace{6pt}
+\begin{multicols}{2}
+
+\textbf{Tool pricing classification:}
+
+\begin{tabular}{@{}lll@{}}
+\toprule
+Tool & Pricing & Category \\
+\midrule
+Claude Code       & Pro \$20/mo required  & Paid \\
+OpenAI Codex CLI  & API credits required  & Paid \\
+Devin             & \$500+/mo             & Paid \\
+Junie             & JetBrains sub.        & Paid \\
+Codegen           & Paid only             & Paid \\
+Factory           & Paid only             & Paid \\
+Greptile          & Paid only             & Paid \\
+Ellipsis          & Paid (OSS free)       & Paid \\
+\midrule
+GitHub Copilot    & Free tier + student   & Free \\
+Cursor            & Free tier + student   & Free \\
+OpenHands         & OSS / self-host       & Free \\
+Gemini CLI        & Free tier             & Free \\
+Amazon Q          & Free tier + edu       & Free \\
+Sweep AI          & Free for public repos & Free \\
+CodeRabbit        & Free for public repos & Free \\
+Windsurf          & Free tier             & Free \\
+Aider             & OSS, free             & Free \\
+Jules             & Free (Google preview) & Free \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{World Bank income groups (2024):}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+Group & Countries in corpus \\
+\midrule
+\textbf{HIC} & US, UK, Germany, France, Japan, \\
+High Income  & South Korea, Australia, Canada, \\
+             & Israel, UAE, Sweden, Switzerland, \\
+             & Netherlands, Denmark, Singapore, \\
+             & Taiwan, Belgium, Norway, Austria, \\
+             & Finland, NZ, Ireland, Hong Kong, \\
+             & Italy, Spain, Portugal, Czech Rep. \\[4pt]
+\textbf{UMIC} & China, Brazil, Turkey, Russia, \\
+Upper-Middle  & Mexico, Argentina, Thailand, \\
+              & Malaysia, Colombia, Ukraine, \\
+              & South Africa, Poland, Romania, \\
+              & Bulgaria, Serbia, Chile, Egypt, \\
+              & Georgia, Kazakhstan, Uzbekistan, \\
+              & Algeria, Tunisia, Hungary, Peru \\[4pt]
+\textbf{LMIC} & India, Vietnam, Philippines, \\
+Lower-Middle  & Indonesia, Bangladesh, Pakistan, \\
+              & Nigeria, Ghana, Kenya, Morocco, \\
+              & Sri Lanka, Nepal, Ethiopia, Iran \\[4pt]
+\textbf{LIC}  & Rwanda \\
+Low Income    & \\
+\bottomrule
+\end{tabular}
+
+\end{multicols}
+
+\vspace{6pt}
+\textbf{Results by income group} (21,406 agentic + located repos):
+
+\vspace{3pt}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Income Group & Repos & Adoption\% & Agentic & Paid tool\% & Free tool\% \\
+\midrule
+High Income        & 15,020 & 80.0 & 11,015 & 91.3 &  8.6 \\
+Upper-Middle Inc.  & 10,534 & 72.4 &  6,752 & 91.7 &  8.3 \\
+Lower-Middle Inc.  &  7,697 & 50.6 &  3,337 & 78.8 & 20.9 \\
+Low Income         &     51 & 23.5 &     10 & 60.0 & 40.0 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Statistical tests:}\\
+Adoption rate across income groups: $\chi^2 = 2201.80$, $df=3$, $p < 10^{-300}$ \quad \textcolor{red}{\textbf{Significant}}\\
+Paid vs free tool share across groups: $\chi^2 = 478.67$, $df=3$, $p = 2.0 \times 10^{-103}$ \quad \textcolor{red}{\textbf{Significant}}
+
+\vspace{6pt}
+\textbf{Key findings:}
+\begin{itemize}\setlength\itemsep{1pt}
+  \item As income group drops, adoption falls monotonically: 80.0\% $\to$ 72.4\% $\to$ 50.6\% $\to$ 23.5\%
+  \item Free tool share rises as income drops: 8.8\% (HIC) $\to$ 21.2\% (LMIC) $\to$ 40.0\% (LIC)
+  \item Developers in lower-income countries who \emph{do} adopt agents disproportionately choose free tools
+  \item Extreme cases: Kenya (36.6\% adoption, \textbf{44.7\%} free tool share), Nepal (31.4\%, \textbf{37.0\%}), Rwanda (23.5\%, \textbf{40.0\%})
+  \item High-income outlier: Hong Kong (HIC, 73.9\% adoption, \textbf{18.9\%} free) --- highest free share in HIC group
+  \item Claude Code + OpenAI Codex CLI (both paid) together dominate the vast majority of agentic repos --- their pricing likely acts as the primary adoption barrier in lower-income markets
+\end{itemize}
+
+\vspace{4pt}
+{\small Paid tool \% and free tool \% are shares of \emph{agentic} repos only (repos with confirmed agent use).
+``Ambiguous'' tools (OpenAI Codex, MCP, generic labels) account for 4.2\% and are excluded from paid/free counts.
+Repos using both paid and free tools are counted under ``paid'' (conservative classification).}
 
 \end{document}
