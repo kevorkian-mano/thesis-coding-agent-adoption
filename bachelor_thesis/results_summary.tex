@@ -8,7 +8,11 @@
 \usepackage{parskip}
 \usepackage{xcolor}
 \usepackage{array}
+\usepackage{graphicx}
+\usepackage{colortbl}
 \usepackage{hyperref}
+
+\graphicspath{{figures/}}
 
 \setlength{\parskip}{3pt}
 \setlength{\columnsep}{1cm}
@@ -74,6 +78,21 @@ Not specified              & 21,723 & 43.4 \\
 Top countries: China 5,829 (20.6\%), US 3,981 (14.1\%), India 3,945 (14.0\%)
 \end{multicols}
 
+\vspace{4pt}
+\begin{center}
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig_ecosystem_stacked.png}\\
+    \small\textit{Stage 1 --- Package ecosystem distribution}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig_pass_contributions.png}\\
+    \small\textit{Stage 2 --- Location inference passes}
+  \end{minipage}
+\end{center}
+
 \vspace{6pt}
 \hrule
 \vspace{6pt}
@@ -129,6 +148,21 @@ pnpm 82.5\% \quad npm 73.7\% \quad vanilla 57.5\%\\[3pt]
 Claude Code only: 59.2\% of adopters\\
 Top pair: Claude Code + Cursor (628 repos, 1.04\%)
 \end{multicols}
+
+\vspace{4pt}
+\begin{center}
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig_tool_distribution.png}\\
+    \small\textit{Stage 3 --- Agent tool distribution}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig_tool_loyalty.png}\\
+    \small\textit{Stage 3 --- Tool loyalty (single vs multi-tool)}
+  \end{minipage}
+\end{center}
 
 \vspace{6pt}
 \hrule
@@ -186,7 +220,20 @@ Rk & Country & Repos & Rate\% \\
 
 \end{multicols}
 
-
+\vspace{4pt}
+\begin{center}
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig_top_bottom_countries.png}\\
+    \small\textit{Top 10 vs bottom 10 countries by adoption rate}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig_choropleth.png}\\
+    \small\textit{Global adoption choropleth (located repos)}
+  \end{minipage}
+\end{center}
 
 \vspace{6pt}
 \hrule
@@ -226,6 +273,30 @@ is the conservative figure.
 \end{multicols}
 
 \vspace{6pt}
+\noindent\textbf{Signal strength hierarchy:}
+\vspace{4pt}
+
+\noindent
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}
+  >{\centering\arraybackslash\columncolor{red!18}}p{5.2cm}
+  >{\centering\arraybackslash\columncolor{yellow!35}}p{5.2cm}
+  >{\centering\arraybackslash\columncolor{gray!18}}p{5.2cm}@{}}
+\textbf{STRONG} --- agent \emph{did} work &
+\textbf{MEDIUM} --- agent \emph{configured} &
+\textbf{WEAK} --- incidental mention \\[2pt]
+\small\texttt{bot\_author} &
+\small\texttt{config\_file} (CLAUDE.md, .cursorrules) &
+\small\texttt{pr\_body} \\
+\small\texttt{ci\_workflow} &
+\small\texttt{pr\_label} &
+\small\texttt{editor\_config} \\
+\small\texttt{pr\_branch} & & \\
+\small\texttt{agent\_attribution} (trailers) & & \\
+\end{tabular}
+\renewcommand{\arraystretch}{1}
+
+\vspace{6pt}
 \hrule
 \vspace{6pt}
 
@@ -252,6 +323,12 @@ Approach & Small & Medium & Large & Range \\
   & 59.7\% & 73.3\% & 85.6\% & $+$26.0\,pp \\
 \bottomrule
 \end{tabular}
+
+\vspace{4pt}
+\begin{center}
+  \includegraphics[width=0.78\textwidth]{fig_size_grouped_bar.png}\\
+  \small\textit{Adoption rate by repository size (stars, commits, code volume)}
+\end{center}
 
 \vspace{6pt}
 \hrule
@@ -303,7 +380,20 @@ Morocco      &  81 & 38.3* \\
 
 \end{multicols}
 
-
+\vspace{4pt}
+\begin{center}
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig_mena_bar.png}\\
+    \small\textit{MENA sub-region adoption rates with 95\% CIs}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{fig_country_bubble.png}\\
+    \small\textit{Country bubble chart (size = repos, position = adoption rate)}
+  \end{minipage}
+\end{center}
 
 \vspace{6pt}
 \hrule
@@ -330,6 +420,21 @@ Morocco      &  81 & 38.3* \\
   \textcolor{red}{\textbf{Reject $H_0$}} \\
 \bottomrule
 \end{tabular}
+
+\vspace{6pt}
+\renewcommand{\arraystretch}{1.4}
+\noindent
+\begin{tabular}{@{}
+  >{\centering\arraybackslash\columncolor{red!15}}p{2.8cm}
+  >{\columncolor{red!8}}p{14.0cm}@{}}
+\textbf{RQ1 Reject $H_0$} &
+  73.0\% adoption (43,895/60,129). Wilson 95\% CI: [72.65\%--73.35\%]. Binomial $p < 10^{-300}$. \\
+\textbf{RQ2 Reject $H_0$} &
+  Multi-signal detects \textbf{+31.4\,pp} more than single-signal (41.6\% $\to$ 73.0\%). McNemar $\chi^2 = 18{,}883$, $p < 10^{-300}$. \\
+\textbf{RQ3 Reject $H_0$} &
+  66-country range 23.5\%--90.4\%. 44/66 countries deviate significantly from global mean. $\chi^2 = 2545.8$, $p < 10^{-300}$. \\
+\end{tabular}
+\renewcommand{\arraystretch}{1}
 
 \vspace{6pt}
 \hrule
@@ -378,6 +483,26 @@ Morocco      &  81 & 38.3* \\
 has reached \textbf{saturation}. The remaining 20,633 repos show no detectable agentic footprint using any
 publicly observable signal. Silent IDE usage (e.g.\ Cursor, Copilot inline completions with no config file)
 remains undetectable by design and is documented as a validity threat.
+
+\vspace{6pt}
+\noindent
+\colorbox{green!15}{\parbox{0.975\linewidth}{
+\vspace{3pt}
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}
+  >{\centering\arraybackslash\columncolor{green!25}}p{3.8cm}
+  >{\centering\arraybackslash\columncolor{green!25}}p{3.8cm}
+  >{\centering\arraybackslash\columncolor{green!25}}p{3.8cm}
+  >{\centering\arraybackslash\columncolor{green!10}}p{4.4cm}@{}}
+\textbf{5a Extended bots} & \textbf{5b Workflows} & \textbf{5c Configs} & \textbf{Verdict} \\
+12 new bot accounts & 11 new AI actions & 18 new config paths & \\
+\textbf{0 new agentic} & \textbf{0 new agentic} & \textbf{0 new agentic} &
+\textbf{Stage 3 = saturated} \\
+\end{tabular}
+\renewcommand{\arraystretch}{1}
+\vspace{3pt}
+}}
 
 \vspace{6pt}
 \hrule
@@ -462,6 +587,11 @@ bun          &    107 & 57.9 & 4.7 & 37.4 \\
 pnpm's higher rate likely reflects modern toolchain projects where AI agent setup is more common.
 vanilla repos (no lockfile) skew older or simpler projects with less AI tooling.}
 
+\vspace{4pt}
+\begin{center}
+  \includegraphics[width=0.82\textwidth]{fig_framework_adoption.png}\\
+  \small\textit{Agentic adoption rate for top 20 JS frameworks (dashed line = overall 65.7\%)}
+\end{center}
 
 \vspace{6pt}
 \hrule
@@ -552,6 +682,11 @@ Low Income         &     51 & 23.5 &     10 & 60.0 & 40.0 \\
 \bottomrule
 \end{tabular}
 
+\vspace{4pt}
+\begin{center}
+  \includegraphics[width=0.82\textwidth]{fig_pricing_income.png}\\
+  \small\textit{Adoption rate (left axis) and tool-type share (right axis) by income group}
+\end{center}
 
 \newpage
 % ─── EXTENDED ANALYSIS ────────────────────────────────────────────────────────
@@ -695,6 +830,42 @@ Devin           &    29 &  0.5 \\
 \end{multicols}
 
 \vspace{4pt}
+\begin{center}
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_adoption_time_series.png}\\
+    \small\textit{E1 --- Monthly adoption rate (stacked, with release milestones)}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_agent_market_share.png}\\
+    \small\textit{E1 --- Agent market share over time}
+  \end{minipage}
+\end{center}
+
+\vspace{4pt}
+\begin{center}
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_size_comparison.png}\\
+    \small\textit{E2 --- Repo size violin plots by adoption group (99th-pct cap)}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_rn_agent_breakdown.png}\\
+    \small\textit{E3 --- Agent usage in React + Next.js agentic repos}
+  \end{minipage}
+\end{center}
+
+\vspace{4pt}
+\begin{center}
+  \includegraphics[width=0.60\textwidth]{stage5/fig_rn_country_ranking.png}\\
+  \small\textit{E3 --- Top 15 countries by AI adoption in the React + Next.js subset}
+\end{center}
+
+\vspace{4pt}
 \hrule
 \vspace{4pt}
 
@@ -762,7 +933,19 @@ Median config day: \textbf{2\,d}.
 
 \end{multicols}
 
-\end{document}
-
+\vspace{4pt}
+\begin{center}
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_adoption_timing.png}\\
+    \small\textit{E4 --- First AI commit timing (donut + histogram)}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_adoption_pattern.png}\\
+    \small\textit{E4 --- Adoption pattern distribution (trailer-only vs AI-native etc.)}
+  \end{minipage}
+\end{center}
 
 \end{document}
