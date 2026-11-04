@@ -1,45 +1,43 @@
 #!/usr/bin/env python3
 """
-Stage 3c -- Pass 3: Deep Scan (tiered classification, GraphQL batch)
+Stage 3c -- Pass C: Deep Scan (tiered classification, GraphQL batch)
 =====================================================================
-Runs only on repos not classified by Pass 1 or Pass 2 (pass2_unclassified.csv).
+Runs only on repos not classified by Pass A or Pass B (pass2_unclassified.csv).
 
-Speed optimisation vs. the REST version
-----------------------------------------
-Instead of 4 sequential REST calls per repo (3 commit pages + 1 PR page),
-this version batches BATCH_SIZE repos into a single GraphQL query.
-At BATCH_SIZE=5 this gives ~4-5x throughput improvement, reducing runtime
-from ~15 hours (REST) to ~3-4 hours for ~23,000 repos.
+Speed optimisation
+------------------
+Batches BATCH_SIZE repos into a single GraphQL query.
+At BATCH_SIZE=5 this gives ~4-5x throughput vs. sequential REST calls.
 
-Commit depth: 150 per repo (GraphQL history, in between the old 100/300).
-PRs:          50 per repo (most recent, all states).
+What is fetched per repo in a single GraphQL call
+--------------------------------------------------
+  - Last MAX_COMMITS commits (message, author email, author name, author login,
+    committer login)
+  - Last MAX_PRS pull requests (branch name, author login, labels, body)
+  - .gitignore file content
+  - Repo topics
+  - Dedicated AI ignore file existence (6 files)
+  - Additional MEDIUM config file existence (9 paths)
+  - CI workflow YAML content (.github/workflows/ directory tree)
 
 Tiered signal families
 ----------------------
 STRONG  (any 1 alone -> agentic):
-  agent_attribution  agent-specific commit trailer OR author email, deduped
-                     per commit (Claude Code, Codex, Devin, Jules, Copilot
-                     coding agent, Cursor, Aider, Windsurf, Gemini)
-  pr_branch          copilot/, codex/, devin/, claude/, cursor/, jules-, sweep/
+  agent_attribution  agent-specific commit trailer OR author email/name
+  pr_branch          copilot/, codex/, devin/, claude/, cursor/, jules-, sweep/,
+                     replit/, amazon-q/, pr-agent/
   bot_author         known agent bot account as commit or PR author
+  ci_ai_action       AI coding-agent GitHub Action found in a workflow YAML
 
 MEDIUM  (>= 2 different families, OR 1 + activity evidence -> agentic;
          1 alone -> ai_assisted):
   pr_label           PR label containing agent name
-  tool_configuration .gitignore entry for an agentic tool (not a template block),
-                     OR a dedicated AI ignore file (.aiderignore, .claudeignore …)
-                     Counts in the same family as committed config files so a repo
-                     that both commits .claude/ AND ignores settings.local.json is
-                     not counted twice.
+  tool_configuration .gitignore entry for an agentic tool, a dedicated AI
+                     ignore file, a MEDIUM config file, or a matching repo topic
 
 WEAK    (>= 1 alone -> ai_assisted):
-  pr_body            agent/AI mention anywhere in PR description
-  gitignore_mixed    .gitignore entry for an editor-with-agent-mode tool
-                     (.cursor/, .windsurf/, .continue/, .specstory/)
-
-EXCLUDED:
-  npm_dependency     indicates AI *product* development, not AI-assisted
-                     development of this repo -- too many false positives
+  pr_body            agent/AI mention in PR description
+  gitignore_mixed    .gitignore entry for an editor-with-optional-agent-mode tool
 
 Classification rule
 -------------------
@@ -52,7 +50,7 @@ Classification rule
 Output
 ------
   data/stage3/pass3_results.csv
-  data/stage3/corpus_detected_full.csv   (merged pass 1 + 2 + 3)
+  data/stage3/corpus_detected_full.csv   (merged pass A + B + C)
 """
 
 import os
@@ -79,35 +77,36 @@ if not TOKEN:
 HEADERS_GRAPHQL = {"Authorization": f"bearer {TOKEN}", "Content-Type": "application/json"}
 GRAPHQL_URL     = "https://api.github.com/graphql"
 
-BATCH_SIZE  = 5     # repos per GraphQL request (~4-5x faster than REST)
-MAX_COMMITS = 150   # per repo (was 300 REST; 150 catches most signal at lower cost)
+BATCH_SIZE  = 5     # repos per GraphQL request
+MAX_COMMITS = 150   # per repo
 MAX_PRS     = 50    # per repo
-SLEEP_OK    = 0.4   # between batches (less sleep needed; one call per 5 repos)
+SLEEP_OK    = 0.4   # between batches
 SLEEP_RETRY = 60
 SAVE_EVERY  = 200   # save to disk every N repos processed
 
-# ── STRONG: agent attribution patterns (commit message + author email) ────────
-# One match per commit (break after first). Dedupes trailer + email naturally.
-# Sources: stage3b patterns + Paper 1 (Robbes et al. 2026) explicit examples.
+# ── STRONG: agent attribution patterns (commit message + author email/name) ───
+# One match per commit (break after first). Sources: stage3b patterns + papers.
 AGENT_ATTRIBUTION_PATTERNS = [
     # Claude Code
     (re.compile(r"co-authored-by:.*claude.*anthropic", re.I), "Claude Code"),
     (re.compile(r"noreply@anthropic\.com",              re.I), "Claude Code"),
     (re.compile(r"generated with claude code",          re.I), "Claude Code"),
     (re.compile(r"🤖 generated with claude",            re.I), "Claude Code"),
-    (re.compile(r"generated by: claude",                re.I), "Claude Code"),   # Paper 1 explicit example
+    (re.compile(r"generated by: claude",                re.I), "Claude Code"),
     # Devin
     (re.compile(r"co-authored-by:.*devin",              re.I), "Devin"),
     (re.compile(r"devin-ai-integration",                re.I), "Devin"),
     # OpenAI Codex
     (re.compile(r"co-authored-by:.*codex",              re.I), "OpenAI Codex"),
     (re.compile(r"chatgpt-codex",                       re.I), "OpenAI Codex"),
+    (re.compile(r"generated by codex",                  re.I), "OpenAI Codex"),
+    (re.compile(r"codex-cli",                           re.I), "OpenAI Codex"),
     # Jules
     (re.compile(r"co-authored-by:.*jules",              re.I), "Jules"),
     (re.compile(r"google-labs-jules",                   re.I), "Jules"),
     # GitHub Copilot
     (re.compile(r"co-authored-by:.*copilot",            re.I), "GitHub Copilot"),
-    (re.compile(r"co-authored-by:.*copilot-swe-agent",  re.I), "GitHub Copilot"),  # Paper 1 explicit
+    (re.compile(r"co-authored-by:.*copilot-swe-agent",  re.I), "GitHub Copilot"),
     # Cursor
     (re.compile(r"co-authored-by:.*cursor",             re.I), "Cursor"),
     # Aider
@@ -118,7 +117,7 @@ AGENT_ATTRIBUTION_PATTERNS = [
     (re.compile(r"co-authored-by:.*gemini",             re.I), "Gemini"),
     # Codeium
     (re.compile(r"co-authored-by:.*codeium",            re.I), "Codeium"),
-    # CodeRabbit (Paper 1 explicit example)
+    # CodeRabbit
     (re.compile(r"co-authored-by:.*coderabbit",         re.I), "CodeRabbit"),
     # Sourcery
     (re.compile(r"co-authored-by:.*sourcery",           re.I), "Sourcery"),
@@ -128,10 +127,17 @@ AGENT_ATTRIBUTION_PATTERNS = [
     (re.compile(r"co-authored-by:.*openhands",          re.I), "OpenHands"),
     # Amp
     (re.compile(r"co-authored-by:.*amp-code",           re.I), "Amp"),
+    # Replit (new)
+    (re.compile(r"replit-commit-author:",               re.I), "Replit"),
+    (re.compile(r"generated by replit",                 re.I), "Replit"),
+]
+
+# Author display NAME suffix patterns (checked separately from message patterns)
+AUTHOR_NAME_PATTERNS = [
+    (re.compile(r"\(aider\)\s*$", re.I), "Aider"),   # Aider appends "(aider)" to author name
 ]
 
 # ── STRONG: known agent bot account logins ────────────────────────────────────
-# Sources: Paper 1 (Robbes et al. 2026) 63-agent list + direct observation.
 BOT_AUTHOR_MAP = {
     # GitHub Copilot
     "github-copilot[bot]":           "GitHub Copilot",
@@ -144,14 +150,16 @@ BOT_AUTHOR_MAP = {
     "chatgpt-codex-connector[bot]":  "OpenAI Codex",
     # Jules (Google)
     "google-labs-jules[bot]":        "Jules",
+    "jules-google[bot]":             "Jules",        # alternate account name (new)
     # Sweep
     "sweep-ai[bot]":                 "Sweep",
     # OpenHands
     "openhands-agent":               "OpenHands",
+    "openhands-agent[bot]":          "OpenHands",    # with [bot] suffix (new)
     "all-hands-ai[bot]":             "OpenHands",
     # Cursor
     "cursor[bot]":                   "Cursor",
-    # CodeRabbit (Paper 1 explicit example)
+    # CodeRabbit
     "coderabbitai[bot]":             "CodeRabbit",
     # Sourcery
     "sourcery-ai[bot]":              "Sourcery",
@@ -161,22 +169,37 @@ BOT_AUTHOR_MAP = {
     "kiro[bot]":                     "Kiro",
     # Factory
     "factory-droid[bot]":            "Factory",
+    "factory-bot[bot]":              "Factory",      # alternate account name (new)
     # Amp
     "amp-bot[bot]":                  "Amp",
     # Codegen
     "codegen-bot[bot]":              "Codegen",
+    "codegen-sh[bot]":               "Codegen",      # alternate account name (new)
     # SWE-agent (Princeton)
     "swe-agent[bot]":                "SWE-agent",
+    # Amazon Q Developer (new)
+    "amazon-q-developer[bot]":       "Amazon Q",
+    # Ellipsis (new)
+    "ellipsis-dev[bot]":             "Ellipsis",
+    # Greptile (new)
+    "greptileai[bot]":               "Greptile",
+    # Replit (new)
+    "replit[bot]":                   "Replit",
+    # PR-Agent / CodiumAI (new)
+    "pr-agent[bot]":                 "PR-Agent",
+    # DeepSource (new)
+    "deepsource-autofix[bot]":       "DeepSource",
 }
+
 BOT_SUBSTRINGS = [
-    "copilot", "devin-ai", "codex-connector", "jules[bot]",
+    "copilot", "devin-ai", "codex-connector", "jules[bot]", "jules-google",
     "sweep-ai", "openhands", "cursor[bot]", "coderabbit",
-    "sourcery", "junie", "kiro[bot]", "factory-droid",
+    "sourcery", "junie", "kiro[bot]", "factory-droid", "factory-bot",
+    "amazon-q-developer", "ellipsis-dev", "greptileai", "replit[bot]",
+    "pr-agent[bot]", "deepsource-autofix",
 ]
 
 # ── STRONG: agent-style PR branch prefixes ────────────────────────────────────
-# Paper 1 tracks 20-24 branch patterns. We cover the named ones + plausible
-# conventions for agents in the 63-agent list.
 PR_BRANCH_PATTERNS = [
     (re.compile(r"^copilot/",      re.I), "GitHub Copilot"),
     (re.compile(r"^codex/",        re.I), "OpenAI Codex"),
@@ -193,6 +216,28 @@ PR_BRANCH_PATTERNS = [
     (re.compile(r"^junie/",        re.I), "Junie"),
     (re.compile(r"^swe-agent/",    re.I), "SWE-agent"),
     (re.compile(r"^sourcery/",     re.I), "Sourcery"),
+    # new
+    (re.compile(r"^replit/",       re.I), "Replit"),
+    (re.compile(r"^amazon-q/",     re.I), "Amazon Q"),
+    (re.compile(r"^pr-agent/",     re.I), "PR-Agent"),
+]
+
+# ── STRONG: CI/AI action patterns (matched against workflow YAML content) ─────
+# Patterns matched against the raw YAML text (case-insensitive).
+# Only actions that actively WRITE/GENERATE code or open PRs autonomously.
+AI_ACTION_PATTERNS = [
+    (re.compile(r"anthropic/claude-code-action",                  re.I), "Claude Code"),
+    (re.compile(r"sweep-ai/sweep",                                re.I), "Sweep"),
+    (re.compile(r"All-Hands-AI/OpenHands",                        re.I), "OpenHands"),
+    (re.compile(r"codegen-sh/codegen",                            re.I), "Codegen"),
+    (re.compile(r"devin-ai-integration/devin",                    re.I), "Devin"),
+    (re.compile(r"junie-jetbrains/junie",                         re.I), "Junie"),
+    (re.compile(r"amazonwebservices/amazon-q-developer-action",   re.I), "Amazon Q"),
+    (re.compile(r"greptileai/greptile-action",                    re.I), "Greptile"),
+    (re.compile(r"ellipsis-dev/ellipsis-action",                  re.I), "Ellipsis"),
+    (re.compile(r"factory-ai/factory-action",                     re.I), "Factory"),
+    (re.compile(r"github/copilot-autofix-action",                 re.I), "GitHub Copilot"),
+    (re.compile(r"Codium-ai/pr-agent",                            re.I), "PR-Agent"),
 ]
 
 # ── MEDIUM: PR labels ─────────────────────────────────────────────────────────
@@ -218,12 +263,10 @@ PR_BODY_PATTERNS = [
 ]
 
 # ── MEDIUM: .gitignore agentic tool entries -> tool_configuration family ───────
-# Patterns match individual non-comment lines in .gitignore.
-# These tools have CLI/agent modes and write local state that developers typically ignore.
 GITIGNORE_AGENTIC_PATTERNS = [
     (re.compile(r"^\.claude(/|$)",            re.I), "Claude Code"),
     (re.compile(r"^CLAUDE\.local\.md",        re.I), "Claude Code"),
-    (re.compile(r"^\.aider",                  re.I), "Aider"),        # .aider*, .aider.chat.history.md
+    (re.compile(r"^\.aider",                  re.I), "Aider"),
     (re.compile(r"^\.codex(/|$)",             re.I), "OpenAI Codex"),
     (re.compile(r"^\.gemini(/|$)",            re.I), "Gemini CLI"),
     (re.compile(r"^\.qwen(/|$)",              re.I), "Qwen"),
@@ -248,8 +291,7 @@ GITIGNORE_MIXED_PATTERNS = [
     (re.compile(r"^\.copilot(/|$)",           re.I), "GitHub Copilot"),
 ]
 
-# Dedicated AI ignore files (exist as separate files, not .gitignore entries).
-# Stronger than a .gitignore line: developer explicitly configured the tool.
+# Dedicated AI ignore files (MEDIUM: developer explicitly configured the tool).
 AI_IGNORE_FILES = [
     ".cursorignore",
     ".aiderignore",
@@ -259,19 +301,28 @@ AI_IGNORE_FILES = [
     ".continueignore",
 ]
 
+# Additional MEDIUM config paths (tool presence without being a stage3a hard positive).
+# These are tool directories/files that signal active use but are more common than
+# the stage3a list. Classified as tool_configuration (MEDIUM).
+MEDIUM_CONFIG_PATHS = [
+    (".amazonq",         "Amazon Q"),
+    (".sourcegraph",     "Sourcegraph Cody"),
+    (".tabnine",         "Tabnine"),
+    (".mentat",          "Mentat"),
+    (".graphite",        "Graphite"),
+    (".continuerc.json", "Continue"),
+    (".cursor",          "Cursor"),
+]
+
 # If this many or more distinct AI tool categories appear in .gitignore,
 # it is almost certainly a generated template -- downgrade to WEAK.
 TEMPLATE_THRESHOLD = 6
 
 # ── MEDIUM: GitHub repo topic tags -> tool_configuration family ───────────────
-# Developers explicitly tag their repos with these topics to signal AI tool use.
-# Paper 2 (Robbes et al. 2026) shows these topics are massively over-represented
-# in new AI-adopting projects vs. non-adopting ones.
 TOPIC_MEDIUM = {
     "claude-code", "opencode", "agentic-ai", "agent-skills",
     "openclaw", "ai-coding-agent", "cursor-ai", "kiro", "amp-code",
 }
-# WEAK: broader AI/ML topics that are common enough to be ambiguous alone
 TOPIC_WEAK = {
     "ai-agents", "mcp", "llm", "ai-assistant", "cursor",
     "copilot", "chatgpt", "openai", "anthropic",
@@ -296,13 +347,20 @@ def _bot_agent(login: str) -> str | None:
 
 def build_batch_query(repos: list[tuple[str, str]]) -> str:
     """
-    Build a single GraphQL query that fetches commits, PRs, .gitignore content,
-    and dedicated AI ignore file existence for up to BATCH_SIZE repos.
+    Build a single GraphQL query fetching commits, PRs, .gitignore, topics,
+    dedicated ignore files, additional MEDIUM config paths, and CI workflow
+    YAML content for up to BATCH_SIZE repos.
     """
-    # Pre-build ignore-file existence checks (same for every repo)
+    # Dedicated ignore-file existence checks (same for every repo)
     ignore_file_checks = "\n".join(
         f'    ig{j}: object(expression: "HEAD:{fname}") {{ __typename }}'
         for j, fname in enumerate(AI_IGNORE_FILES)
+    )
+
+    # Additional MEDIUM config path existence checks
+    medium_config_checks = "\n".join(
+        f'    mc{j}: object(expression: "HEAD:{path}") {{ __typename }}'
+        for j, (path, _) in enumerate(MEDIUM_CONFIG_PATHS)
     )
 
     parts = []
@@ -318,6 +376,7 @@ def build_batch_query(repos: list[tuple[str, str]]) -> str:
               message
               author {{
                 email
+                name
                 user {{ login }}
               }}
               committer {{
@@ -342,16 +401,24 @@ def build_batch_query(repos: list[tuple[str, str]]) -> str:
     repositoryTopics(first: 15) {{
       nodes {{ topic {{ name }} }}
     }}
+    workflowDir: object(expression: "HEAD:.github/workflows") {{
+      ... on Tree {{
+        entries {{
+          name
+          object {{
+            ... on Blob {{ text }}
+          }}
+        }}
+      }}
+    }}
 {ignore_file_checks}
+{medium_config_checks}
   }}""")
     return "{\n" + "\n".join(parts) + "\n}"
 
 
 def graphql_batch(repos: list[tuple[str, str]]) -> dict:
-    """
-    Execute the batch query and return {full_name: repo_data_dict}.
-    Retries up to 5 times on network errors or rate limits.
-    """
+    """Execute the batch query and return {full_name: repo_data_dict}."""
     query = build_batch_query(repos)
     for attempt in range(5):
         try:
@@ -362,8 +429,7 @@ def graphql_batch(repos: list[tuple[str, str]]) -> dict:
                 timeout=45,
             )
             if resp.status_code == 200:
-                data = resp.json()
-                gql_data = data.get("data") or {}
+                gql_data = resp.json().get("data") or {}
                 result = {}
                 for i, (owner, name) in enumerate(repos):
                     full_name = f"{owner}/{name}"
@@ -379,36 +445,30 @@ def graphql_batch(repos: list[tuple[str, str]]) -> dict:
             wait = 10 * (attempt + 1)
             print(f"  Network error ({e.__class__.__name__}), retry {attempt+1}/5 in {wait}s ...")
             time.sleep(wait)
-    # Return empty dicts on total failure
     return {f"{o}/{n}": {} for o, n in repos}
 
 
-# ── tiered classification ─────────────────────────────────────────────────────
+# ── tiered signal detection ───────────────────────────────────────────────────
 
 def analyze_gitignore(repo_data: dict) -> tuple[str, str, set]:
     """
     Inspect .gitignore content and dedicated ignore file presence.
-
-    Returns (family, tier, tools_found):
-      family : 'tool_configuration' | 'gitignore_mixed' | ''
-      tier   : 'medium' | 'weak' | ''
-      tools  : set of tool names detected
+    Returns (family, tier, tools_found).
     """
-    tools_agentic = {}   # tool -> True
+    tools_agentic = {}
     tools_mixed   = {}
 
-    # ── dedicated ignore files (stronger than a .gitignore line) ─────────────
+    # Dedicated ignore files (stronger than a .gitignore line)
     for j, fname in enumerate(AI_IGNORE_FILES):
         node = repo_data.get(f"ig{j}")
         if node and node.get("__typename"):
-            # Map filename to tool name
             tool = fname.lstrip(".").replace("ignore", "").replace("-", " ").title() or fname
             tools_agentic[tool] = True
 
     if tools_agentic:
         return "tool_configuration", "medium", set(tools_agentic)
 
-    # ── .gitignore content ────────────────────────────────────────────────────
+    # .gitignore content
     gitignore_obj = repo_data.get("gitignore") or {}
     text = gitignore_obj.get("text") or ""
     if not text:
@@ -429,7 +489,6 @@ def analyze_gitignore(repo_data: dict) -> tuple[str, str, set]:
 
     total_hits = len(tools_agentic) + len(tools_mixed)
 
-    # Template detection: too many AI tool entries = generated boilerplate
     if total_hits >= TEMPLATE_THRESHOLD:
         return "gitignore_mixed", "weak", set(tools_agentic) | set(tools_mixed)
 
@@ -440,6 +499,42 @@ def analyze_gitignore(repo_data: dict) -> tuple[str, str, set]:
         return "gitignore_mixed", "weak", set(tools_mixed)
 
     return "", "", set()
+
+
+def analyze_medium_configs(repo_data: dict) -> set:
+    """
+    Check additional MEDIUM config paths (beyond the stage3a hard-positive list).
+    Returns set of agent names found.
+    """
+    found = set()
+    for j, (_path, agent) in enumerate(MEDIUM_CONFIG_PATHS):
+        node = repo_data.get(f"mc{j}")
+        if node and node.get("__typename"):
+            found.add(agent)
+    return found
+
+
+def analyze_workflows(repo_data: dict) -> set:
+    """
+    Scan .github/workflows/ YAML files for AI coding-agent actions.
+    Returns set of agent names found.
+    """
+    found        = set()
+    workflow_dir = repo_data.get("workflowDir") or {}
+    entries      = workflow_dir.get("entries") or []
+
+    for entry in entries:
+        fname = entry.get("name") or ""
+        if not (fname.endswith(".yml") or fname.endswith(".yaml")):
+            continue
+        blob = entry.get("object") or {}
+        text = blob.get("text") or ""
+        if not text:
+            continue
+        for pat, agent in AI_ACTION_PATTERNS:
+            if pat.search(text):
+                found.add(agent)
+    return found
 
 
 def classify(strong_families: set, medium_families: set,
@@ -473,18 +568,19 @@ def process_repo_data(repo_data: dict) -> dict:
     commits     = history.get("nodes") or []
 
     for c in commits:
-        msg   = c.get("message") or ""
-        author_data    = c.get("author") or {}
-        email          = author_data.get("email") or ""
-        author_user    = author_data.get("user") or {}
-        author_login   = author_user.get("login") or ""
-        committer_data = c.get("committer") or {}
-        committer_user = committer_data.get("user") or {}
+        msg             = c.get("message") or ""
+        author_data     = c.get("author") or {}
+        email           = author_data.get("email") or ""
+        author_name_str = author_data.get("name")  or ""
+        author_user     = author_data.get("user")  or {}
+        author_login    = author_user.get("login") or ""
+        committer_data  = c.get("committer") or {}
+        committer_user  = committer_data.get("user") or {}
         committer_login = committer_user.get("login") or ""
 
         matched = False
 
-        # STRONG: agent_attribution -- one match per commit, break after first
+        # STRONG: agent_attribution -- message / email patterns
         for pat, agent in AGENT_ATTRIBUTION_PATTERNS:
             if pat.search(msg) or pat.search(email):
                 strong.add("agent_attribution")
@@ -492,6 +588,16 @@ def process_repo_data(repo_data: dict) -> dict:
                 activity += 1
                 matched = True
                 break
+
+        # STRONG: agent_attribution -- author name suffix (e.g. "(aider)")
+        if not matched:
+            for pat, agent in AUTHOR_NAME_PATTERNS:
+                if pat.search(author_name_str):
+                    strong.add("agent_attribution")
+                    agents.add(agent)
+                    activity += 1
+                    matched = True
+                    break
 
         # STRONG: bot commit author (only if no attribution match)
         if not matched:
@@ -512,7 +618,7 @@ def process_repo_data(repo_data: dict) -> dict:
         author_login = author_obj.get("login") or ""
         label_nodes  = (pr.get("labels") or {}).get("nodes") or []
         labels       = [lb.get("name", "") for lb in label_nodes]
-        body         = (pr.get("body") or "")[:5000]  # truncate large PR bodies
+        body         = (pr.get("body") or "")[:5000]
 
         pr_matched = False
 
@@ -562,19 +668,34 @@ def process_repo_data(repo_data: dict) -> dict:
     if gi_family:
         agents.update(gi_tools)
         if gi_tier == "medium":
-            medium.add(gi_family)        # tool_configuration
+            medium.add(gi_family)
         elif gi_tier == "weak":
-            weak.add(gi_family)          # gitignore_mixed
+            weak.add(gi_family)
+
+    # ── additional MEDIUM config paths ────────────────────────────────────────
+    mc_tools = analyze_medium_configs(repo_data)
+    if mc_tools:
+        agents.update(mc_tools)
+        medium.add("tool_configuration")
+
+    # ── CI/AI action scanning (STRONG: ci_ai_action) ─────────────────────────
+    wf_agents = analyze_workflows(repo_data)
+    if wf_agents:
+        agents.update(wf_agents)
+        strong.add("ci_ai_action")
+        activity += len(wf_agents)
 
     # ── GitHub repo topics ────────────────────────────────────────────────────
     topic_nodes = (repo_data.get("repositoryTopics") or {}).get("nodes") or []
+    matched_medium_topic = False
     for node in topic_nodes:
         topic_name = (node.get("topic") or {}).get("name", "").lower()
         if topic_name in TOPIC_MEDIUM:
             medium.add("tool_configuration")
             agents.add(topic_name)
-            break   # one topic match is enough; avoid duplicate family adds
-    else:
+            matched_medium_topic = True
+            break
+    if not matched_medium_topic:
         for node in topic_nodes:
             topic_name = (node.get("topic") or {}).get("name", "").lower()
             if topic_name in TOPIC_WEAK:
@@ -583,10 +704,17 @@ def process_repo_data(repo_data: dict) -> dict:
 
     label = classify(strong, medium, weak, activity)
 
+    # Build signal_source string from all families that fired
+    all_sources = set()
+    all_sources.update(strong)
+    all_sources.update(medium)
+    all_sources.update(weak)
+
     return {
         "strong_families":        "|".join(sorted(strong)),
         "medium_families":        "|".join(sorted(medium)),
         "weak_families":          "|".join(sorted(weak)),
+        "signal_source":          "|".join(sorted(all_sources)),
         "agents_found":           "|".join(sorted(agents)),
         "agent_attributed_count": activity,
         "adoption_label":         label,
@@ -596,7 +724,7 @@ def process_repo_data(repo_data: dict) -> dict:
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    print("Stage 3c -- Pass 3: Deep Scan (GraphQL batch, 150 commits)")
+    print("Stage 3c -- Pass C: Deep Scan (GraphQL batch, 150 commits)")
     print("=" * 60)
 
     if not IN_FILE.exists():
@@ -620,11 +748,11 @@ def main():
         if len(parts) == 2:
             pairs.append((parts[0], parts[1]))
 
-    results    = []
-    total      = len(pairs)
-    processed  = 0
-    n_agentic  = 0
-    n_ai       = 0
+    results   = []
+    total     = len(pairs)
+    processed = 0
+    n_agentic = 0
+    n_ai      = 0
 
     for batch_start in range(0, total, BATCH_SIZE):
         batch = pairs[batch_start: batch_start + BATCH_SIZE]
@@ -641,7 +769,8 @@ def main():
                 print(f"  Error processing {full_name}: {e}")
                 result = {
                     "strong_families": "", "medium_families": "", "weak_families": "",
-                    "agents_found": "", "agent_attributed_count": 0, "adoption_label": "none",
+                    "signal_source": "", "agents_found": "",
+                    "agent_attributed_count": 0, "adoption_label": "none",
                 }
 
             result["full_name"] = full_name
@@ -663,9 +792,9 @@ def main():
                 existing = pd.read_csv(OUT_PASS3)
                 chunk    = pd.concat([existing, chunk], ignore_index=True)
             chunk.to_csv(OUT_PASS3, index=False)
-            results    = []
-            n_agentic  = 0
-            n_ai       = 0
+            results   = []
+            n_agentic = 0
+            n_ai      = 0
 
         time.sleep(SLEEP_OK)
 
@@ -683,8 +812,7 @@ def main():
     print("\nMerging all passes into corpus_detected_full.csv ...")
     corpus = pd.read_csv(CORPUS, low_memory=False)
 
-    p1 = pd.read_csv(PASS1)[["full_name", "adoption_label", "agent_detected"]]
-    p1 = p1.rename(columns={"agent_detected": "agents_found"})
+    p1 = pd.read_csv(PASS1)[["full_name", "adoption_label", "agents_found"]]
     p1 = p1[p1["adoption_label"] == "agentic"]
     p1["strong_families"] = "config_file"
     p1["signal_source"]   = "config_file"
@@ -695,7 +823,7 @@ def main():
 
     p3 = new_df[["full_name", "adoption_label", "agents_found",
                  "strong_families", "medium_families", "weak_families",
-                 "agent_attributed_count"]]
+                 "signal_source", "agent_attributed_count"]]
 
     detected = pd.concat([p1, p2, p3], ignore_index=True)
     detected = detected.drop_duplicates(subset="full_name", keep="first")
@@ -713,6 +841,18 @@ def main():
         print(f"  {label:<15} {n:>6,}  ({n/total_all*100:.1f}%)")
     adopted = full["adoption_label"].isin(["agentic", "ai_assisted"]).sum()
     print(f"\n  Total adopted : {adopted:,}  ({adopted/total_all*100:.1f}%)")
+
+    print()
+    print("Top agents across full corpus:")
+    agent_series = (
+        full[full["agents_found"] != ""]["agents_found"]
+        .str.split("|")
+        .explode()
+    )
+    top = agent_series.value_counts().head(20)
+    for agent, count in top.items():
+        print(f"  {agent:<40} {count:>6,}")
+
     print(f"\nSaved: {OUT_PASS3}")
     print(f"Saved: {OUT_FULL}")
 
