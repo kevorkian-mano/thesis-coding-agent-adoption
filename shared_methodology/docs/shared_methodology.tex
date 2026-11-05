@@ -83,15 +83,20 @@ Script & What it does \\
 Script & What it does \\
 \midrule
 \cellcolor{stagegray}\texttt{3a\_config\_files} &
-  Checks every repo for 22 known AI agent config files/dirs via GraphQL (batch=5).
+  Checks every repo for 70+ known AI agent config files/dirs via GraphQL (batch=5).
   Scans \emph{all} config paths per repo --- tracks every matching agent in
   \texttt{agents\_found} (pipe-separated). Hard positives $\to$ \texttt{agentic};
   unmatched repos $\to$ 3b.
-  Covers: CLAUDE.md, AGENTS.md, AGENTS.json, .cursorrules, .cursorignore,
-  .aider.conf.yml, .roomodes, .windsurfrules, GEMINI.md,
-  .github/copilot-instructions.md, .continue/config.json, .codeium/config.json,
-  .replit, .deepsource.toml, .pr\_agent.toml, .junie/, .sourcery.yaml,
-  .kiro/, .opencode/, coderabbit.yaml, sweep.yaml, .ellipsis.yaml. \\[2pt]
+  Covers 48 agents including: CLAUDE.md, .claude/, AGENTS.md (Generic/shared),
+  AGENTS.json, .cursorrules, .cursorignore, .cursor/rules, .aider.conf.yml,
+  .aiderignore, .clinerules, .cline/, .roomodes, .roo/, .roosettings,
+  .windsurfrules, GEMINI.md, .github/copilot-instructions.md,
+  .continue/config.json, .codeium/config.json, .replit, .deepsource.toml,
+  .pr\_agent.toml, .junie/, .sourcery.yaml, .kiro/, .opencode/, coderabbit.yaml,
+  .coderabbit/, sweep.yaml, .sweep/, .ellipsis.yaml, .devin/, AGENT.md,
+  .amazonq/, .codegen/, .goose/, .marscode/, .trae/, .speckit/, .serena/,
+  .mistral/, .letta/, .abacus/, .paperclip/, .kimi/, .rovodev/, .specstory/,
+  .augment/, .gru/, .pi/, .qwen/, .plandex/. \\[2pt]
 \cellcolor{stagegray}\texttt{3b\_commit\_trailers} &
   Fetches latest 100 commits + 50 PRs per repo (REST).
   Checks commit \emph{messages} (trailer/body patterns), commit \emph{author names}
@@ -175,7 +180,27 @@ Script & What it does \\
   Tracks AI coding agent adoption across top countries month by month (Feb 2025 onward).
   Produces three figures: (A) heatmap of monthly adoption rate per country, (B) bump chart
   of monthly rank by adoption rate, (C) cumulative agentic repo growth per country.
-  Eligibility: $\geq$30 total repos per country; cells shown only if $\geq$5 repos that month. \\
+  Eligibility: $\geq$30 total repos per country; cells shown only if $\geq$5 repos that month. \\[2pt]
+\cellcolor{stagegray}\texttt{5f\_tool\_loyalty} &
+  Repo-level agent diversity: counts distinct agents detected per agentic repository.
+  Single-agent repo = exactly 1 agent detected; multi-agent repo = 2+ agents.
+  Produces: (A) stacked bar of 1 / 2 / 3+ agent buckets, (B) co-occurrence heatmap of top
+  agents (only if multi-agent rate $>$5\%).
+  \textbf{Limitation:} a multi-agent repo may reflect team diversity (different contributors
+  using different tools) rather than one developer using multiple tools in parallel.
+  Report as repo-level agent diversity, not individual tool loyalty. \\[2pt]
+\cellcolor{stagegray}\texttt{5g\_world\_regions} &
+  Adoption analysis across 10 macro-regions (North America, Europe, East Asia, South Asia,
+  Latin America, MENA, Sub-Saharan Africa, Southeast Asia, Oceania, Central/Eastern Europe).
+  Wilson 95\% CI per region, chi-squared omnibus test, pairwise Fisher + BH FDR correction.
+  Reports top agent per region and single-homing rate per region. \\[2pt]
+\cellcolor{stagegray}\texttt{5h\_commit\_density} &
+  Measures what fraction of commits in each agentic repo were made by an AI agent
+  (\texttt{ai\_density = trailer\_count / total\_commits}).
+  Produces: (A) histogram of AI commit density (5\% bins) for repos with $\geq$1 trailer,
+  (B) median density by agent (horizontal bar, IQR error bars),
+  (C) adoption intensity buckets: config-only / low (1--25\%) / medium (26--75\%) /
+  high (76--99\%) / full (100\%). \\
 \bottomrule
 \end{tabular}
 
@@ -210,10 +235,13 @@ ci\_ai\_action & & \\
 Agent & Fingerprints (config / trailer / branch / bot / CI action) \\
 \midrule
 Claude Code &
-  \texttt{CLAUDE.md}, \texttt{AGENTS.md};
+  \texttt{CLAUDE.md}, \texttt{.claude/};
   \texttt{Co-Authored-By: claude@anthropic}, \texttt{noreply@anthropic.com};
   \texttt{claude/} branch; bot: \texttt{claude[bot]};
   action: \texttt{anthropic/claude-code-action} \\[2pt]
+Generic (shared) &
+  \texttt{AGENTS.md} --- used by Codex, Jules, Cursor, Aider, and Copilot;
+  not agent-specific; classified as \texttt{Generic} \\[2pt]
 GitHub Copilot &
   \texttt{.github/copilot-instructions.md};
   \texttt{Co-authored-by: copilot}; \texttt{copilot/} branch;
@@ -297,7 +325,55 @@ SWE-agent &
   bot: \texttt{swe-agent[bot]}; \texttt{swe-agent/} branch \\[2pt]
 Amp &
   bot: \texttt{amp-bot[bot]}; \texttt{amp/} branch;
-  \texttt{Co-authored-by: amp-code} \\
+  \texttt{Co-authored-by: amp-code} \\[2pt]
+Cline &
+  file: \texttt{.clinerules} (shared), \texttt{.cline/};
+  bot: \texttt{cursor[bot]} (not applicable --- Cline has no dedicated bot) \\[2pt]
+Goose (Block) &
+  file: \texttt{.goose/};
+  bot: \texttt{goose[bot]}; \texttt{goose/} branch \\[2pt]
+Trae / MarsCode (ByteDance) &
+  file: \texttt{.marscode/}, \texttt{.trae/} \\[2pt]
+SpecKit &
+  file: \texttt{.speckit/} \\[2pt]
+Serena &
+  file: \texttt{.serena/}; \texttt{serena/} branch \\[2pt]
+Mistral Vibe &
+  file: \texttt{.mistral/};
+  author email: \texttt{vibe@mistral.ai};
+  trailer: \texttt{Co-authored-by: ...mistral} \\[2pt]
+Letta Code &
+  file: \texttt{.letta/};
+  bot: \texttt{letta[bot]};
+  trailer: \texttt{Co-authored-by: ...letta} \\[2pt]
+Abacus AI &
+  file: \texttt{.abacus/};
+  bot: \texttt{abacus-ai-automation[bot]};
+  author email: \texttt{agent@abacus.ai} \\[2pt]
+Open SWE (Langchain) &
+  branch: \texttt{open-swe/}; bot: \texttt{open-swe[bot]}; PR label: \texttt{open-swe} \\[2pt]
+Paperclip &
+  file: \texttt{.paperclip/}; author email: \texttt{noreply@paperclip.ing} \\[2pt]
+Kimi Code (Moonshot AI) &
+  file: \texttt{.kimi/} \\[2pt]
+Atlassian Rovodev &
+  file: \texttt{.rovodev/} \\[2pt]
+SpecStory &
+  file: \texttt{.specstory/} \\[2pt]
+Augment Code &
+  file: \texttt{.augment/}; bot: \texttt{augment[bot]} \\[2pt]
+Microsoft Amplifier &
+  author email: \texttt{microsoft-amplifier@users.noreply.github.com} \\[2pt]
+Gru &
+  file: \texttt{.gru/}; branch: \texttt{gru/} \\[2pt]
+Pi &
+  file: \texttt{.pi/} \\[2pt]
+Qwen Code (Alibaba) &
+  file: \texttt{.qwen/} \\[2pt]
+Plandex &
+  file: \texttt{.plandex/} \\[2pt]
+JACoB &
+  bot: \texttt{jacob-ai[bot]} \\
 \bottomrule
 \end{tabular}
 
@@ -408,6 +484,32 @@ Amp &
         Only include country$\times$month cells with $\geq$5 repos to suppress noise.
         \textit{Visual: heatmap + bump chart + cumulative line ---
           \texttt{fig\_country\_heatmap}, \texttt{fig\_country\_bump}, \texttt{fig\_country\_cumulative}}
+  \item \textbf{Repo-level agent diversity (5f):} classify every agentic repo as
+        single-agent (1 agent detected) or multi-agent (2+ agents detected).
+        Report: single-agent rate, multi-agent rate, breakdown by 1/2/3+ agents.
+        If multi-agent rate $>$5\%: report top co-occurring agent pairs and co-occurrence heatmap.
+        \textbf{Caveat:} a multi-agent repo may reflect different contributors using different
+        tools, or a past tool migration, rather than one developer using multiple tools in
+        parallel. Frame findings as \emph{repo-level agent diversity}, not individual tool
+        loyalty.
+        \textit{Visual: stacked bar + co-occurrence heatmap ---
+          \texttt{fig\_tool\_loyalty\_bar}, \texttt{fig\_tool\_loyalty\_heatmap}}
+  \item \textbf{World regions adoption (5g):} compare AI coding agent adoption rates across
+        10 macro-regions. Report: regional adoption rate + Wilson 95\% CI, chi-squared
+        omnibus $p$-value, pairwise Fisher exact tests with BH FDR correction,
+        top agent per region, single-homing rate per region.
+        \textit{Visual: regional bar chart + agent heatmap ---
+          \texttt{fig\_world\_regions\_adoption}, \texttt{fig\_world\_regions\_agents}}
+  \item \textbf{AI commit density (5h):} for every agentic repo compute
+        $\text{ai\_density} = \text{trailer\_count} / \text{total\_commits}$.
+        Report: \% of agentic repos with $\geq$1 trailer commit (``trailer-detectable''),
+        median and mean AI commit density among trailer-detectable repos,
+        \% of repos fully agentic (density = 100\%).
+        Bucket all agentic repos into: config-only / low / medium / high / full.
+        Median AI commit density by agent (which tools generate proportionally more commits?).
+        \textit{Visual: histogram + by-agent bar + bucket bar ---
+          \texttt{fig\_commit\_density\_hist}, \texttt{fig\_commit\_density\_by\_agent},
+          \texttt{fig\_commit\_density\_buckets}}
 \end{enumerate}
 
 % ── SECTION 4: FILTERING CRITERIA ────────────────────────────────────────────

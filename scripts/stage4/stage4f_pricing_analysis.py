@@ -7,12 +7,14 @@ across country income groups (World Bank classification).
 
 Classifies each detected tool as:
   - paid_dominant : requires paid subscription for meaningful use
-                    (Claude Code, Devin, Junie, Codegen, Factory, Greptile)
+                    (Claude Code, Devin, Junie, Codegen, Factory, Greptile,
+                     Roo Code, Ellipsis, Amp)
   - free_accessible: free tier, OSS, or free for students/education
                     (GitHub Copilot, Cursor, OpenHands, Amazon Q,
                      CodeRabbit, Sweep, Windsurf, Aider, Codeium,
-                     Continue, Gemini CLI, OpenCode, Cline, Jules)
-  - ambiguous      : hard to classify (OpenAI Codex, MCP, generic labels)
+                     Continue, Gemini CLI, OpenCode, Jules, Replit,
+                     DeepSource, PR-Agent, Sourcery, Kiro, SWE-agent)
+  - ambiguous      : hard to classify (OpenAI Codex, generic labels)
 
 For each country assigns World Bank 2024 income group and computes:
   - overall adoption rate
@@ -44,19 +46,50 @@ OUT_GROUP   = OUT_DIR / "pricing_income_groups.csv"
 # ── Tool pricing classification ───────────────────────────────────────────────
 # paid_dominant: real use requires paid subscription
 PAID_TOOLS = {
-    "claude code", "claude code / generic", "claude", "claude-code",
-    "devin", "junie", "codegen", "factory", "greptile", "ellipsis",
-    "roo code", "kilocode", "openclaw", "agent-skills", "agentic-ai",
-    "openai codex",   # Codex CLI — requires OpenAI API credits (pay-per-token)
+    # Anthropic
+    "claude code", "claude code / generic",
+    # JetBrains
+    "junie",
+    # Devin (Cognition AI)
+    "devin",
+    # Roo Code / Kilocode
+    "roo code",
+    # Codegen / Factory / Greptile / Ellipsis / Amp — paid SaaS
+    "codegen", "factory", "greptile", "ellipsis", "amp",
+    # OpenAI Codex CLI — pay-per-token API
+    "openai codex",
 }
 
 # free_accessible: free tier / OSS / free for students
 FREE_TOOLS = {
-    "github copilot", "cursor", "cursor/copilot",
-    "openhands", "sweep", "amazon q", "coderabbit",
-    "windsurf", "aider", "codeium", "continue",
-    "gemini cli", "gemini", "opencode", "cline",
-    "jules", "qwen", "mcp",
+    # GitHub Copilot (free for students / free tier)
+    "github copilot",
+    # Cursor (free tier)
+    "cursor",
+    # Windsurf / Codeium (free tier)
+    "windsurf", "codeium",
+    # Aider (open source)
+    "aider",
+    # Continue (open source)
+    "continue",
+    # Gemini CLI (free)
+    "gemini cli",
+    # OpenCode (open source)
+    "opencode",
+    # OpenHands / SWE-agent (open source)
+    "openhands", "swe-agent",
+    # Amazon Q / Kiro (free tier)
+    "amazon q", "kiro",
+    # CodeRabbit / Sweep (free for open source)
+    "coderabbit", "sweep",
+    # Jules (Google Labs — free preview)
+    "jules",
+    # Replit (free tier)
+    "replit",
+    # DeepSource (free for open source)
+    "deepsource",
+    # PR-Agent / Sourcery (open source / free tier)
+    "pr-agent", "sourcery",
 }
 
 def classify_tool(name: str) -> str:

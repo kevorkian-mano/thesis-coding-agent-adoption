@@ -1,0 +1,143 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=1.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{listings}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  framerule=0.4pt,
+  xleftmargin=4pt,
+  xrightmargin=4pt,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textbf{AI Coding Agent Adoption --- Team Onboarding Guide}}
+\rhead{\small v1.0 · Nov 2026}
+\cfoot{\thepage}
+
+\setlist[enumerate]{itemsep=1pt,topsep=1pt,leftmargin=1.4em}
+\setlist[itemize]{itemsep=1pt,topsep=1pt,leftmargin=1.4em}
+
+\begin{document}
+
+\begin{center}
+  {\large\bfseries Team Onboarding Guide --- AI Coding Agent Adoption on GitHub}\\[2pt]
+  {\small Shared Methodology · 7-Stage Pipeline}
+\end{center}
+\noindent\rule{\linewidth}{0.6pt}
+
+% ── OVERVIEW ──────────────────────────────────────────────────────────────────
+\section*{1. Overview}
+
+Every team member runs the \textbf{same scripts} on their own language/ecosystem corpus
+and reports the \textbf{same metrics}, enabling cross-stack comparison.
+Pipeline: Stage~1 (corpus) $\to$ Stage~2 (location) $\to$ Stage~3 (detection, 3-pass)
+$\to$ Stage~4 (geography \& stats) $\to$ Stage~5 (extended analysis).
+
+\noindent\textbf{Critical rule:} detection patterns, signal tiers (STRONG/MEDIUM/WEAK),
+Wilson CI, BH FDR, and \texttt{MIN\_REPOS = 30} \textbf{must be identical across all members.}
+Only variables inside the \texttt{TEAM CONFIGURATION} block may be changed.
+
+% ── SETUP ─────────────────────────────────────────────────────────────────────
+\section*{2. One-Time Setup}
+
+\begin{enumerate}
+  \item Install dependencies (Python 3.10+): \quad
+        \lstinline|pip install pandas requests matplotlib scipy numpy|
+  \item Set your GitHub token (required for Stages 2, 3, 5d): \quad
+        \lstinline|export GITHUB_TOKEN=ghp_...|\\
+        Generate at \texttt{github.com/settings/tokens} with read-only \texttt{public\_repo} scope.
+  \item Build your Stage~1 corpus CSV. Required columns:\\
+        \texttt{full\_name, owner\_login, repo\_name, stars, commits, lang\_bytes, created\_at, primary\_language}
+  \item In each script, set \texttt{INPUT\_CSV} inside the \texttt{TEAM CONFIGURATION} block (see Section~3).
+\end{enumerate}
+
+% ── TEAM CONFIG ───────────────────────────────────────────────────────────────
+\section*{3. The TEAM CONFIGURATION Block}
+
+Every script contains a marked block at the top. \textbf{Change only \texttt{INPUT\_CSV}.}
+Do not rename \texttt{CORPUS} --- every function in the script uses that alias.
+Search for \texttt{NOTE FOR TEAM} in each script before running; some scripts require
+a small stack-specific edit (e.g.\ ecosystem column names in \texttt{4c\_breakdowns}).
+
+\begin{lstlisting}
+# =====================================================
+# TEAM CONFIGURATION - edit before running
+# =====================================================
+INPUT_CSV = ROOT / "data" / "stage1" / "global_corpus.csv"  # <-- set this
+# =====================================================
+CORPUS = INPUT_CSV  # alias used throughout -- do not change
+\end{lstlisting}
+
+% ── RUN ORDER ─────────────────────────────────────────────────────────────────
+\section*{4. Run Order}
+
+Run stages in order; each reads the previous stage's output.
+
+\vspace{2pt}
+\noindent\textbf{Stage 2} (location lookup) $\to$ output: \texttt{data/stage2/owner\_locations\_all.csv}
+\begin{lstlisting}
+python3 scripts/stage2/stage2a_location_fast.py
+python3 scripts/stage2/stage2b_location_deep.py    # only if 2a coverage < 50%
+python3 scripts/stage2/stage2c_timezone_readme.py
+python3 scripts/stage2/stage2d_company_orgs.py
+\end{lstlisting}
+
+\noindent\textbf{Stage 3} (detection, most API-intensive; has resume support) $\to$ output: \texttt{data/stage3/}
+\begin{lstlisting}
+python3 scripts/stage3/stage3a_config_files.py     # Pass A: config files (hard positives)
+python3 scripts/stage3/stage3b_commit_trailers.py  # Pass B: commit trailers
+python3 scripts/stage3/stage3c_deep_scan.py        # Pass C: deep GraphQL scan
+\end{lstlisting}
+
+\noindent\textbf{Stage 4} (geography \& stats) $\to$ output: \texttt{data/stage4/corpus\_with\_country.csv}
+\begin{lstlisting}
+python3 scripts/stage4/stage4a_geographic_analysis.py
+python3 scripts/stage4/stage4b_statistical_tests.py
+python3 scripts/stage4/stage4c_breakdowns.py          # check NOTE FOR TEAM first
+python3 scripts/stage4/stage4d_size_analysis.py
+python3 scripts/stage4/stage4e_mena_analysis.py
+python3 scripts/stage4/stage4f_pricing_analysis.py
+\end{lstlisting}
+
+\noindent\textbf{Stage 5} (extended analysis; scripts are independent, run in any order)
+\begin{lstlisting}
+python3 scripts/stage5/stage5a_time_series.py
+python3 scripts/stage5/stage5b_size_comparison.py
+python3 scripts/stage5/stage5c_framework_subset.py    # set FRAMEWORK_INCLUDE/EXCLUDE
+python3 scripts/stage5/stage5d_first_agent_commit.py  # set AGENT_FILTER if not Claude Code
+python3 scripts/stage5/stage5e_country_timeline.py
+python3 scripts/stage5/stage5f_tool_loyalty.py
+python3 scripts/stage5/stage5g_world_regions.py
+python3 scripts/stage5/stage5h_commit_density.py
+\end{lstlisting}
+
+% ── TROUBLESHOOTING ───────────────────────────────────────────────────────────
+\section*{5. Common Issues}
+
+\begin{tabular}{@{}p{4.2cm}p{11.3cm}@{}}
+\toprule
+Error & Fix \\
+\midrule
+\texttt{Set GITHUB\_TOKEN} & Run \texttt{export GITHUB\_TOKEN=ghp\_...} in terminal before running any script. \\[2pt]
+\texttt{Missing: data/stage3/...} & Run the preceding stage first; each stage reads the previous stage's output. \\[2pt]
+\texttt{KeyError: 'owner\_login'} & Stage~1 CSV is missing a required column; check the column list in Section~2. \\[2pt]
+HTTP 403 / 429 & Rate limit. Scripts auto-retry after 60s. If persistent, regenerate your token. \\[2pt]
+HTTP 502 / 504 & GitHub timeout. Stage 3a/3c use \texttt{BATCH\_SIZE=5} and auto-retry 5$\times$ with 20s sleep. \\[2pt]
+Crash / interrupted & Re-run the same script. Stage~3 scripts skip already-processed repos automatically. \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\noindent\rule{\linewidth}{0.4pt}
+{\small Full signal documentation: \texttt{docs/shared\_methodology.pdf} \quad
+Do not modify detection patterns or statistical formulas --- contact the methodology lead if something needs changing.}
+
+\end{document}

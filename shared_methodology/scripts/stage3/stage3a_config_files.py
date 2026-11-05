@@ -4,7 +4,7 @@ Stage 3a -- Pass A: Configuration File Check
 =============================================
 Checks every repo in global_corpus.csv for the presence of known AI agent
 configuration files at the repository root. Uses a single GraphQL query per
-batch of repos (BATCH_SIZE = 10).
+batch of repos (BATCH_SIZE = 5).
 
 ALL matching config files are recorded per repo (not just the first one).
 A repo with both CLAUDE.md and .junie/ will show both agents in agents_found.
@@ -68,7 +68,7 @@ if not TOKEN:
 
 HEADERS     = {"Authorization": f"bearer {TOKEN}", "Content-Type": "application/json"}
 GRAPHQL_URL = "https://api.github.com/graphql"
-BATCH_SIZE  = 10     # repos per GraphQL request
+BATCH_SIZE  = 5      # repos per GraphQL request (lower = fewer 5xx timeouts)
 SLEEP_OK    = 0.8
 SLEEP_RETRY = 60
 SAVE_EVERY  = 500    # save to disk every N repos
@@ -80,16 +80,24 @@ SAVE_EVERY  = 500    # save to disk every N repos
 CONFIG_FILES = {
     # ── Claude Code (Anthropic) ───────────────────────────────────────────────
     "CLAUDE.md":                            "Claude Code",
-    "AGENTS.md":                            "Claude Code / Generic",
+    ".claude":                              "Claude Code",        # settings/commands dir
+    "AGENTS.md":                            "Generic",            # shared by Codex/Jules/Cursor/Aider
     # ── OpenAI Codex ─────────────────────────────────────────────────────────
     "AGENTS.json":                          "OpenAI Codex",
     # ── Cursor ───────────────────────────────────────────────────────────────
     ".cursorrules":                         "Cursor",
     ".cursorignore":                        "Cursor",
+    ".cursor/rules":                        "Cursor",             # nested rules dir (agentic use)
     # ── Aider ────────────────────────────────────────────────────────────────
     ".aider.conf.yml":                      "Aider",
+    ".aiderignore":                         "Aider",
+    # ── Cline ────────────────────────────────────────────────────────────────
+    ".clinerules":                          "Cline / Roo Code",   # shared — Cline invented, Roo forked
+    ".cline":                               "Cline",              # Cline-specific dir
     # ── Roo Code ─────────────────────────────────────────────────────────────
     ".roomodes":                            "Roo Code",
+    ".roo":                                 "Roo Code",
+    ".roosettings":                         "Roo Code",
     # ── Windsurf (Codeium) ───────────────────────────────────────────────────
     ".windsurfrules":                       "Windsurf",
     # ── Gemini CLI ───────────────────────────────────────────────────────────
@@ -117,10 +125,53 @@ CONFIG_FILES = {
     # ── CodeRabbit ───────────────────────────────────────────────────────────
     "coderabbit.yaml":                      "CodeRabbit",
     ".coderabbit.yaml":                     "CodeRabbit",
+    ".coderabbit":                          "CodeRabbit",         # config dir
     # ── Sweep AI ─────────────────────────────────────────────────────────────
     "sweep.yaml":                           "Sweep",
+    ".sweep":                               "Sweep",              # config dir
     # ── Ellipsis ─────────────────────────────────────────────────────────────
     ".ellipsis.yaml":                       "Ellipsis",
+    # ── Devin (Cognition) ────────────────────────────────────────────────────
+    ".devin":                               "Devin",
+    # ── Amp (Sourcegraph) ────────────────────────────────────────────────────
+    "AGENT.md":                             "Amp",                # Amp-specific guidance file
+    # ── Amazon Q Developer ───────────────────────────────────────────────────
+    ".amazonq":                             "Amazon Q",
+    # ── Codegen ──────────────────────────────────────────────────────────────
+    ".codegen":                             "Codegen",
+    # ── Goose (Block) ────────────────────────────────────────────────────────
+    ".goose":                               "Goose",
+    # ── Trae / MarsCode (ByteDance) ──────────────────────────────────────────
+    ".marscode":                            "Trae / MarsCode",
+    ".trae":                                "Trae / MarsCode",
+    # ── SpecKit ──────────────────────────────────────────────────────────────
+    ".speckit":                             "SpecKit",
+    # ── Serena ───────────────────────────────────────────────────────────────
+    ".serena":                              "Serena",
+    # ── Mistral Vibe ─────────────────────────────────────────────────────────
+    ".mistral":                             "Mistral Vibe",
+    # ── Letta Code ───────────────────────────────────────────────────────────
+    ".letta":                               "Letta Code",
+    # ── Abacus AI ────────────────────────────────────────────────────────────
+    ".abacus":                              "Abacus AI",
+    # ── Paperclip ────────────────────────────────────────────────────────────
+    ".paperclip":                           "Paperclip",
+    # ── Kimi Code (Moonshot AI) ──────────────────────────────────────────────
+    ".kimi":                                "Kimi Code",
+    # ── Atlassian Rovodev ────────────────────────────────────────────────────
+    ".rovodev":                             "Atlassian Rovodev",
+    # ── SpecStory ────────────────────────────────────────────────────────────
+    ".specstory":                           "SpecStory",
+    # ── Augment Code ─────────────────────────────────────────────────────────
+    ".augment":                             "Augment Code",
+    # ── Gru ──────────────────────────────────────────────────────────────────
+    ".gru":                                 "Gru",
+    # ── Pi ───────────────────────────────────────────────────────────────────
+    ".pi":                                  "Pi",
+    # ── Qwen Code (Alibaba) ──────────────────────────────────────────────────
+    ".qwen":                                "Qwen Code",
+    # ── Plandex ──────────────────────────────────────────────────────────────
+    ".plandex":                             "Plandex",
 }
 
 
@@ -181,7 +232,7 @@ def fetch_batch(repos: list[tuple[str, str]]) -> dict:
             time.sleep(SLEEP_RETRY)
         else:
             print(f"  HTTP {resp.status_code} attempt {attempt+1}")
-            time.sleep(5)
+            time.sleep(20)
     return {f"{o}/{n}": {} for o, n in repos}
 
 
