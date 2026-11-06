@@ -3,13 +3,11 @@
 Stage 3b -- Pass B: Commit Trailer Scan  [TIERED RULE -- no ai_assisted output]
 ================================================================================
 Runs only on repos not classified by Pass A (pass1_unclassified.csv).
-Fetches the most recent 100 commits per repo and scans:
-  - commit messages for known AI agent trailer patterns
-  - commit author names for agent-specific suffixes (e.g. "(aider)")
-  - commit bodies for inline generation notices (Replit, Codex)
+Uses GraphQL batching (BATCH_SIZE repos per query) for ~5x throughput vs REST.
 
-Also checks PR branch names for agent-specific prefixes (copilot/, codex/,
-devin/, replit/, amazon-q/, pr-agent/).
+Fetches per repo:
+  - Last MAX_COMMITS commit messages + author names (trailer & suffix patterns)
+  - Last MAX_PRS pull request branch names (PR branch prefix patterns)
 
 TIERED CLASSIFICATION RULE:
   commit_trailer and pr_branch are STRONG signals.
@@ -51,17 +49,16 @@ TOKEN = os.environ.get("GITHUB_TOKEN", "")
 if not TOKEN:
     raise SystemExit("Set GITHUB_TOKEN environment variable before running.")
 
-HEADERS  = {"Authorization": f"token {TOKEN}", "Accept": "application/vnd.github+json"}
-REST_URL = "https://api.github.com"
+HEADERS_GQL = {"Authorization": f"bearer {TOKEN}", "Content-Type": "application/json"}
+GRAPHQL_URL = "https://api.github.com/graphql"
+BATCH_SIZE  = 10     # repos per GraphQL request
 SLEEP_OK    = 0.5
 SLEEP_RETRY = 60
 MAX_COMMITS = 100
 MAX_PRS     = 50
-SAVE_EVERY  = 200   # save to disk every N repos
+SAVE_EVERY  = 500    # save to disk every N repos
 
 # ── trailer / commit-body patterns ────────────────────────────────────────────
-# Matched against the full commit message string (message + trailers block).
-# One match per commit (break after first match per commit).
 TRAILER_PATTERNS = [
     # Claude Code
     (re.compile(r"co-authored-by:.*claude.*anthropic",        re.I),  "Claude Code"),
@@ -104,8 +101,6 @@ TRAILER_PATTERNS = [
 ]
 
 # ── author name suffix patterns ───────────────────────────────────────────────
-# Checked against the commit author's display NAME (not email).
-# Aider appends " (aider)" to the author name when making commits.
 AUTHOR_NAME_PATTERNS = [
     (re.compile(r"\(aider\)\s*$", re.I), "Aider"),
 ]
@@ -131,72 +126,90 @@ PR_BRANCH_PATTERNS = [
 ]
 
 
-def get_commits(owner: str, name: str) -> list[dict]:
-    """Return list of commit dicts (up to MAX_COMMITS). Each dict has 'message' and 'author_name'."""
-    url    = f"{REST_URL}/repos/{owner}/{name}/commits"
-    params = {"per_page": MAX_COMMITS}
+# ── GraphQL batch fetch ───────────────────────────────────────────────────────
+
+def build_query(repos: list[tuple[str, str]]) -> str:
+    parts = []
+    for i, (owner, name) in enumerate(repos):
+        parts.append(f"""
+  r{i}: repository(owner: "{owner}", name: "{name}") {{
+    nameWithOwner
+    defaultBranchRef {{
+      target {{
+        ... on Commit {{
+          history(first: {MAX_COMMITS}) {{
+            nodes {{
+              message
+              author {{ email name }}
+            }}
+          }}
+        }}
+      }}
+    }}
+    pullRequests(first: {MAX_PRS}, states: [OPEN, CLOSED, MERGED]) {{
+      nodes {{ headRefName }}
+    }}
+  }}""")
+    return "{\n" + "\n".join(parts) + "\n}"
+
+
+def fetch_batch(repos: list[tuple[str, str]]) -> dict:
+    """Returns {full_name: repo_data_dict} via a single GraphQL query."""
+    query = build_query(repos)
     for attempt in range(5):
         try:
-            resp = requests.get(url, headers=HEADERS, params=params, timeout=20)
-            if resp.status_code == 200:
-                result = []
-                for c in resp.json():
-                    commit_data = c.get("commit") or {}
-                    author_data = commit_data.get("author") or {}
-                    result.append({
-                        "message":     commit_data.get("message") or "",
-                        "author_name": author_data.get("name")    or "",
-                    })
-                return result
-            elif resp.status_code in (403, 429):
-                time.sleep(SLEEP_RETRY)
-            else:
-                time.sleep(5)
+            resp = requests.post(GRAPHQL_URL, json={"query": query},
+                                 headers=HEADERS_GQL, timeout=45)
         except Exception as e:
             wait = 10 * (attempt + 1)
             print(f"  Network error ({e.__class__.__name__}), retry {attempt+1}/5 in {wait}s ...")
             time.sleep(wait)
-    return []
+            continue
+        if resp.status_code == 200:
+            try:
+                data = resp.json().get("data") or {}
+            except Exception:
+                print(f"  Empty/invalid JSON on attempt {attempt+1}/5, retrying in 10s ...")
+                time.sleep(10)
+                continue
+            result = {}
+            for i, (owner, name) in enumerate(repos):
+                full_name = f"{owner}/{name}"
+                result[full_name] = data.get(f"r{i}") or {}
+            return result
+        elif resp.status_code in (403, 429):
+            print(f"  Rate limited. Sleeping {SLEEP_RETRY}s ...")
+            time.sleep(SLEEP_RETRY)
+        else:
+            print(f"  HTTP {resp.status_code} attempt {attempt+1}/5")
+            time.sleep(20)
+    return {f"{o}/{n}": {} for o, n in repos}
 
 
-def get_pr_branches(owner: str, name: str) -> list[str]:
-    """Return list of PR head branch names."""
-    url    = f"{REST_URL}/repos/{owner}/{name}/pulls"
-    params = {"state": "all", "per_page": MAX_PRS}
-    for attempt in range(5):
-        try:
-            resp = requests.get(url, headers=HEADERS, params=params, timeout=20)
-            if resp.status_code == 200:
-                return [pr.get("head", {}).get("ref", "") for pr in resp.json()]
-            elif resp.status_code in (403, 429):
-                time.sleep(SLEEP_RETRY)
-            else:
-                time.sleep(5)
-        except Exception as e:
-            wait = 10 * (attempt + 1)
-            print(f"  Network error ({e.__class__.__name__}), retry {attempt+1}/5 in {wait}s ...")
-            time.sleep(wait)
-    return []
+# ── per-repo signal detection ─────────────────────────────────────────────────
 
-
-def scan_repo(owner: str, name: str) -> tuple[int, set, str]:
+def scan_repo_data(repo_data: dict) -> tuple[int, set, str]:
     """
-    Scan commits (messages + author names) and PR branch names.
+    Scan GraphQL data for one repo.
     Returns (hit_count, agents_found_set, signal_source_string).
     """
-    agents_found = {}   # agent -> True (insertion-ordered, dedup)
+    agents_found = {}
     hit_count    = 0
     sources      = set()
 
     # ── commit scan ───────────────────────────────────────────────────────────
-    commits = get_commits(owner, name)
+    history = (
+        ((repo_data.get("defaultBranchRef") or {})
+         .get("target") or {})
+        .get("history") or {}
+    ).get("nodes") or []
 
-    for commit in commits:
-        msg         = commit["message"]
-        author_name = commit["author_name"]
+    for node in history:
+        msg         = node.get("message")              or ""
+        author      = node.get("author")               or {}
+        author_name = author.get("name")               or ""
         matched     = False
 
-        # Trailer / body patterns
         for pattern, agent in TRAILER_PATTERNS:
             if pattern.search(msg):
                 agents_found[agent] = True
@@ -205,7 +218,6 @@ def scan_repo(owner: str, name: str) -> tuple[int, set, str]:
                 matched = True
                 break
 
-        # Author name suffix (only if no trailer match for this commit)
         if not matched:
             for pattern, agent in AUTHOR_NAME_PATTERNS:
                 if pattern.search(author_name):
@@ -214,79 +226,67 @@ def scan_repo(owner: str, name: str) -> tuple[int, set, str]:
                     sources.add("commit_trailer")
                     break
 
-    # ── PR branch scan (only if no commits matched -- saves API calls) ────────
-    if hit_count == 0:
-        branches = get_pr_branches(owner, name)
-        for branch in branches:
-            for pattern, agent in PR_BRANCH_PATTERNS:
-                if pattern.search(branch):
-                    agents_found[agent] = True
-                    hit_count += 1
-                    sources.add("pr_branch")
-                    break
+    # ── PR branch scan ────────────────────────────────────────────────────────
+    prs = (repo_data.get("pullRequests") or {}).get("nodes") or []
+    for pr in prs:
+        branch = pr.get("headRefName") or ""
+        for pattern, agent in PR_BRANCH_PATTERNS:
+            if pattern.search(branch):
+                agents_found[agent] = True
+                hit_count += 1
+                sources.add("pr_branch")
+                break
 
-    source_str = "|".join(sorted(sources))
-    return hit_count, set(agents_found.keys()), source_str
-
-
-def classify(hit_count: int) -> str:
-    # commit_trailer and pr_branch are STRONG signals under the tiered rule.
-    # Any hit -> agentic. Never produce "ai_assisted" here.
-    return "agentic" if hit_count > 0 else "unclassified"
+    return hit_count, set(agents_found.keys()), "|".join(sorted(sources))
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
 def main():
-    print("Stage 3b -- Pass B: Commit Trailer Scan")
+    print("Stage 3b -- Pass B: Commit Trailer Scan (GraphQL batch)")
     print("=" * 55)
 
     if not IN_FILE.exists():
         raise SystemExit(f"Run stage3a first. Missing: {IN_FILE}")
 
-    repos = pd.read_csv(IN_FILE)["full_name"].tolist()
-    print(f"Repos to process: {len(repos):,}")
+    full_names = pd.read_csv(IN_FILE)["full_name"].tolist()
+    print(f"Repos to process: {len(full_names):,}")
 
     # Resume support
     if OUT_PASS2.exists():
-        done  = set(pd.read_csv(OUT_PASS2)["full_name"].tolist())
-        repos = [r for r in repos if r not in done]
-        print(f"Resuming: {len(repos):,} remaining")
+        done       = set(pd.read_csv(OUT_PASS2)["full_name"].tolist())
+        full_names = [r for r in full_names if r not in done]
+        print(f"Resuming: {len(full_names):,} remaining")
+
+    pairs = [(fn.split("/")[0], fn.split("/")[1])
+             for fn in full_names if fn.count("/") == 1]
 
     results       = []
-    total         = len(repos)
+    total         = len(pairs)
     agentic_count = 0
 
-    for i, full_name in enumerate(repos):
-        parts = full_name.split("/", 1)
-        if len(parts) != 2:
-            continue
-        owner, name = parts
+    for start in range(0, total, BATCH_SIZE):
+        batch   = pairs[start:start + BATCH_SIZE]
+        fetched = fetch_batch(batch)
 
-        for _attempt in range(3):
-            try:
-                hit_count, agents_found, source = scan_repo(owner, name)
-                break
-            except Exception as e:
-                print(f"  Error on {full_name}: {e}")
-                time.sleep(10)
-        else:
-            hit_count, agents_found, source = 0, set(), ""
+        for owner, name in batch:
+            full_name  = f"{owner}/{name}"
+            repo_data  = fetched.get(full_name, {})
+            hit_count, agents_found, source = scan_repo_data(repo_data)
+            label = "agentic" if hit_count > 0 else "unclassified"
+            if label == "agentic":
+                agentic_count += 1
+            results.append({
+                "full_name":      full_name,
+                "trailer_count":  hit_count,
+                "agents_found":   "|".join(sorted(agents_found)),
+                "adoption_label": label,
+                "signal_source":  source,
+            })
 
-        label = classify(hit_count)
-        if label == "agentic":
-            agentic_count += 1
-
-        results.append({
-            "full_name":      full_name,
-            "trailer_count":  hit_count,
-            "agents_found":   "|".join(sorted(agents_found)),
-            "adoption_label": label,
-            "signal_source":  source,
-        })
-
-        if (i + 1) % SAVE_EVERY == 0 or (i + 1) == total:
-            pct = (i + 1) / total * 100
-            print(f"  {i+1:>6,}/{total:,} ({pct:.1f}%)  agentic: {agentic_count:,}")
+        done_count = start + len(batch)
+        if done_count % SAVE_EVERY == 0 or done_count == total:
+            pct = done_count / total * 100
+            print(f"  {done_count:>6,}/{total:,} ({pct:.1f}%)  agentic: {agentic_count:,}")
             chunk = pd.DataFrame(results)
             if OUT_PASS2.exists():
                 existing = pd.read_csv(OUT_PASS2)
@@ -305,12 +305,9 @@ def main():
         chunk.to_csv(OUT_PASS2, index=False)
 
     new_df = pd.read_csv(OUT_PASS2)
-
-    # Save unclassified for Pass C
     unclassified = new_df[new_df["adoption_label"] == "unclassified"][["full_name"]]
     unclassified.to_csv(OUT_UNRES, index=False)
 
-    # Summary
     total_proc     = len(new_df)
     n_agentic      = (new_df["adoption_label"] == "agentic").sum()
     n_unclassified = (new_df["adoption_label"] == "unclassified").sum()

@@ -68,8 +68,8 @@ if not TOKEN:
 
 HEADERS     = {"Authorization": f"bearer {TOKEN}", "Content-Type": "application/json"}
 GRAPHQL_URL = "https://api.github.com/graphql"
-BATCH_SIZE  = 5      # repos per GraphQL request (lower = fewer 5xx timeouts)
-SLEEP_OK    = 0.8
+BATCH_SIZE  = 10     # repos per GraphQL request
+SLEEP_OK    = 0.5
 SLEEP_RETRY = 60
 SAVE_EVERY  = 500    # save to disk every N repos
 
@@ -166,8 +166,6 @@ CONFIG_FILES = {
     ".augment":                             "Augment Code",
     # ── Gru ──────────────────────────────────────────────────────────────────
     ".gru":                                 "Gru",
-    # ── Pi ───────────────────────────────────────────────────────────────────
-    ".pi":                                  "Pi",
     # ── Qwen Code (Alibaba) ──────────────────────────────────────────────────
     ".qwen":                                "Qwen Code",
     # ── Plandex ──────────────────────────────────────────────────────────────
@@ -175,43 +173,68 @@ CONFIG_FILES = {
 }
 
 
-def build_query(repos: list[tuple[str, str]]) -> str:
-    """Build a GraphQL query to check ALL config files for a batch of repos."""
+# ── split config files into root-level vs nested paths ───────────────────────
+_ROOT_CONFIGS   = {k: v for k, v in CONFIG_FILES.items() if "/" not in k}
+_NESTED_CONFIGS = {k: v for k, v in CONFIG_FILES.items() if "/" in k}
+_NESTED_KEYS    = list(_NESTED_CONFIGS.keys())
+
+
+def _build_tree_query(repos: list[tuple[str, str]]) -> str:
+    """Fetch root directory tree entries for every repo — one lightweight query."""
     parts = []
     for i, (owner, name) in enumerate(repos):
-        file_checks = "\n".join(
-            f'      f{j}: object(expression: "HEAD:{fname}") {{ __typename }}'
-            for j, fname in enumerate(CONFIG_FILES.keys())
-        )
         parts.append(f"""
   r{i}: repository(owner: "{owner}", name: "{name}") {{
     nameWithOwner
-{file_checks}
+    object(expression: "HEAD:") {{
+      ... on Tree {{
+        entries {{ name type }}
+      }}
+    }}
+  }}""")
+    return "{ " + "\n".join(parts) + " }"
+
+
+def _build_nested_query(repos: list[tuple[str, str]]) -> str:
+    """Check the small set of nested config paths."""
+    parts = []
+    for i, (owner, name) in enumerate(repos):
+        checks = "\n".join(
+            f'      n{j}: object(expression: "HEAD:{fname}") {{ __typename }}'
+            for j, fname in enumerate(_NESTED_KEYS)
+        )
+        parts.append(f"""
+  r{i}: repository(owner: "{owner}", name: "{name}") {{
+{checks}
   }}""")
     return "{ " + "\n".join(parts) + " }"
 
 
 def parse_result(repo_data: dict) -> tuple[list[str], list[str]]:
-    """
-    Scan ALL config file positions and return:
-      (files_found_list, agents_found_list)
-    """
-    filenames  = list(CONFIG_FILES.keys())
-    agents     = {}   # agent -> True (insertion-ordered, dedup)
-    files      = []
+    """Return (files_found, agents_found) from merged tree + nested query data."""
+    agents = {}
+    files  = []
 
-    for j, fname in enumerate(filenames):
-        node = repo_data.get(f"f{j}")
+    # Root-level: check tree entries by name
+    entries    = ((repo_data.get("object") or {}).get("entries")) or []
+    root_names = {e["name"] for e in entries}
+    for fname, agent in _ROOT_CONFIGS.items():
+        if fname in root_names:
+            files.append(fname)
+            agents[agent] = True
+
+    # Nested paths: individual object lookups
+    for j, (fname, agent) in enumerate(_NESTED_CONFIGS.items()):
+        node = repo_data.get(f"n{j}")
         if node and node.get("__typename"):
             files.append(fname)
-            agents[CONFIG_FILES[fname]] = True
+            agents[agent] = True
 
     return files, list(agents.keys())
 
 
-def fetch_batch(repos: list[tuple[str, str]]) -> dict:
-    """Returns {full_name: repo_data_dict}"""
-    query = build_query(repos)
+def _run_query(query: str) -> dict:
+    """Execute one GraphQL query with retry. Returns the data dict."""
     for attempt in range(5):
         try:
             resp = requests.post(GRAPHQL_URL, json={"query": query}, headers=HEADERS, timeout=30)
@@ -221,19 +244,34 @@ def fetch_batch(repos: list[tuple[str, str]]) -> dict:
             time.sleep(wait)
             continue
         if resp.status_code == 200:
-            data = resp.json().get("data") or {}
-            result = {}
-            for i, (owner, name) in enumerate(repos):
-                full_name = f"{owner}/{name}"
-                result[full_name] = data.get(f"r{i}") or {}
-            return result
+            try:
+                return resp.json().get("data") or {}
+            except Exception:
+                print(f"  Empty/invalid JSON on attempt {attempt+1}/5, retrying in 10s ...")
+                time.sleep(10)
+                continue
         elif resp.status_code in (403, 429):
             print(f"  Rate limited. Sleeping {SLEEP_RETRY}s ...")
             time.sleep(SLEEP_RETRY)
         else:
             print(f"  HTTP {resp.status_code} attempt {attempt+1}")
             time.sleep(20)
-    return {f"{o}/{n}": {} for o, n in repos}
+    return {}
+
+
+def fetch_batch(repos: list[tuple[str, str]]) -> dict:
+    """Two lightweight queries per batch: (1) root tree, (2) nested paths."""
+    tree_data   = _run_query(_build_tree_query(repos))
+    time.sleep(SLEEP_OK)
+    nested_data = _run_query(_build_nested_query(repos))
+    time.sleep(SLEEP_OK)
+
+    merged = {}
+    for i, (owner, name) in enumerate(repos):
+        full_name         = f"{owner}/{name}"
+        merged[full_name] = {**(tree_data.get(f"r{i}") or {}),
+                             **(nested_data.get(f"r{i}") or {})}
+    return merged
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
@@ -298,8 +336,6 @@ def main():
                 chunk = pd.concat([existing, chunk], ignore_index=True)
             chunk.to_csv(OUT_PASS1, index=False)
             results = []
-
-        time.sleep(SLEEP_OK)
 
     # Final save of any remaining buffer
     if results:

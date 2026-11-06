@@ -499,7 +499,12 @@ def graphql_batch(repos: list[tuple[str, str]]) -> dict:
                 timeout=45,
             )
             if resp.status_code == 200:
-                gql_data = resp.json().get("data") or {}
+                try:
+                    gql_data = resp.json().get("data") or {}
+                except Exception:
+                    print(f"  Empty/invalid JSON on attempt {attempt+1}/5, retrying in 10s ...")
+                    time.sleep(10)
+                    continue
                 result = {}
                 for i, (owner, name) in enumerate(repos):
                     full_name = f"{owner}/{name}"
@@ -510,7 +515,7 @@ def graphql_batch(repos: list[tuple[str, str]]) -> dict:
                 time.sleep(SLEEP_RETRY)
             else:
                 print(f"  HTTP {resp.status_code}, attempt {attempt+1}/5")
-                time.sleep(5)
+                time.sleep(20)
         except Exception as e:
             wait = 10 * (attempt + 1)
             print(f"  Network error ({e.__class__.__name__}), retry {attempt+1}/5 in {wait}s ...")
