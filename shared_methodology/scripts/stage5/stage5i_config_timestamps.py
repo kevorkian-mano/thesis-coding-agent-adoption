@@ -1,25 +1,22 @@
 #!/usr/bin/env python3
 """
-Stage 5i -- Config File Timestamps
-====================================
-For every repo detected as agentic via config file (Pass 3a of Stage 3),
-retrieve the OLDEST commit that first added each detected config file.
-This gives the exact date AI tooling was first configured in the repo.
+Stage 5i -- Config File Timestamps  (GraphQL batch edition)
+=============================================================
+For every repo detected as agentic via config file (Pass 3a), find the OLDEST
+commit that first added each detected config file → first_ai_date for the repo.
 
-  first_ai_date = min(oldest_commit_date)  across all detected config files
+  first_ai_date = min(oldest_commit)  across all detected config files
 
-API pattern
------------
-  GET /repos/{owner}/{repo}/commits?path={file}&per_page=100
-  For each file: check Link header for last page → fetch last page → last
-  commit on that page is the oldest.  Typically 1–3 API calls per repo.
+GraphQL batching strategy
+--------------------------
+Instead of 1–3 REST calls per repo (56,000–85,000 total), we build a single
+GraphQL query that handles BATCH_SIZE repos at once.  For each repo we ask for
+the history of EVERY detected config file with `last: 1`, which returns the
+single oldest commit for that path in one round-trip.
 
-Scale estimate
---------------
-  ~28,397 agentic-via-config repos
-  ~1–3 API calls each → ~56,000–85,000 calls
-  At GitHub's 5,000 req/hr authenticated limit → 11–17 hours
-  Checkpointing lets you resume from where you left off.
+  Requests = ceil(28,397 / BATCH_SIZE) ≈ 2,840  (batch = 10)
+  Each request ≈ 0.5s network + 0.8s sleep → ~1.3s/batch
+  Total: 2,840 × 1.3s ≈ 61 minutes  (down from 11–17 hours)
 
 Input
 -----
@@ -37,156 +34,167 @@ Usage
   python3 scripts/stage5/stage5i_config_timestamps.py [--limit N] [--resume]
 """
 
-import os
-import re
-import sys
-import time
-import argparse
-import requests
-import pandas as pd
+import os, re, sys, time, json, argparse, requests, pandas as pd
 from pathlib import Path
 
-ROOT       = Path(__file__).resolve().parents[2]
-PASS1      = ROOT / "data" / "stage3" / "pass1_results.csv"
-OUT_DIR    = ROOT / "data" / "stage5"
-OUT_CSV    = OUT_DIR / "config_timestamps.csv"
+ROOT    = Path(__file__).resolve().parents[2]
+PASS1   = ROOT / "data" / "stage3" / "pass1_results.csv"
+OUT_DIR = ROOT / "data" / "stage5"
+OUT_CSV = OUT_DIR / "config_timestamps.csv"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-SLEEP_BETWEEN = 0.08   # seconds between requests (stays under rate limit)
+GRAPHQL_URL   = "https://api.github.com/graphql"
+BATCH_SIZE    = 10     # repos per GraphQL request
+SLEEP_BATCH   = 0.80   # seconds between batches (~1,250/hr — safe buffer under 5,000)
 
 
-# ── GitHub API helpers ────────────────────────────────────────────────────────
+# ── GitHub helpers ────────────────────────────────────────────────────────────
 
-def get_token() -> str:
+def get_headers() -> dict:
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
-        sys.exit("ERROR: GITHUB_TOKEN not set.  Export it and rerun.")
-    return token
+        sys.exit("ERROR: GITHUB_TOKEN not set.")
+    return {"Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"}
 
 
-def github_get(url: str, headers: dict, params: dict | None = None) -> requests.Response:
-    wait = 20
-    for attempt in range(5):
+def gql_post(query: str, headers: dict) -> dict:
+    """POST a GraphQL query with retry for rate limits, 5xx errors, and timeouts."""
+    wait = 15
+    for attempt in range(6):
         try:
-            resp = requests.get(url, headers=headers, params=params, timeout=45)
+            resp = requests.post(GRAPHQL_URL,
+                                 json={"query": query},
+                                 headers=headers,
+                                 timeout=60)
         except (requests.exceptions.ReadTimeout,
                 requests.exceptions.ConnectionError) as exc:
-            if attempt < 4:
+            if attempt < 5:
                 print(f"\n  Network error ({exc.__class__.__name__}), "
-                      f"retry {attempt+1}/4 in {wait}s …", flush=True)
+                      f"retry {attempt+1}/5 in {wait}s …", flush=True)
                 time.sleep(wait)
-                wait *= 2
+                wait = min(wait * 2, 120)
                 continue
             raise
-        if resp.status_code == 403 and "X-RateLimit-Reset" in resp.headers:
-            reset_ts = int(resp.headers["X-RateLimit-Reset"])
-            wait_sec = max(reset_ts - int(time.time()), 1)
-            print(f"\n  Rate limited — sleeping {wait_sec}s …", flush=True)
-            time.sleep(wait_sec + 2)
+
+        if resp.status_code == 200:
+            return resp.json()
+
+        if resp.status_code in (403, 429):
+            reset  = int(resp.headers.get("X-RateLimit-Reset", time.time() + 60))
+            wait_s = max(reset - int(time.time()), 10)
+            print(f"\n  Rate limited ({resp.status_code}) — sleeping {wait_s}s …",
+                  flush=True)
+            time.sleep(wait_s + 2)
             continue
-        if resp.status_code == 429:
-            retry = int(resp.headers.get("Retry-After", 60))
-            print(f"\n  429 — sleeping {retry}s …", flush=True)
-            time.sleep(retry + 2)
+
+        if resp.status_code in (500, 502, 503, 504):
+            print(f"\n  Server error {resp.status_code} — "
+                  f"retry {attempt+1}/5 in {wait}s …", flush=True)
+            time.sleep(wait)
+            wait = min(wait * 2, 120)
             continue
-        return resp
-    return resp  # return last attempt
+
+        print(f"\n  Unexpected HTTP {resp.status_code}", flush=True)
+        return {}
+
+    print("\n  Giving up after 5 retries — returning empty result.", flush=True)
+    return {}
 
 
-def parse_last_page(link_header: str) -> int | None:
-    """Extract the last page number from a GitHub Link header."""
-    if not link_header:
-        return None
-    m = re.search(r'[?&]page=(\d+)[^>]*>;\s*rel="last"', link_header)
-    return int(m.group(1)) if m else None
+# ── GraphQL query builder ─────────────────────────────────────────────────────
+
+def _alias(s: str) -> str:
+    """Turn an arbitrary string into a valid GraphQL field alias."""
+    return re.sub(r'[^a-zA-Z0-9]', '_', s)
 
 
-# ── Core: oldest commit for a single file path ───────────────────────────────
-
-def oldest_commit_for_path(owner: str, repo: str, path: str,
-                            headers: dict) -> str | None:
+def build_query(batch: list[tuple[str, str, list[str]]]) -> str:
     """
-    Returns the ISO date string of the oldest commit that touched `path`,
-    or None if the path has no commit history or the API returns an error.
+    batch: [(owner, repo, [config_file, ...]), ...]
+    Returns a GraphQL query string that fetches the oldest commit for every
+    config file of every repo in one request.
     """
-    base_url = f"https://api.github.com/repos/{owner}/{repo}/commits"
-    params   = {"path": path, "per_page": 100, "page": 1}
-
-    # First request — may be the only one
-    resp = github_get(base_url, headers, params)
-    time.sleep(SLEEP_BETWEEN)
-
-    if resp.status_code == 404:
-        return None
-    if resp.status_code != 200:
-        return None
-
-    commits = resp.json()
-    if not commits:
-        return None
-
-    # Check whether there are more pages
-    last_page = parse_last_page(resp.headers.get("Link", ""))
-
-    if last_page and last_page > 1:
-        # Fetch the last page — its final commit is the oldest
-        params2 = {"path": path, "per_page": 100, "page": last_page}
-        resp2 = github_get(base_url, headers, params2)
-        time.sleep(SLEEP_BETWEEN)
-        if resp2.status_code == 200 and resp2.json():
-            commits = resp2.json()
-
-    # Last item on the last page = oldest commit for this file
-    oldest = commits[-1]
-    try:
-        return oldest["commit"]["committer"]["date"][:10]
-    except (KeyError, TypeError):
-        try:
-            return oldest["commit"]["author"]["date"][:10]
-        except (KeyError, TypeError):
-            return None
+    parts = []
+    for i, (owner, repo, files) in enumerate(batch):
+        file_queries = []
+        for j, path in enumerate(files):
+            escaped = path.replace('\\', '\\\\').replace('"', '\\"')
+            file_queries.append(
+                f'          f{j}: history(path: "{escaped}", first: 100) '
+                f'{{ nodes {{ committedDate }} }}'
+            )
+        joined = "\n".join(file_queries)
+        parts.append(f"""
+  r{i}: repository(owner: "{owner}", name: "{repo}") {{
+    object(expression: "HEAD") {{
+      ... on Commit {{
+{joined}
+      }}
+    }}
+  }}""")
+    return "query {" + "".join(parts) + "\n}"
 
 
-# ── Per-repo processing ───────────────────────────────────────────────────────
+# ── Response parser ───────────────────────────────────────────────────────────
 
-def process_repo(full_name: str, config_files_raw: str,
-                 headers: dict) -> dict:
+def parse_batch_response(response: dict,
+                         batch: list[tuple[str, str, list[str]]]
+                         ) -> list[dict]:
     """
-    Given a repo full_name and the pipe-separated list of detected config
-    files, find the oldest commit across all files.
+    Parse the JSON response and return one result dict per repo in batch.
     """
-    result = {
-        "full_name":        full_name,
-        "first_ai_date":    None,
-        "first_config_file": None,
-        "n_configs":        0,
-        "api_status":       "ok",
-    }
+    data   = response.get("data") or {}
+    errors = {e.get("path", [None])[0]: e.get("message", "")
+              for e in response.get("errors", [])}
+    results = []
 
-    if pd.isna(config_files_raw) or not str(config_files_raw).strip():
-        result["api_status"] = "no_config_list"
-        return result
+    for i, (owner, repo, files) in enumerate(batch):
+        full_name = f"{owner}/{repo}"
+        alias     = f"r{i}"
+        repo_data = data.get(alias)
 
-    files = [f.strip() for f in str(config_files_raw).split("|") if f.strip()]
-    result["n_configs"] = len(files)
+        if repo_data is None:
+            results.append({
+                "full_name":         full_name,
+                "first_ai_date":     None,
+                "first_config_file": None,
+                "n_configs":         len(files),
+                "api_status":        errors.get(alias, "null_response"),
+            })
+            continue
 
-    owner, repo = full_name.split("/", 1)
-    best_date  = None
-    best_file  = None
+        commit_obj = repo_data.get("object")
+        if not commit_obj:
+            results.append({
+                "full_name":         full_name,
+                "first_ai_date":     None,
+                "first_config_file": None,
+                "n_configs":         len(files),
+                "api_status":        "empty_repo",
+            })
+            continue
 
-    for f in files:
-        date = oldest_commit_for_path(owner, repo, f, headers)
-        if date:
-            if best_date is None or date < best_date:
-                best_date = date
-                best_file = f
+        best_date = None
+        best_file = None
+        for j, path in enumerate(files):
+            nodes = (commit_obj.get(f"f{j}") or {}).get("nodes") or []
+            if nodes:
+                # nodes sorted newest→oldest; last item = oldest commit for this file
+                date = nodes[-1].get("committedDate", "")[:10]
+                if date and (best_date is None or date < best_date):
+                    best_date = date
+                    best_file = path
 
-    result["first_ai_date"]     = best_date
-    result["first_config_file"] = best_file
-    if best_date is None:
-        result["api_status"] = "no_date_found"
+        results.append({
+            "full_name":         full_name,
+            "first_ai_date":     best_date,
+            "first_config_file": best_file,
+            "n_configs":         len(files),
+            "api_status":        "ok" if best_date else "no_date_found",
+        })
 
-    return result
+    return results
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -200,75 +208,87 @@ def main():
     args = parser.parse_args()
 
     if not PASS1.exists():
-        sys.exit(f"Missing: {PASS1}\nRun stage3a first.")
+        sys.exit(f"Missing: {PASS1}")
 
-    headers = {"Authorization": f"token {get_token()}",
-               "Accept": "application/vnd.github+json"}
+    headers = get_headers()
 
-    # Load pass1 and filter to agentic repos with config files
     df = pd.read_csv(PASS1, low_memory=False)
-    agentic = df[df["adoption_label"] == "agentic"].copy()
-    # config_files_found may be NaN for some; keep only rows where it's present
-    agentic = agentic[agentic["config_files_found"].notna() &
-                      (agentic["config_files_found"].str.strip() != "")]
-    repos = agentic["full_name"].tolist()
+    agentic = df[(df["adoption_label"] == "agentic") &
+                 df["config_files_found"].notna() &
+                 (df["config_files_found"].str.strip() != "")]
 
-    # Resume: skip already-processed repos
+    # Build (owner, repo, [files]) tuples
+    repo_tuples: list[tuple[str, str, list[str]]] = []
+    for _, row in agentic.iterrows():
+        files = [f.strip() for f in str(row["config_files_found"]).split("|") if f.strip()]
+        if files:
+            owner, repo = row["full_name"].split("/", 1)
+            repo_tuples.append((owner, repo, files))
+
+    # Resume: skip already-processed
     done: set[str] = set()
     if args.resume and OUT_CSV.exists():
-        done_df = pd.read_csv(OUT_CSV)
-        done = set(done_df["full_name"].tolist())
+        done = set(pd.read_csv(OUT_CSV)["full_name"].tolist())
         print(f"Resuming — {len(done):,} repos already processed.")
+    repo_tuples = [(o, r, f) for o, r, f in repo_tuples
+                   if f"{o}/{r}" not in done]
 
-    repos = [r for r in repos if r not in done]
     if args.limit > 0:
-        repos = repos[:args.limit]
+        repo_tuples = repo_tuples[:args.limit]
 
-    total = len(repos)
-    print(f"Stage 5i -- Config File Timestamps")
+    total   = len(repo_tuples)
+    n_batches = -(-total // BATCH_SIZE)   # ceiling division
+
+    print("Stage 5i -- Config File Timestamps  [GraphQL]")
     print("=" * 55)
     print(f"Repos to process : {total:,}")
+    print(f"Batch size       : {BATCH_SIZE}")
+    print(f"Total batches    : {n_batches:,}")
+    print(f"Est. time        : ~{n_batches * SLEEP_BATCH / 60:.0f} min")
     print(f"Output           : {OUT_CSV}")
     print()
 
-    # Open output file (append mode so checkpointing works)
     write_header = not OUT_CSV.exists() or not args.resume
     out_fh = open(OUT_CSV, "a", buffering=1)
     if write_header:
         out_fh.write("full_name,first_ai_date,first_config_file,n_configs,api_status\n")
 
-    ok_count   = 0
-    err_count  = 0
-    start_time = time.time()
+    ok_count  = 0
+    err_count = 0
+    start     = time.time()
 
-    for i, full_name in enumerate(repos, 1):
-        config_files_raw = agentic.loc[
-            agentic["full_name"] == full_name, "config_files_found"
-        ].iloc[0]
+    for batch_num, start_i in enumerate(range(0, total, BATCH_SIZE), 1):
+        batch = repo_tuples[start_i:start_i + BATCH_SIZE]
+        query = build_query(batch)
 
-        result = process_repo(full_name, config_files_raw, headers)
+        response = gql_post(query, headers)
+        results  = parse_batch_response(response, batch)
 
-        # Write line immediately (checkpointing)
-        cfg_file = str(result["first_config_file"] or "").replace(",", ";")
-        line = (f"{result['full_name']},"
-                f"{result['first_ai_date'] or ''},"
-                f"{cfg_file},"
-                f"{result['n_configs']},"
-                f"{result['api_status']}\n")
-        out_fh.write(line)
+        for r in results:
+            cfg = str(r["first_config_file"] or "").replace(",", ";")
+            out_fh.write(
+                f"{r['full_name']},"
+                f"{r['first_ai_date'] or ''},"
+                f"{cfg},"
+                f"{r['n_configs']},"
+                f"{r['api_status']}\n"
+            )
+            if r["first_ai_date"]:
+                ok_count += 1
+            else:
+                err_count += 1
 
-        if result["first_ai_date"]:
-            ok_count += 1
-        else:
-            err_count += 1
+        if batch_num % 50 == 0 or batch_num == n_batches:
+            elapsed = time.time() - start
+            rate    = batch_num / elapsed if elapsed else 0
+            eta_m   = (n_batches - batch_num) / rate / 60 if rate else 0
+            done_r  = start_i + len(batch)
+            print(f"  [{batch_num:>5,}/{n_batches:,} batches | "
+                  f"{done_r:>6,}/{total:,} repos]  "
+                  f"ok={ok_count:,}  no_date={err_count:,}  "
+                  f"ETA={eta_m:.0f}m", flush=True)
 
-        if i % 100 == 0 or i == total:
-            elapsed = time.time() - start_time
-            rate    = i / elapsed if elapsed > 0 else 0
-            eta_s   = (total - i) / rate if rate > 0 else 0
-            eta_m   = eta_s / 60
-            print(f"  [{i:>6,}/{total:,}]  ok={ok_count:,}  no_date={err_count:,}"
-                  f"  rate={rate:.1f} repos/s  ETA={eta_m:.0f}m", flush=True)
+        time.sleep(SLEEP_BATCH)
 
     out_fh.close()
     print()
