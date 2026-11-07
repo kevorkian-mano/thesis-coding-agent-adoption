@@ -1,0 +1,781 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=1.8cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{multicol}
+\usepackage{multirow}
+\usepackage{parskip}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{hyperref}
+
+\setlength{\parskip}{3pt}
+\setlength{\columnsep}{1cm}
+
+\title{\textbf{Pipeline Results Summary}\\
+\large AI Coding Agent Adoption in C\#/.NET Repositories on GitHub\\[2pt]
+\normalsize C\# Stack Member}
+\date{November 2026 \quad \textcolor{red}{\textbf{DRAFT -- not for submission}}}
+
+\begin{document}
+\maketitle
+\vspace{-4pt}
+\hrule
+\vspace{8pt}
+
+% ─── STAGE 1 ──────────────────────────────────────────────────────────────────
+\section*{Stage 1 --- Corpus Construction}
+
+\begin{multicols}{2}
+
+\textbf{Corpus:} C\# repositories sourced from a CSV of 5,073 candidates.
+GitHub metadata fetched for 5,041 repos; 4,981 passed eligibility filters.
+92 repos excluded (fork, insufficient commits/stars, or metadata gap).
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Stage & Repos & Notes \\
+\midrule
+Original CSV            & 5,073 & starting list \\
+GitHub metadata found   & 5,041 & API lookup \\
+Eligible (pass filters) & 4,981 & final corpus \\
+Excluded                &    92 & forks / criteria \\
+\midrule
+\textbf{Final corpus} & \textbf{4,981} & \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{Language:} C\# (single language corpus; no TypeScript/JavaScript split).
+
+\vspace{6pt}
+\textbf{Ecosystem:} NuGet (.NET package manager). \\
+NuGet Central Package Management (CPM) adoption measured in Stage 4:\\
+\textbf{625 / 780 repos (80.13\%)} use NuGet CPM among the subset examined.
+
+\vspace{6pt}
+% ─── STAGE 2 ────────────────────────────────────────────────────────────────
+\section*{Stage 2 --- Owner Location Inference}
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Pass & New Owners & Cumul.\ \% \\
+\midrule
+Pass 1 (location field)         & 1,182 & 27.3 \\
+Pass 2 (bio, TLD, network)      &   625 & 41.7 \\
+Pass 3 (Nominatim + TZ + script)&   565 & 54.8 \\
+Pass 4 (company ROR + org orgs) &     7 & 54.9 \\
+\midrule
+Located total         & 2,379 & 54.9 \\
+Not specified         & 1,953 & 45.1 \\
+\textbf{Unique owners}& \textbf{4,332} & \\
+\bottomrule
+\end{tabular}
+
+\end{multicols}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── STAGE 3 ──────────────────────────────────────────────────────────────────
+\section*{Stage 3 --- AI Adoption Detection (Three Passes)}
+
+\textit{Note: This stack uses three detection passes (3a/3b/3c), not four as in the JS/TS pipeline.
+The section title has been updated accordingly.}
+
+\begin{multicols}{2}
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Pass & Agentic & Input \\
+\midrule
+Pass 3a --- config files    & 1,903 (38.2\%) & 4,981 \\
+Pass 3b --- commit trailers &   977 (31.4\%) & 3,078 \\
+Pass 3c --- deep scan       &    30 agentic; 337 AI-asst & 2,101 \\
+\bottomrule
+\end{tabular}
+
+\textbf{Pass 3a top agents (config files):}\\
+Claude Code (CLAUDE.md / AGENTS.md) \quad 1,809\\
+Generic (AGENTS.md) \quad 1,017\\
+GitHub Copilot \quad 717
+
+\columnbreak
+
+\textbf{Final Classification:}
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Label & Repos & \% \\
+\midrule
+Agentic      & 2,910 & 58.42 \\
+AI-assisted  &   337 &  6.77 \\
+None         & 1,734 & 34.81 \\
+\midrule
+\textbf{Total adopted} & \textbf{3,247} & \textbf{65.19} \\
+\textbf{Total corpus}  & \textbf{4,981} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Validation:} $1{,}903 + 977 + 30 = 2{,}910$ agentic; \\
+$2{,}910 + 337 + 1{,}734 = 4{,}981$ \checkmark; \\
+$3{,}247 / 4{,}981 = 65.19\%$ \checkmark
+\end{multicols}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── STAGE 4 ──────────────────────────────────────────────────────────────────
+\section*{Stage 4 --- Geographic Analysis}
+
+\textbf{Coverage:} 21 countries with $\geq 30$ repos \quad
+2,738 repos with country (55.0\% of corpus) \quad
+Global adoption rate: \textbf{65.19\%} \quad
+Wilson 95\% CI: [63.85\%, 66.50\%]
+
+\vspace{4pt}
+\textit{Note: Only the highest and lowest countries are reported below; a full top/bottom-10 table
+was not provided in the submission.}
+\textit{\small [Data not provided in submission.]}
+
+\begin{multicols}{2}
+
+\textbf{Highest adoption (of 21 eligible countries):}
+
+\begin{tabular}{@{}rlrr@{}}
+\toprule
+Rank & Country & Repos & Rate\% \\
+\midrule
+1 & South Korea & 46 & 82.61* \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{Lowest adoption (of 21 eligible countries):}
+
+\begin{tabular}{@{}rlrr@{}}
+\toprule
+Rank & Country & Repos & Rate\% \\
+\midrule
+21 & Egypt & 43 & 27.91* \\
+\bottomrule
+\end{tabular}
+
+\end{multicols}
+
+\vspace{4pt}
+\textbf{Geographic heterogeneity test:}
+$\chi^2 = 86.91$, $df = 20$ (21 countries), $p = 2.56 \times 10^{-10}$.
+Countries significant after Benjamini--Hochberg correction: Canada, US, India, Egypt.
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── CLASSIFICATION LABELS ────────────────────────────────────────────────────
+\section*{Classification Labels --- What Each Label Means}
+
+\begin{multicols}{2}
+
+\begin{tabular}{@{}lrrp{4.2cm}@{}}
+\toprule
+Label & Repos & \% & Condition \\
+\midrule
+Agentic     & 2,910 & 58.42 &
+  $\geq$1 STRONG signal \emph{or} $\geq$2 MEDIUM families \\[2pt]
+AI-assisted &   337 &  6.77 &
+  1 MEDIUM only \emph{or} WEAK only, configured but unconfirmed \\[2pt]
+None        & 1,734 & 34.81 &
+  No signal found in any of the three passes \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{STRONG} (agent \emph{did} work):\\
+bot\_author, ci\_workflow, pr\_branch,\\
+agent\_attribution (commit trailers).\\[4pt]
+\textbf{MEDIUM} (agent \emph{configured}):\\
+config\_file (CLAUDE.md, .cursorrules\ldots), pr\_label.\\[4pt]
+\textbf{WEAK} (incidental mention):\\
+pr\_body, editor\_config.\\[4pt]
+\textbf{AI-assisted} = evidence present but unconfirmed.
+Included in 65.19\% total; \textbf{58.42\% agentic-only}
+is the conservative figure.
+
+\end{multicols}
+
+\vspace{6pt}
+\noindent\textbf{Signal strength hierarchy:}
+\vspace{4pt}
+
+\noindent
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}
+  >{\centering\arraybackslash\columncolor{red!18}}p{5.2cm}
+  >{\centering\arraybackslash\columncolor{yellow!35}}p{5.2cm}
+  >{\centering\arraybackslash\columncolor{gray!18}}p{5.2cm}@{}}
+\textbf{STRONG} --- agent \emph{did} work &
+\textbf{MEDIUM} --- agent \emph{configured} &
+\textbf{WEAK} --- incidental mention \\[2pt]
+\small\texttt{bot\_author} &
+\small\texttt{config\_file} (CLAUDE.md, .cursorrules) &
+\small\texttt{pr\_body} \\
+\small\texttt{ci\_workflow} &
+\small\texttt{pr\_label} &
+\small\texttt{editor\_config} \\
+\small\texttt{pr\_branch} & & \\
+\small\texttt{agent\_attribution} (trailers) & & \\
+\end{tabular}
+\renewcommand{\arraystretch}{1}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── THREE SIZING APPROACHES ──────────────────────────────────────────────────
+\section*{Repository Size \& Adoption --- Three Operationalisations}
+
+All three confirm the same monotonic pattern. B and C use corpus tertiles
+(P33/P66) so each stratum holds $\approx$33\% of repos.
+
+\vspace{3pt}
+\begin{tabular}{@{}p{6.2cm}rrrr@{}}
+\toprule
+Approach & Small & Medium & Large & Range \\
+\midrule
+\textbf{A: Stars}
+  & 63.58\% & 72.92\% & 81.08\% & $+$17.5\,pp \\[5pt]
+\textbf{B: Commits}
+  & 55.58\% & 64.88\% & 74.84\% & $+$19.26\,pp \\[5pt]
+\textbf{C: C\# code volume}
+  & 50.30\% & 65.37\% & 79.46\% & $+$29.16\,pp \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\small All three operationalisations show a consistent monotonic increase:
+larger repositories (by stars, commit count, or C\# code size) exhibit substantially
+higher AI adoption rates. Code volume (C) shows the steepest gradient ($+$29.16\,pp).}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── MENA ─────────────────────────────────────────────────────────────────────
+\section*{MENA Regional Analysis}
+
+\textbf{Coverage:} 170 repos in MENA countries within the C\# corpus.\\
+\textbf{Overall MENA: 80/170 (47.06\%)} --- below global 65.19\%.\\
+Egypt: \textbf{12/43 repos (27.91\%)} --- lowest of all 21 eligible countries.
+
+\vspace{4pt}
+\textit{Note: Sub-region breakdown and full per-country MENA table were not provided
+in the submission beyond Egypt and the aggregate MENA figure.}
+\textit{\small [Data not provided in submission.]}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── RESEARCH QUESTIONS ───────────────────────────────────────────────────────
+\section*{Research Questions --- Statistical Test Results}
+
+\begin{tabular}{@{}p{3.2cm} p{5.5cm} p{3.2cm} p{3.0cm}@{}}
+\toprule
+\textbf{RQ} & \textbf{Finding} & \textbf{Test} & \textbf{Decision} \\
+\midrule
+\textbf{RQ1} Scope of adoption &
+  65.19\% adoption rate (3,247/4,981). Wilson 95\% CI: [63.85\%, 66.50\%] &
+  Binomial test vs $H_0{:}\ p \leq 5\%$ \newline $p \ll 10^{-100}$ &
+  \textcolor{red}{\textbf{Reject $H_0$}} \\[4pt]
+\textbf{RQ2} Undercounting &
+  Config-only (Pass 3a): 38.2\%. Multi-signal: 65.19\%. Delta: \textbf{+26.98\,pp}.
+  McNemar test not provided. &
+  \textit{McNemar stat not provided} \newline \textit{\small [Data not provided in submission.]} &
+  \textit{Direction clear; formal test pending} \\[4pt]
+\textbf{RQ3} Geographic variation &
+  Range: 27.91\% (Egypt) -- 82.61\% (South Korea) across 21 countries.
+  4 countries significantly differ after BH correction. &
+  $\chi^2 = 86.91$, $df=20$ \newline $p = 2.56 \times 10^{-10}$ &
+  \textcolor{red}{\textbf{Reject $H_0$}} \\
+\bottomrule
+\end{tabular}
+
+\vspace{6pt}
+\renewcommand{\arraystretch}{1.4}
+\noindent
+\begin{tabular}{@{}
+  >{\centering\arraybackslash\columncolor{red!15}}p{2.8cm}
+  >{\columncolor{red!8}}p{14.0cm}@{}}
+\textbf{RQ1 Reject $H_0$} &
+  65.19\% adoption (3,247/4,981). Wilson 95\% CI: [63.85\%--66.50\%]. \\
+\textbf{RQ2 Partial} &
+  Multi-signal detects \textbf{+26.98\,pp} more than config-only (38.2\% $\to$ 65.19\%).
+  McNemar $\chi^2$ statistic not provided in submission. Direction strongly suggests
+  undercounting; formal rejection pending full statistic. \\
+\textbf{RQ3 Reject $H_0$} &
+  21-country range 27.91\%--82.61\%. 4 countries deviate significantly from global mean
+  after BH correction (Canada, US, India, Egypt).
+  $\chi^2 = 86.91$, $p = 2.56 \times 10^{-10}$. \\
+\end{tabular}
+\renewcommand{\arraystretch}{1}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── EXTENDED PIPELINE CHECK ──────────────────────────────────────────────────
+\section*{Extended Pipeline Check --- Coverage Validation (Saturation Check)}
+
+\textbf{Input:} Repos labelled \texttt{none} or \texttt{ai\_assisted} after Stage 3 (3 passes).\\
+\textbf{Purpose:} Verify Stage 3 saturation by scanning for signals not included in the
+original three passes.
+
+\vspace{4pt}
+\textit{Note: The extended saturation check (additional bots, workflow scans, and extended
+config paths) was \textbf{not reported} in the C\# stack submission. It is not possible to
+confirm whether Stage 3 has reached saturation for this stack.}
+
+\vspace{4pt}
+\colorbox{yellow!20}{\parbox{0.975\linewidth}{
+\vspace{3pt}
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}
+  >{\centering\arraybackslash\columncolor{yellow!35}}p{5.2cm}
+  >{\centering\arraybackslash\columncolor{yellow!35}}p{5.2cm}
+  >{\centering\arraybackslash\columncolor{orange!25}}p{5.5cm}@{}}
+\textbf{Extended bots check} & \textbf{Workflow scan} & \textbf{Verdict} \\
+\textit{Not reported} & \textit{Not reported} & \textbf{Saturation unconfirmed} \\
+\end{tabular}
+\renewcommand{\arraystretch}{1}
+\vspace{3pt}
+}}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── FRAMEWORK ANALYSIS ───────────────────────────────────────────────────────
+\section*{AI Adoption by Framework --- ASP.NET Core \& Blazor}
+
+\textbf{Note:} Frameworks are multi-label per repo. The C\# subset examined here
+focuses on the two dominant .NET web frameworks: ASP.NET Core and Blazor.
+
+\vspace{4pt}
+\textbf{ASP.NET Core / Blazor subset:} 138/183 repos adopted AI (75.41\%).
+
+\vspace{3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Framework & Repos & Agentic+AI-asst\% & Notes \\
+\midrule
+ASP.NET Core (only)   & --- & 62.22 & lower than combined \\
+Blazor (only)         & --- & 81.16 & higher than combined \\
+ASP.NET Core + Blazor & 183 & 75.41 & combined subset \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\small Blazor repos show notably higher adoption (81.16\%) than ASP.NET Core-only (62.22\%),
+suggesting that developers building modern Blazor UIs adopt AI coding agents at a higher rate
+than those maintaining traditional server-side ASP.NET Core applications. Per-repo counts for
+the individual ASP.NET Core-only and Blazor-only subsets were not separately reported.}
+
+\vspace{6pt}
+\textbf{NuGet Central Package Management (CPM) adoption:}
+
+\vspace{3pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Subset & Repos with CPM & Rate\% \\
+\midrule
+NuGet CPM-examined repos & 625 / 780 & 80.13 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\small NuGet Central Package Management adoption is very high among the examined subset
+(80.13\%), indicating that the C\# corpus skews toward well-maintained, modern .NET projects.
+Broader per-ecosystem breakdown (analogous to npm/pnpm/yarn in the JS/TS pipeline) was not
+separately reported for this stack.}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── PRICING ANALYSIS ─────────────────────────────────────────────────────────
+\section*{AI Tool Pricing vs Country Income --- Adoption Analysis}
+
+\textbf{Hypothesis:} Does tool pricing (paid vs free) explain lower adoption rates in
+lower-income countries?
+
+\vspace{6pt}
+\begin{multicols}{2}
+
+\textbf{Tool pricing classification:}
+
+\begin{tabular}{@{}lll@{}}
+\toprule
+Tool & Pricing & Category \\
+\midrule
+Claude Code       & Pro \$20/mo required  & Paid \\
+OpenAI Codex CLI  & API credits required  & Paid \\
+Devin             & \$500+/mo             & Paid \\
+Junie             & JetBrains sub.        & Paid \\
+Codegen           & Paid only             & Paid \\
+Factory           & Paid only             & Paid \\
+Greptile          & Paid only             & Paid \\
+Ellipsis          & Paid (OSS free)       & Paid \\
+\midrule
+GitHub Copilot    & Free tier + student   & Free \\
+Cursor            & Free tier + student   & Free \\
+OpenHands         & OSS / self-host       & Free \\
+Gemini CLI        & Free tier             & Free \\
+Amazon Q          & Free tier + edu       & Free \\
+Sweep AI          & Free for public repos & Free \\
+CodeRabbit        & Free for public repos & Free \\
+Windsurf          & Free tier             & Free \\
+Aider             & OSS, free             & Free \\
+Jules             & Free (Google preview) & Free \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{World Bank income groups (2024):}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+Group & Countries in corpus \\
+\midrule
+\textbf{HIC} & US, UK, Germany, France, Japan, \\
+High Income  & South Korea, Australia, Canada, \\
+             & Israel, UAE, Sweden, Switzerland, \\
+             & Netherlands, Denmark, Singapore, \\
+             & Taiwan, Belgium, Norway, Austria, \\
+             & Finland, NZ, Ireland, Hong Kong, \\
+             & Italy, Spain, Portugal, Czech Rep. \\[4pt]
+\textbf{UMIC} & China, Brazil, Turkey, Russia, \\
+Upper-Middle  & Mexico, Argentina, Thailand, \\
+              & Malaysia, Colombia, Ukraine, \\
+              & South Africa, Poland, Romania, \\
+              & Bulgaria, Serbia, Chile, Egypt, \\
+              & Georgia, Kazakhstan, Uzbekistan, \\
+              & Algeria, Tunisia, Hungary, Peru \\[4pt]
+\textbf{LMIC} & India, Vietnam, Philippines, \\
+Lower-Middle  & Indonesia, Bangladesh, Pakistan, \\
+              & Nigeria, Ghana, Kenya, Morocco, \\
+              & Sri Lanka, Nepal, Ethiopia, Iran \\[4pt]
+\textbf{LIC}  & Rwanda \\
+Low Income    & \\
+\bottomrule
+\end{tabular}
+
+\end{multicols}
+
+\vspace{6pt}
+\textbf{Results by income group:}
+
+\vspace{3pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Income Group & Adoption\% & Notes \\
+\midrule
+High Income         & 71.4 & highest group \\
+Upper-Middle Income & 60.4 & \\
+Lower-Middle Income & 54.1 & \\
+\midrule
+\textbf{Paid vs Free tool test} & \multicolumn{2}{l}{$p = 0.924$ --- \textbf{not significant}} \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\small \textbf{Key finding:} Unlike the JS/TS stack, the C\# corpus shows \textbf{no statistically
+significant difference} in adoption between repos using paid vs free tools ($p = 0.924$). The
+income-group gradient (HIC 71.4\% $>$ UMIC 60.4\% $>$ LMIC 54.1\%) is present, but tool pricing
+does not explain it in this stack. This may reflect the composition of the C\# corpus or the
+different ecosystem of .NET developers on GitHub.}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── EXTENDED ANALYSIS ────────────────────────────────────────────────────────
+\section*{Extended Analysis (Stage 5)}
+\begin{multicols}{2}
+\footnotesize
+
+% ── 5a: Time Series ───────────────────────────────────────────────────────────
+\subsection*{5a --- AI Adoption Over Time}
+\textbf{Range:} Feb 2025 -- Sep 2026.\\
+\textbf{Summary:} 43.59\% (Feb 2025) $\to$ 70.63\% (Sep 2026).\\
+\textbf{Peak:} 78.45\% (Mar 2026).
+
+\vspace{3pt}
+\textit{Note: A full monthly table was not provided in the submission. Only summary
+statistics (start, end, peak) are available.}
+\textit{\small [Monthly table: data not provided in submission.]}
+
+\vspace{3pt}
+\textbf{Key findings:}
+\begin{itemize}\setlength\itemsep{0pt}
+  \item Adoption grew by \textbf{+27\,pp} over the observation window
+        (Feb 2025 to Sep 2026).
+  \item Peak of 78.45\% in March 2026, suggesting a possible
+        post-peak stabilisation toward 70\% in later months.
+  \item Trajectory is consistent with the JS/TS stack but at a lower
+        absolute level (C\# global: 65.19\% vs JS/TS: 73.0\%).
+\end{itemize}
+
+\vspace{3pt}
+\hrule
+\vspace{3pt}
+
+% ── 5b: Size Comparison ───────────────────────────────────────────────────────
+\subsection*{5b --- Repo Size by Adoption Category}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Metric & No AI & AI-Asst & Agentic \\
+       & (med.)& (med.)  & (med.)  \\
+\midrule
+Commits     & 159 & 197 & 246 \\
+Code (KB)   & 634 & 1,449 & 1,477 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\small Monotonic increase in both commits and code size across adoption
+categories. The gap between AI-assisted and Agentic is small for code
+volume (1,449 vs 1,477 KB) but more pronounced for commits (197 vs 246).}
+
+\columnbreak
+
+% ── 5c: ASP.NET Core / Blazor Subset ─────────────────────────────────────────
+\subsection*{5c --- ASP.NET Core / Blazor Subset}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Category & Count & \% \\
+\midrule
+Adopted (AI + Agentic) & 138 & 75.41 \\
+No AI                  &  45 & 24.59 \\
+\midrule
+\textbf{Total subset}  & 183 & 100.0 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Framework (mutually exclusive) & Rate\% \\
+\midrule
+ASP.NET Core only & 62.22 \\
+Blazor only       & 81.16 \\
+Combined subset   & 75.41 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Key findings:}
+\begin{itemize}\setlength\itemsep{0pt}
+  \item Blazor-only repos (81.16\%) adopt at a markedly higher rate than
+        ASP.NET Core-only (62.22\%).
+  \item Combined subset (75.41\%) exceeds the global C\# rate of 65.19\%,
+        suggesting framework-driven selection effects.
+\end{itemize}
+
+\end{multicols}
+
+\vspace{4pt}
+\hrule
+\vspace{4pt}
+
+% ── 5d: First Claude Code Commit ─────────────────────────────────────────────
+\begin{multicols}{2}
+\footnotesize
+
+\subsection*{5d --- First Claude Code Commit \& Adoption Timing}
+
+\textit{\textbf{Important:} This analysis is based on only \textbf{n=24} Claude Code
+agentic repos in the C\# corpus. This is a very small sample; all findings are
+\textbf{strictly exploratory} and should not be generalised. Confidence intervals
+are wide and no significance tests are appropriate at this sample size.}
+
+\vspace{3pt}
+\textbf{Trailer timing (days from repo creation to first AI commit):}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Timing & Count & \% \\
+\midrule
+Day 1 ($\leq$7\,d)  & 11 & 45.8 \\
+Early (8--30\,d)    &  2 &  8.3 \\
+Late ($>$30\,d)     &  9 & 37.5 \\
+Pre-creation (invalid) & 2 & 8.3 \\
+\midrule
+Valid ($n=22$)      & 22 & --- \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+Median days to first trailer: \textbf{7.5\,d} ($n=22$ valid).\\
+2 repos had a trailer timestamp before repo creation (excluded from median).
+
+\columnbreak
+
+\textbf{Descriptive observations ($n=24$, exploratory only):}
+\begin{itemize}\setlength\itemsep{0pt}
+  \item Slight majority (11/22 valid repos = 50.0\%) adopted within the
+        first 7 days, suggesting some AI-native project initiations.
+  \item 9 repos show late adoption ($>$30\,d), consistent with the mid-project
+        onboarding pattern seen in the JS/TS stack.
+  \item Median of 7.5\,d is lower than the JS/TS React+Next.js subset
+        (16\,d), but the difference is not meaningful given $n=24$.
+  \item 2 pre-creation timestamps indicate data quality issues in a minority
+        of records.
+  \item \textbf{Do not interpret country, framework, or tool breakdowns
+        at this sample size.}
+\end{itemize}
+
+\end{multicols}
+
+\vspace{4pt}
+\hrule
+\vspace{4pt}
+
+% ── 5e: Cumulative Agentic by Country ────────────────────────────────────────
+\begin{multicols}{2}
+\footnotesize
+
+\subsection*{5e --- Cumulative Agentic Repos by Country}
+
+\textbf{Top countries by total agentic repo count:}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Country & Cumulative Agentic & Rank \\
+\midrule
+China          & 333 & 1 \\
+United States  & 253 & 2 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\small China (333) and the United States (253) lead by absolute agentic
+repo count in the C\# corpus. Full country rankings beyond these two were
+not provided in the submission.}
+
+\textit{\small [Full ranking: data not provided in submission.]}
+
+\columnbreak
+
+\subsection*{5f --- Tool Loyalty}
+
+\textbf{Single-agent vs multi-agent repos (agentic only, $n=2{,}910$):}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Category & Count & \% \\
+\midrule
+Single-agent repos & 2,185 & 75.1 \\
+Multi-agent repos  &   725 & 24.9 \\
+\midrule
+\textbf{Total agentic} & \textbf{2,910} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\small Validation: $2{,}185 + 725 = 2{,}910$ \checkmark (equals total agentic count).\\
+75.1\% of agentic repos use exactly one AI tool.
+Multi-agent usage (24.9\%) is higher than the JS/TS stack (4.6\%),
+which may reflect different tooling norms in the .NET ecosystem or
+the smaller corpus size amplifying variation.}
+
+\end{multicols}
+
+\vspace{4pt}
+\hrule
+\vspace{4pt}
+
+% ── 5g: World Regions ────────────────────────────────────────────────────────
+\begin{multicols}{2}
+\footnotesize
+
+\subsection*{5g --- Adoption by World Region}
+
+\textit{Note: Only 4 world regions are reported. A full regional breakdown
+was not provided in the submission.}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+World Region & Adoption\% & Notes \\
+\midrule
+North America   & 74.95 & highest \\
+Western Europe  & 68.91 & \\
+East Asia       & 66.58 & \\
+MENA            & 47.06 & lowest reported \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\small MENA lags North America by \textbf{27.89\,pp}, the largest regional gap.
+East Asia (66.58\%) is close to the global mean (65.19\%).
+Full breakdown including South/Southeast Asia, Sub-Saharan Africa, Latin America,
+and Oceania is not available.}
+
+\textit{\small [Full regional table: data not provided in submission.]}
+
+\columnbreak
+
+\subsection*{5h --- Commit Trailer Density}
+
+\textbf{Measurement scope (Stage 3b input only):}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Category & Count & Notes \\
+\midrule
+Repos measured        &   977 & Stage 3b agentic \\
+Had trailer commits   &   732 & 74.9\% of measured \\
+Median trailer density & 11.7\% & of all commits \\
+Not measured          & 1,933 & Stage 3a \& 3c agentic \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\small Validation: $977$ measured corresponds to the Stage 3b agentic count \checkmark.\\
+Among the 977 repos where trailers were measured, 732 (74.9\%) had at least one
+AI-attributed commit. The median trailer density of 11.7\% means that in a typical
+repo, roughly 1 in 9 commits carries an AI tool attribution.
+The 1,933 repos detected in Passes 3a and 3c were not subjected to trailer density
+measurement (config-file or deep-scan detections).}
+
+\end{multicols}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\end{document}

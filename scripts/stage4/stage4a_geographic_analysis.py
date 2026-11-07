@@ -49,7 +49,7 @@ from pathlib import Path
 
 # ── paths ─────────────────────────────────────────────────────────────────────
 ROOT           = Path(__file__).resolve().parents[2]
-DETECTED_FILE  = ROOT / "data" / "stage5" / "corpus_detected_full_v3.csv"
+DETECTED_FILE  = ROOT / "data" / "stage3" / "corpus_detected_full.csv"
 LOCATIONS_FILE = ROOT / "data" / "stage2" / "owner_locations_all.csv"
 OUT_DIR        = ROOT / "data" / "stage4"
 OUT_CORPUS     = OUT_DIR / "corpus_with_country.csv"

@@ -213,7 +213,9 @@ def plot_cumulative(monthly: pd.DataFrame, countries: list[str]) -> None:
         cdata = (
             sub[sub["country"] == country]
             .sort_values("month_str")
+            .assign(month_str=lambda d: d["month_str"].astype(str))
             .set_index("month_str")
+            [["adopted"]]
             .reindex(months, fill_value=0)
         )
         cumulative = cdata["adopted"].cumsum()
