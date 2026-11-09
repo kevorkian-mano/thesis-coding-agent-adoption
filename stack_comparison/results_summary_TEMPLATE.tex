@@ -1,0 +1,1026 @@
+% ╔══════════════════════════════════════════════════════════════════════════════╗
+% ║  STACK RESULTS SUMMARY — FILL-IN TEMPLATE                                  ║
+% ║  AI Coding Agent Adoption on GitHub — ME Thesis 2026                        ║
+% ╠══════════════════════════════════════════════════════════════════════════════╣
+% ║  HOW TO USE THIS TEMPLATE                                                   ║
+% ║  1. Search for every \FILLIN{...} and replace it with your real value.      ║
+% ║  2. Search for every \OPT{...} — fill it in if you have the data,           ║
+% ║     or leave / remove the entire row/block if you don't.                    ║
+% ║  3. Add your figures: drop PNGs next to this file and update                ║
+% ║     \includegraphics{fig_XXX.png} paths.                                    ║
+% ║  4. If a section does not apply to your stack (e.g. no ecosystem types),    ║
+% ║     delete that block or replace it with a one-line \textit{N/A note}.      ║
+% ║  5. Keep the section order and titles intact for cross-stack alignment.      ║
+% ║                                                                              ║
+% ║  ORANGE = must fill in.   BLUE = optional / if available.                   ║
+% ╚══════════════════════════════════════════════════════════════════════════════╝
+
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=1.8cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{multicol}
+\usepackage{multirow}
+\usepackage{parskip}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{colortbl}
+\usepackage{hyperref}
+
+\graphicspath{{./}}
+
+\setlength{\parskip}{3pt}
+\setlength{\columnsep}{1cm}
+
+% ── Placeholder macros ────────────────────────────────────────────────────────
+% \FILLIN{desc}  : required value — shows in orange bold until replaced
+% \OPT{desc}     : optional value — shows in blue italic until replaced
+\newcommand{\FILLIN}[1]{\textcolor{orange}{\textbf{[#1]}}}
+\newcommand{\OPT}[1]{\textcolor{blue}{\textit{[OPT: #1]}}}
+
+% ─────────────────────────────────────────────────────────────────────────────
+
+\title{\textbf{Pipeline Results Summary}\\
+\large AI Coding Agent Adoption in \FILLIN{STACK\_NAME} Repositories on GitHub\\[2pt]
+\normalsize \FILLIN{Your Full Name}}
+\date{November 2026 \quad \textcolor{red}{\textbf{DRAFT -- not for submission}}}
+
+\begin{document}
+\maketitle
+\vspace{-4pt}
+\hrule
+\vspace{8pt}
+
+% ─── STAGE 1 ──────────────────────────────────────────────────────────────────
+\section*{Stage 1 --- Corpus Construction}
+
+\begin{multicols}{2}
+
+% Describe your corpus construction criteria.
+% Replace the filter values with what your Stage 1 script actually used.
+\textbf{Corpus:} \FILLIN{N\_TOTAL} repositories
+\OPT{created after DATE / sourced from CSV / language filter used}.
+\FILLIN{Describe your eligibility filters: min stars, min commits, not fork, etc.}
+
+% If your stack has ecosystem/package-manager subtypes (like JS/TS has npm/pnpm/yarn),
+% fill in the table below. If not (e.g. Python, Java), replace with a one-liner.
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\FILLIN{Ecosystem / Stratum} & Repos & \% \\
+\midrule
+\FILLIN{type\_1} & \FILLIN{n1} & \FILLIN{pct1} \\
+\FILLIN{type\_2} & \FILLIN{n2} & \FILLIN{pct2} \\
+\OPT{type\_3}    & \OPT{n3}    & \OPT{pct3}    \\
+\midrule
+\textbf{Total} & \textbf{\FILLIN{N\_TOTAL}} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+% Language / technology split (e.g. "Python only", or "Java 90% / Kotlin 10%").
+\textbf{Language / tech split:}
+\FILLIN{e.g. Python only, or Java 85\% / Kotlin 15\%}
+
+\vspace{6pt}
+% ─── STAGE 2 ────────────────────────────────────────────────────────────────
+\section*{Stage 2 --- Owner Location Inference}
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Pass & Owners & Cumul.\ \% \\
+\midrule
+Pass 1 (location field)            & \FILLIN{n1} & \FILLIN{pct1} \\
+Pass 2 (bio, TLD, network)         & \FILLIN{n2} & \FILLIN{pct2} \\
+Pass 3 (Nominatim + TZ + script)   & \FILLIN{n3} & \FILLIN{pct3} \\
+Pass 4 (company ROR + org orgs)    & \FILLIN{n4} & \FILLIN{pct4} \\
+\midrule
+Located total              & \FILLIN{located}      & \FILLIN{pct\_located} \\
+Not specified              & \FILLIN{not\_located} & \FILLIN{pct\_not\_located} \\
+\textbf{Unique owners}     & \textbf{\FILLIN{unique\_owners}} & \\
+\bottomrule
+\end{tabular}
+
+Top countries: \FILLIN{Country1 N1 (pct1\%), Country2 N2 (pct2\%), Country3 N3 (pct3\%)}
+
+\end{multicols}
+
+% ── Optional figures for Stage 1 / Stage 2 ──────────────────────────────────
+% Drop your PNG files in the same folder and uncomment:
+%\vspace{4pt}
+%\begin{center}
+%  \begin{minipage}[t]{0.47\textwidth}
+%    \centering
+%    \includegraphics[width=\linewidth]{fig_ecosystem_stacked.png}\\
+%    \small\textit{Stage 1 --- Ecosystem / stratum distribution}
+%  \end{minipage}
+%  \hfill
+%  \begin{minipage}[t]{0.47\textwidth}
+%    \centering
+%    \includegraphics[width=\linewidth]{fig_pass_contributions.png}\\
+%    \small\textit{Stage 2/3 --- Agentic detections per pass}
+%  \end{minipage}
+%\end{center}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── STAGE 3 ──────────────────────────────────────────────────────────────────
+\section*{Stage 3 --- AI Adoption Detection (Three Passes)}
+
+\begin{multicols}{2}
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Pass & Agentic & Input \\
+\midrule
+Pass 3a --- config files    & \FILLIN{n\_3a} (\FILLIN{pct\_3a}\%) & \FILLIN{N\_TOTAL} \\
+Pass 3b --- commit trailers & \FILLIN{n\_3b} (\FILLIN{pct\_3b}\%) & \FILLIN{input\_3b} \\
+Pass 3c --- deep scan       & \FILLIN{n\_3c} agentic; \FILLIN{n\_aiasst} AI-asst & \FILLIN{input\_3c} \\
+\bottomrule
+\end{tabular}
+
+\textbf{Pass 3a top agents:}\\
+\FILLIN{Agent1} \quad \FILLIN{n1} (\FILLIN{pct1}\% of pass)\\
+\FILLIN{Agent2} \quad \FILLIN{n2} (\FILLIN{pct2}\%)\\
+\FILLIN{Agent3} \quad \FILLIN{n3} (\FILLIN{pct3}\%)\\
+\OPT{Agent4} \quad \OPT{n4} (\OPT{pct4}\%)
+
+\columnbreak
+
+\textbf{Final Classification:}
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Label & Repos & \% \\
+\midrule
+Agentic      & \FILLIN{n\_agentic}   & \FILLIN{pct\_agentic} \\
+AI-assisted  & \FILLIN{n\_aiasst}    & \FILLIN{pct\_aiasst} \\
+None         & \FILLIN{n\_none}      & \FILLIN{pct\_none} \\
+\midrule
+\textbf{Total adopted} & \textbf{\FILLIN{n\_adopted}} & \textbf{\FILLIN{pct\_adopted}} \\
+\textbf{Total corpus}  & \textbf{\FILLIN{N\_TOTAL}}   & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Breakdowns:} \OPT{e.g. language split, ecosystem split}\\[3pt]
+\textbf{Tool loyalty:} \FILLIN{X}\% of adopters use 1 tool\\
+\FILLIN{Top agent}: \FILLIN{X}\% of adopters\\
+\OPT{Top pair: AgentA + AgentB (N repos, pct\%)}
+
+\end{multicols}
+
+% ── Optional figures for Stage 3 ────────────────────────────────────────────
+%\vspace{4pt}
+%\begin{center}
+%  \begin{minipage}[t]{0.47\textwidth}
+%    \centering
+%    \includegraphics[width=\linewidth]{fig_tool_distribution.png}\\
+%    \small\textit{Stage 3 --- Agent tool distribution (top 15)}
+%  \end{minipage}
+%  \hfill
+%  \begin{minipage}[t]{0.47\textwidth}
+%    \centering
+%    \includegraphics[width=\linewidth]{fig_tool_loyalty.png}\\
+%    \small\textit{Stage 3 --- Tool loyalty (single vs multi-tool)}
+%  \end{minipage}
+%\end{center}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── STAGE 4 ──────────────────────────────────────────────────────────────────
+\section*{Stage 4 --- Geographic Analysis}
+
+\textbf{Coverage:} \FILLIN{N\_countries} countries with $\geq$\FILLIN{MIN\_REPOS} repos \quad
+\FILLIN{n\_located} repos with country (\FILLIN{pct\_located}\% of corpus) \quad
+Global adoption rate: \textbf{\FILLIN{ADOPT\_RATE}\%} \quad
+Wilson 95\% CI: [\FILLIN{CI\_LO}\%, \FILLIN{CI\_HI}\%]
+
+\begin{multicols}{2}
+
+\textbf{Top 10 countries:}
+
+\begin{tabular}{@{}rlrr@{}}
+\toprule
+Rk & Country & Repos & Rate\% \\
+\midrule
+ 1 & \FILLIN{c1}  & \FILLIN{n1}  & \FILLIN{r1}* \\
+ 2 & \FILLIN{c2}  & \FILLIN{n2}  & \FILLIN{r2}* \\
+ 3 & \FILLIN{c3}  & \FILLIN{n3}  & \FILLIN{r3}* \\
+ 4 & \FILLIN{c4}  & \FILLIN{n4}  & \FILLIN{r4}* \\
+ 5 & \FILLIN{c5}  & \FILLIN{n5}  & \FILLIN{r5}* \\
+ 6 & \FILLIN{c6}  & \FILLIN{n6}  & \FILLIN{r6}* \\
+ 7 & \FILLIN{c7}  & \FILLIN{n7}  & \FILLIN{r7}* \\
+ 8 & \FILLIN{c8}  & \FILLIN{n8}  & \FILLIN{r8}* \\
+ 9 & \FILLIN{c9}  & \FILLIN{n9}  & \FILLIN{r9}* \\
+10 & \FILLIN{c10} & \FILLIN{n10} & \FILLIN{r10}* \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{Bottom 10 countries:}
+
+\begin{tabular}{@{}rlrr@{}}
+\toprule
+Rk & Country & Repos & Rate\% \\
+\midrule
+\FILLIN{rk1}  & \FILLIN{c1}  & \FILLIN{n1}  & \FILLIN{r1}* \\
+\FILLIN{rk2}  & \FILLIN{c2}  & \FILLIN{n2}  & \FILLIN{r2}* \\
+\FILLIN{rk3}  & \FILLIN{c3}  & \FILLIN{n3}  & \FILLIN{r3}* \\
+\FILLIN{rk4}  & \FILLIN{c4}  & \FILLIN{n4}  & \FILLIN{r4}* \\
+\FILLIN{rk5}  & \FILLIN{c5}  & \FILLIN{n5}  & \FILLIN{r5}* \\
+\FILLIN{rk6}  & \FILLIN{c6}  & \FILLIN{n6}  & \FILLIN{r6}* \\
+\FILLIN{rk7}  & \FILLIN{c7}  & \FILLIN{n7}  & \FILLIN{r7}* \\
+\FILLIN{rk8}  & \FILLIN{c8}  & \FILLIN{n8}  & \FILLIN{r8}* \\
+\FILLIN{rk9}  & \FILLIN{c9}  & \FILLIN{n9}  & \FILLIN{r9}* \\
+\FILLIN{rk10} & \FILLIN{c10} & \FILLIN{n10} & \FILLIN{r10}* \\
+\bottomrule
+\end{tabular}
+
+\end{multicols}
+% * = significantly different from global mean (BH-corrected)
+
+%\vspace{4pt}
+%\begin{center}
+%  \begin{minipage}[t]{0.47\textwidth}
+%    \centering
+%    \includegraphics[width=\linewidth]{fig_top_bottom_countries.png}\\
+%    \small\textit{Top 10 vs bottom 10 countries (95\% Wilson CI)}
+%  \end{minipage}
+%  \hfill
+%  \begin{minipage}[t]{0.47\textwidth}
+%    \centering
+%    \includegraphics[width=\linewidth]{fig_choropleth.png}\\
+%    \small\textit{All eligible countries sorted by adoption rate}
+%  \end{minipage}
+%\end{center}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── CLASSIFICATION LABELS ────────────────────────────────────────────────────
+% This section is the same for every stack — do not change the definitions.
+% Only update the numbers (Repos and %) to match your stack.
+\section*{Classification Labels --- What Each Label Means}
+
+\begin{multicols}{2}
+
+\begin{tabular}{@{}lrrp{4.2cm}@{}}
+\toprule
+Label & Repos & \% & Condition \\
+\midrule
+Agentic     & \FILLIN{n\_agentic} & \FILLIN{pct\_agentic} &
+  $\geq$1 STRONG signal \emph{or} $\geq$2 MEDIUM families \\[2pt]
+AI-assisted & \FILLIN{n\_aiasst} & \FILLIN{pct\_aiasst} &
+  1 MEDIUM only \emph{or} WEAK only, configured but unconfirmed \\[2pt]
+None        & \FILLIN{n\_none} & \FILLIN{pct\_none} &
+  No signal found in any of the three passes \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{STRONG} (agent \emph{did} work):\\
+bot\_author, ci\_workflow, pr\_branch,\\
+agent\_attribution (commit trailers).\\[4pt]
+\textbf{MEDIUM} (agent \emph{configured}):\\
+config\_file (CLAUDE.md, .cursorrules\ldots), pr\_label.\\[4pt]
+\textbf{WEAK} (incidental mention):\\
+pr\_body, editor\_config.\\[4pt]
+\textbf{AI-assisted} = evidence present but unconfirmed.
+Included in \FILLIN{pct\_adopted}\% total;
+\textbf{\FILLIN{pct\_agentic}\% agentic-only}
+is the conservative figure.
+
+\end{multicols}
+
+\vspace{6pt}
+\noindent\textbf{Signal strength hierarchy:}
+\vspace{4pt}
+
+\noindent
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}
+  >{\centering\arraybackslash\columncolor{red!18}}p{5.2cm}
+  >{\centering\arraybackslash\columncolor{yellow!35}}p{5.2cm}
+  >{\centering\arraybackslash\columncolor{gray!18}}p{5.2cm}@{}}
+\textbf{STRONG} --- agent \emph{did} work &
+\textbf{MEDIUM} --- agent \emph{configured} &
+\textbf{WEAK} --- incidental mention \\[2pt]
+\small\texttt{bot\_author} &
+\small\texttt{config\_file} (CLAUDE.md, .cursorrules) &
+\small\texttt{pr\_body} \\
+\small\texttt{ci\_workflow} &
+\small\texttt{pr\_label} &
+\small\texttt{editor\_config} \\
+\small\texttt{pr\_branch} & & \\
+\small\texttt{agent\_attribution} (trailers) & & \\
+\end{tabular}
+\renewcommand{\arraystretch}{1}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── THREE SIZING APPROACHES ──────────────────────────────────────────────────
+% Use corpus tertiles for B and C (P33/P66). Report the threshold values used.
+\section*{Repository Size \& Adoption --- Three Operationalisations}
+
+All three confirm the same monotonic pattern. B and C use corpus tertiles
+(P33/P66) so each stratum holds $\approx$33\% of repos.
+
+\vspace{3pt}
+\begin{tabular}{@{}p{6.2cm}rrrr@{}}
+\toprule
+Approach & Small & Medium & Large & Range \\
+\midrule
+\textbf{A: Stars} ($\leq$\FILLIN{thr1} / \FILLIN{thr1}--\FILLIN{thr2} / $>$\FILLIN{thr2})
+  \newline {\footnotesize repos: \FILLIN{nS} \quad \FILLIN{nM} \quad \FILLIN{nL}}
+  & \FILLIN{rS}\% & \FILLIN{rM}\% & \FILLIN{rL}\% & $+$\FILLIN{range}\,pp \\[5pt]
+\textbf{B: Commits} ($\leq$\FILLIN{thr1} / \FILLIN{thr1}--\FILLIN{thr2} / $>$\FILLIN{thr2})
+  \newline {\footnotesize repos: \FILLIN{nS} \quad \FILLIN{nM} \quad \FILLIN{nL}}
+  & \FILLIN{rS}\% & \FILLIN{rM}\% & \FILLIN{rL}\% & $+$\FILLIN{range}\,pp \\[5pt]
+\textbf{C: Code volume} ($\leq$\FILLIN{thr1}\,MB / \FILLIN{thr1}--\FILLIN{thr2}\,MB / $>$\FILLIN{thr2}\,MB)
+  \newline {\footnotesize repos: \FILLIN{nS} \quad \FILLIN{nM} \quad \FILLIN{nL}}
+  & \FILLIN{rS}\% & \FILLIN{rM}\% & \FILLIN{rL}\% & $+$\FILLIN{range}\,pp \\
+\bottomrule
+\end{tabular}
+
+%\vspace{4pt}
+%\begin{center}
+%  \includegraphics[width=0.78\textwidth]{fig_size_grouped_bar.png}\\
+%  \small\textit{Adoption rate by repository size (stars, commits, code volume)}
+%\end{center}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── MENA ─────────────────────────────────────────────────────────────────────
+% MENA countries: Algeria, Bahrain, Egypt, Iran, Iraq, Israel, Jordan, Kuwait,
+% Lebanon, Libya, Morocco, Oman, Palestine, Qatar, Saudi Arabia, Syria, Tunisia,
+% Turkey, UAE, Yemen.
+% Report all MENA countries with >= MIN_REPOS repos in your corpus.
+\section*{MENA Regional Analysis}
+
+\textbf{Coverage:} \FILLIN{N\_MENA} repos (\FILLIN{pct\_of\_corpus}\% corpus, \FILLIN{pct\_of\_located}\% of located repos),
+\FILLIN{N\_mena\_countries} countries defined, \FILLIN{N\_eligible} eligible ($\geq$\FILLIN{MIN\_REPOS} repos).\\
+\textbf{Overall MENA: \FILLIN{MENA\_RATE}\%} [\FILLIN{CI\_LO}\%, \FILLIN{CI\_HI}\%] ---
+\FILLIN{above / below} global \FILLIN{GLOBAL\_RATE}\%.
+Fisher exact vs global: $p = \FILLIN{P\_VALUE}$ (\FILLIN{significant / not significant}).
+
+\begin{multicols}{2}
+
+\textbf{Sub-region breakdown:}
+
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Sub-region & Repos & Rate\% & 95\% CI \\
+\midrule
+Gulf (UAE, SA, \ldots)  & \FILLIN{n} & \FILLIN{r}* & [\FILLIN{lo}, \FILLIN{hi}] \\
+Levant (IL, JO, \ldots) & \FILLIN{n} & \FILLIN{r}* & [\FILLIN{lo}, \FILLIN{hi}] \\
+Turkey                  & \FILLIN{n} & \FILLIN{r}* & [\FILLIN{lo}, \FILLIN{hi}] \\
+North Africa            & \FILLIN{n} & \FILLIN{r}* & [\FILLIN{lo}, \FILLIN{hi}] \\
+Iran                    & \FILLIN{n} & \FILLIN{r}* & [\FILLIN{lo}, \FILLIN{hi}] \\
+\bottomrule
+\end{tabular}
+% If a sub-region has < MIN_REPOS total, omit that row.
+
+\columnbreak
+
+\textbf{Eligible countries ($\geq$\FILLIN{MIN\_REPOS} repos):}
+
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Country & Repos & Rate\% \\
+\midrule
+\FILLIN{c1} & \FILLIN{n1} & \FILLIN{r1}* \\
+\FILLIN{c2} & \FILLIN{n2} & \FILLIN{r2}* \\
+\FILLIN{c3} & \FILLIN{n3} & \FILLIN{r3}* \\
+\OPT{c4}    & \OPT{n4}    & \OPT{r4}*    \\
+\OPT{c5}    & \OPT{n5}    & \OPT{r5}*    \\
+\OPT{c6}    & \OPT{n6}    & \OPT{r6}     \\
+\OPT{c7}    & \OPT{n7}    & \OPT{r7}     \\
+\OPT{c8}    & \OPT{n8}    & \OPT{r8}     \\
+\OPT{c9}    & \OPT{n9}    & \OPT{r9}     \\
+\bottomrule
+\end{tabular}
+
+\end{multicols}
+
+%\vspace{4pt}
+%\begin{center}
+%  \includegraphics[width=0.60\textwidth]{fig_mena_bar.png}\\
+%  \small\textit{MENA sub-region adoption rates with 95\% CIs}
+%\end{center}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── RESEARCH QUESTIONS ───────────────────────────────────────────────────────
+\section*{Research Questions --- Statistical Test Results}
+
+\begin{tabular}{@{}p{3.2cm} p{5.5cm} p{3.2cm} p{3.0cm}@{}}
+\toprule
+\textbf{RQ} & \textbf{Finding} & \textbf{Test} & \textbf{Decision} \\
+\midrule
+\textbf{RQ1} Scope of adoption &
+  \FILLIN{ADOPT\_RATE}\% adoption rate (\FILLIN{n\_adopted}/\FILLIN{N\_TOTAL}).
+  Wilson 95\% CI: [\FILLIN{CI\_LO}\%, \FILLIN{CI\_HI}\%] &
+  Binomial test vs $H_0{:}\ p \leq 5\%$ \newline $p \ll 10^{-100}$ &
+  \textcolor{red}{\textbf{Reject $H_0$}} \\[4pt]
+\textbf{RQ2} Undercounting &
+  Config-only (Pass 3a): \FILLIN{3a\_rate}\%.
+  Multi-signal: \FILLIN{ADOPT\_RATE}\%.
+  Delta: \textbf{$+$\FILLIN{DELTA}\,pp}.
+  $b=\FILLIN{b}$, $c=\FILLIN{c}$ &
+  McNemar $\chi^2 = \FILLIN{CHI2}$ \newline $p = \FILLIN{P}$ &
+  \textcolor{red}{\textbf{Reject $H_0$}} \\[4pt]
+\textbf{RQ3} Geographic variation &
+  Rates range from \FILLIN{MIN\_RATE}\% (\FILLIN{MIN\_COUNTRY}) to
+  \FILLIN{MAX\_RATE}\% (\FILLIN{MAX\_COUNTRY}).
+  \FILLIN{N\_sig}/\FILLIN{N\_countries} countries significantly differ from global mean &
+  $\chi^2 = \FILLIN{CHI2}$, $df=\FILLIN{DF}$ \newline $p = \FILLIN{P}$ &
+  \textcolor{red}{\textbf{Reject $H_0$}} \\
+\bottomrule
+\end{tabular}
+
+\vspace{6pt}
+\renewcommand{\arraystretch}{1.4}
+\noindent
+\begin{tabular}{@{}
+  >{\centering\arraybackslash\columncolor{red!15}}p{2.8cm}
+  >{\columncolor{red!8}}p{14.0cm}@{}}
+\textbf{RQ1 Reject $H_0$} &
+  \FILLIN{ADOPT\_RATE}\% adoption (\FILLIN{n\_adopted}/\FILLIN{N\_TOTAL}).
+  Wilson 95\% CI: [\FILLIN{CI\_LO}\%--\FILLIN{CI\_HI}\%].
+  Binomial $p \ll 10^{-100}$. \\
+\textbf{RQ2 Reject $H_0$} &
+  Multi-signal detects \textbf{$+$\FILLIN{DELTA}\,pp} more than single-signal
+  (\FILLIN{3a\_rate}\% $\to$ \FILLIN{ADOPT\_RATE}\%).
+  McNemar $\chi^2 = \FILLIN{CHI2}$, $p = \FILLIN{P}$. \\
+\textbf{RQ3 Reject $H_0$} &
+  \FILLIN{N\_countries}-country range \FILLIN{MIN\_RATE}\%--\FILLIN{MAX\_RATE}\%.
+  \FILLIN{N\_sig}/\FILLIN{N\_countries} countries deviate significantly from global mean.
+  $\chi^2 = \FILLIN{CHI2}$, $p = \FILLIN{P}$. \\
+\end{tabular}
+\renewcommand{\arraystretch}{1}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── EXTENDED PIPELINE CHECK ──────────────────────────────────────────────────
+\section*{Extended Pipeline Check --- Coverage Validation (Saturation Check)}
+
+\textbf{Input:} \FILLIN{N\_remaining} repos labelled \texttt{none} (\FILLIN{n\_none}) or
+\texttt{ai\_assisted} (\FILLIN{n\_aiasst}) after Stage 3.\\
+\textbf{Purpose:} Verify Stage 3 saturation by scanning for signals not included in the
+original three passes.
+
+\vspace{4pt}
+\begin{tabular}{@{}p{2.2cm} p{5.8cm} p{2.4cm} r r@{}}
+\toprule
+\textbf{Pass} & \textbf{What was checked} & \textbf{Signal (tier)} & \textbf{Input} & \textbf{New agentic} \\
+\midrule
+\textbf{5a} --- Extended bots &
+  12 additional bot accounts as commit/PR authors:
+  \textit{sweep-ai, openhands-agent, codegen-sh, amazon-q-developer,
+  coderabbitai, junie, factory-bot, github-copilot,
+  devin-ai-integration, jules-google, ellipsis-dev, greptileai} &
+  bot\_author (STRONG) & \FILLIN{N\_remaining} & \textbf{\FILLIN{n\_new}} \\[6pt]
+\textbf{5b} --- Workflow scan &
+  11 AI GitHub Actions in \texttt{.github/workflows/} YAML:
+  \textit{anthropic/claude-code-action, sweep-ai/sweep,
+  All-Hands-AI/OpenHands, codegen-sh/codegen,
+  devin-ai-integration/devin, junie-jetbrains/junie,
+  amazon-q-developer-action, greptileai/greptile-action,
+  ellipsis-dev/ellipsis-action, factory-ai/factory-action,
+  github/copilot-autofix-action} &
+  ci\_ai\_action (STRONG) & \FILLIN{N\_remaining} & \textbf{\FILLIN{n\_new}} \\[6pt]
+\textbf{5c} --- Extended configs &
+  18 config paths not in Stage 3:
+  \texttt{.amazonq/}, \texttt{.continue/}, \texttt{.codeium/},
+  \texttt{sweep.yaml}, \texttt{coderabbit.yaml}, \texttt{.cursorrules},
+  \texttt{.cursor/}, \texttt{.mentat/}, \texttt{.sourcegraph/},
+  \texttt{.ellipsis.yaml}, \texttt{.tabnine/} and others &
+  config\_file (MEDIUM) & \FILLIN{N\_remaining} & \textbf{\FILLIN{n\_new}} \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+% If all three are 0: use the green box below.
+% If any are non-zero: replace with a note explaining what was found.
+\textbf{Conclusion:} \FILLIN{Zero new detections across all three passes confirms saturation.
+OR: X new agentic repos found in pass 5Y, adding Z pp to the final adoption rate.}
+
+\vspace{6pt}
+\noindent
+\colorbox{green!15}{\parbox{0.975\linewidth}{
+\vspace{3pt}
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}
+  >{\centering\arraybackslash\columncolor{green!25}}p{3.8cm}
+  >{\centering\arraybackslash\columncolor{green!25}}p{3.8cm}
+  >{\centering\arraybackslash\columncolor{green!25}}p{3.8cm}
+  >{\centering\arraybackslash\columncolor{green!10}}p{4.4cm}@{}}
+\textbf{5a Extended bots} & \textbf{5b Workflows} & \textbf{5c Configs} & \textbf{Verdict} \\
+12 new bot accounts & 11 new AI actions & 18 new config paths & \\
+\textbf{\FILLIN{n} new agentic} & \textbf{\FILLIN{n} new agentic} & \textbf{\FILLIN{n} new agentic} &
+\textbf{\FILLIN{Stage 3 = saturated / not saturated}} \\
+\end{tabular}
+\renewcommand{\arraystretch}{1}
+\vspace{3pt}
+}}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── FRAMEWORK / ECOSYSTEM ANALYSIS ──────────────────────────────────────────
+% Adapt this section to your stack's frameworks:
+%   JS/TS  → React, Next.js, Express, Vue, Astro, etc.
+%   Python → Django, FastAPI, Flask, LangChain, etc.
+%   Java   → Spring Boot, Quarkus, Micronaut, etc.
+%   Rust   → Tokio, Axum, Bevy, etc.
+%   C#     → ASP.NET Core, Blazor, etc.
+%   C++    → Qt, OpenCV, LLVM, etc.
+% Keep at least the top 10 frameworks by repo count.
+\section*{AI Adoption by Framework \& Package Ecosystem}
+
+\textbf{Note:} Frameworks are multi-label per repo (a repo can use multiple frameworks),
+so rows are not mutually exclusive partitions of the corpus.
+
+\vspace{4pt}
+\textbf{Top \FILLIN{N} frameworks by repo count:}
+
+\vspace{3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Framework & Repos & Agentic\% & AI-assist\% & No AI\% \\
+\midrule
+\FILLIN{fw1}  & \FILLIN{n}  & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\FILLIN{fw2}  & \FILLIN{n}  & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\FILLIN{fw3}  & \FILLIN{n}  & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\FILLIN{fw4}  & \FILLIN{n}  & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\FILLIN{fw5}  & \FILLIN{n}  & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\FILLIN{fw6}  & \FILLIN{n}  & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\FILLIN{fw7}  & \FILLIN{n}  & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\FILLIN{fw8}  & \FILLIN{n}  & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\FILLIN{fw9}  & \FILLIN{n}  & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\FILLIN{fw10} & \FILLIN{n}  & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Highest agentic adoption:} \FILLIN{fw\_high1} \FILLIN{r1}\%, \FILLIN{fw\_high2} \FILLIN{r2}\%, \FILLIN{fw\_high3} \FILLIN{r3}\%\\
+\textbf{Lowest agentic adoption:} \FILLIN{fw\_low1} \FILLIN{r1}\%, \FILLIN{fw\_low2} \FILLIN{r2}\%\\
+\textbf{Largest corpus:} \FILLIN{fw\_largest} (\FILLIN{n} repos, \FILLIN{r}\%)
+
+\vspace{6pt}
+% If your stack has package-manager subtypes (npm/pnpm for JS, pip/conda for Python,
+% Maven/Gradle for Java, Cargo workspaces for Rust, NuGet for C#), add the table:
+\textbf{AI adoption by package ecosystem / build system:}
+
+\vspace{3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Ecosystem & Repos & Agentic\% & AI-assist\% & No AI\% \\
+\midrule
+\FILLIN{eco1} & \FILLIN{n} & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\FILLIN{eco2} & \FILLIN{n} & \FILLIN{ag} & \FILLIN{ai} & \FILLIN{no} \\
+\OPT{eco3}    & \OPT{n}    & \OPT{ag}    & \OPT{ai}    & \OPT{no}    \\
+\OPT{eco4}    & \OPT{n}    & \OPT{ag}    & \OPT{ai}    & \OPT{no}    \\
+\bottomrule
+\end{tabular}
+
+%\vspace{4pt}
+%\begin{center}
+%  \includegraphics[width=0.82\textwidth]{fig_framework_adoption.png}\\
+%  \small\textit{Agentic adoption rate for top frameworks (dashed line = overall agentic \%)}
+%\end{center}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── PRICING ANALYSIS ─────────────────────────────────────────────────────────
+% This section is the same for every stack — the tool list and income groups are
+% shared. Only the results table (adoption % by income group) differs per stack.
+\section*{AI Tool Pricing vs Country Income --- Adoption Analysis}
+
+\textbf{Hypothesis:} Does tool pricing (paid vs free) explain lower adoption rates in
+lower-income countries?
+
+\vspace{6pt}
+\begin{multicols}{2}
+
+\textbf{Tool pricing classification:}
+
+\begin{tabular}{@{}lll@{}}
+\toprule
+Tool & Pricing & Category \\
+\midrule
+Claude Code       & Pro \$20/mo required  & Paid \\
+OpenAI Codex CLI  & API credits required  & Paid \\
+Devin             & \$500+/mo             & Paid \\
+Junie             & JetBrains sub.        & Paid \\
+Codegen           & Paid only             & Paid \\
+Factory           & Paid only             & Paid \\
+Greptile          & Paid only             & Paid \\
+Ellipsis          & Paid (OSS free)       & Paid \\
+\midrule
+GitHub Copilot    & Free tier + student   & Free \\
+Cursor            & Free tier + student   & Free \\
+OpenHands         & OSS / self-host       & Free \\
+Gemini CLI        & Free tier             & Free \\
+Amazon Q          & Free tier + edu       & Free \\
+Sweep AI          & Free for public repos & Free \\
+CodeRabbit        & Free for public repos & Free \\
+Windsurf          & Free tier             & Free \\
+Aider             & OSS, free             & Free \\
+Jules             & Free (Google preview) & Free \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\textbf{World Bank income groups (2024):}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+Group & Countries in corpus \\
+\midrule
+\textbf{HIC} & US, UK, Germany, France, Japan, \\
+High Income  & South Korea, Australia, Canada, \\
+             & Israel, UAE, Sweden, Switzerland, \\
+             & Netherlands, Denmark, Singapore, \\
+             & Taiwan, Belgium, Norway, Austria, \\
+             & Finland, NZ, Ireland, Hong Kong, \\
+             & Italy, Spain, Portugal, Czech Rep. \\[4pt]
+\textbf{UMIC} & China, Brazil, Turkey, Russia, \\
+Upper-Middle  & Mexico, Argentina, Thailand, \\
+              & Malaysia, Colombia, Ukraine, \\
+              & South Africa, Poland, Romania, \\
+              & Bulgaria, Serbia, Chile, Egypt, \\
+              & Georgia, Kazakhstan, Uzbekistan, \\
+              & Algeria, Tunisia, Hungary, Peru \\[4pt]
+\textbf{LMIC} & India, Vietnam, Philippines, \\
+Lower-Middle  & Indonesia, Bangladesh, Pakistan, \\
+              & Nigeria, Ghana, Kenya, Morocco, \\
+              & Sri Lanka, Nepal, Ethiopia, Iran \\[4pt]
+\textbf{LIC}  & Rwanda \\
+Low Income    & \\
+\bottomrule
+\end{tabular}
+
+\end{multicols}
+
+\vspace{6pt}
+\textbf{Results by income group} (\FILLIN{n\_located} located repos):
+
+\vspace{3pt}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Income Group & Repos & Adoption\% & Agentic & Paid tool\% & Free tool\% \\
+\midrule
+High Income        & \FILLIN{n} & \FILLIN{r} & \FILLIN{ag} & \FILLIN{paid} & \FILLIN{free} \\
+Upper-Middle Inc.  & \FILLIN{n} & \FILLIN{r} & \FILLIN{ag} & \FILLIN{paid} & \FILLIN{free} \\
+Lower-Middle Inc.  & \FILLIN{n} & \FILLIN{r} & \FILLIN{ag} & \FILLIN{paid} & \FILLIN{free} \\
+Low Income         & \OPT{n}    & \OPT{r}    & \OPT{ag}    & \OPT{paid}    & \OPT{free}    \\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{Chi-sq adoption across groups:}} &
+  \multicolumn{3}{l}{$\chi^2 = \FILLIN{CHI2}$, $df = \FILLIN{DF}$, $p = \FILLIN{P}$} \\
+\multicolumn{3}{@{}l}{\textbf{Chi-sq paid vs free across groups:}} &
+  \multicolumn{3}{l}{$\chi^2 = \FILLIN{CHI2}$, $df = \FILLIN{DF}$, $p = \FILLIN{P}$} \\
+\bottomrule
+\end{tabular}
+
+%\vspace{4pt}
+%\begin{center}
+%  \includegraphics[width=0.82\textwidth]{fig_pricing_income.png}\\
+%  \small\textit{Adoption rate and tool-type share by income group}
+%\end{center}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── EXTENDED ANALYSIS (STAGE 5) ──────────────────────────────────────────────
+\section*{Extended Analysis}
+\begin{multicols}{2}
+\footnotesize
+
+% ── E1: Time Series ───────────────────────────────────────────────────────────
+\subsection*{AI Adoption Over Time}
+\textbf{Range:} Feb 2025 -- \FILLIN{END\_MONTH} (\FILLIN{N\_months} months, \FILLIN{N\_TOTAL} repos).
+
+\vspace{2pt}
+% Fill in every month you have data for. Add or remove rows as needed.
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Month & Repos & Adopt\% & Agentic\% \\
+\midrule
+2025-02 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2025-03 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2025-04 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2025-05 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2025-06 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2025-07 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2025-08 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2025-09 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2025-10 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2025-11 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2025-12 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2026-01 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2026-02 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2026-03 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2026-04 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2026-05 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2026-06 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2026-07 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+2026-08 & \FILLIN{n} & \FILLIN{a} & \FILLIN{g} \\
+\OPT{2026-09} & \OPT{n} & \OPT{a} & \OPT{g} \\
+\bottomrule
+\end{tabular}
+
+\vspace{3pt}
+\textbf{Key findings:}
+\begin{itemize}\setlength\itemsep{0pt}
+  \item Adoption rose from \textbf{\FILLIN{START\_PCT}\%} (Feb 2025)
+        to peak \textbf{\FILLIN{PEAK\_PCT}\%} (\FILLIN{PEAK\_MONTH}).
+  \item \FILLIN{Describe sharpest growth period and notable inflection points.}
+  \item \FILLIN{Any plateau or decline observed?}
+\end{itemize}
+
+\vspace{3pt}
+\hrule
+\vspace{3pt}
+
+% ── E2: Size Comparison ───────────────────────────────────────────────────────
+\subsection*{Repo Size by Adoption Category}
+Kruskal-Wallis (3-way) + Mann-Whitney U (Agentic vs No AI).
+
+\vspace{2pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Metric & No AI & AI-Asst & Agentic \\
+       & (med.)& (med.)  & (med.)  \\
+\midrule
+Commits     & \FILLIN{n} & \FILLIN{n} & \FILLIN{n} \\
+Code (KB)   & \FILLIN{n} & \FILLIN{n} & \FILLIN{n} \\
+\midrule
+Stars       & \FILLIN{n} & \FILLIN{n} & \FILLIN{n} \\
+Forks       & \OPT{n}    & \OPT{n}    & \OPT{n}    \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+\textit{All MW $p < \FILLIN{P\_VALUE}$;\;
+\FILLIN{Describe trend: monotonic increase? Gap between groups?}}
+
+\columnbreak
+
+% ── E3: Stack-specific subset analysis ───────────────────────────────────────
+% Use the most interesting framework/ecosystem subset from your stack.
+% JS/TS used React+Next.js; C# used ASP.NET Core+Blazor.
+% Python might use: FastAPI subset, or LangChain/AI-frameworks subset.
+\subsection*{\FILLIN{STACK-SPECIFIC SUBSET} Subset (\FILLIN{N} repos)}
+
+\textbf{Adoption summary:}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Category & Count & \% \\
+\midrule
+Agentic         & \FILLIN{n} & \FILLIN{r} \\
+AI-Assisted     & \FILLIN{n} & \FILLIN{r} \\
+No AI           & \FILLIN{n} & \FILLIN{r} \\
+\midrule
+\textbf{Adopted}& \textbf{\FILLIN{n}} & \textbf{\FILLIN{r}} \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Top agents (agentic repos):}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Agent & Count & \% agentic \\
+\midrule
+\FILLIN{ag1} & \FILLIN{n} & \FILLIN{r} \\
+\FILLIN{ag2} & \FILLIN{n} & \FILLIN{r} \\
+\FILLIN{ag3} & \FILLIN{n} & \FILLIN{r} \\
+\OPT{ag4}    & \OPT{n}    & \OPT{r}    \\
+\OPT{ag5}    & \OPT{n}    & \OPT{r}    \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Key findings:}
+\begin{itemize}\setlength\itemsep{0pt}
+  \item \FILLIN{Finding 1 — adoption rate vs full corpus}
+  \item \FILLIN{Finding 2 — dominant tool in this subset}
+  \item \FILLIN{Finding 3 — anything surprising}
+\end{itemize}
+
+\end{multicols}
+
+%\vspace{4pt}
+%\begin{center}
+%  \begin{minipage}[t]{0.47\textwidth}
+%    \centering
+%    \includegraphics[width=\linewidth]{fig_adoption_time_series.png}\\
+%    \small\textit{E1 --- Monthly adoption rate}
+%  \end{minipage}
+%  \hfill
+%  \begin{minipage}[t]{0.47\textwidth}
+%    \centering
+%    \includegraphics[width=\linewidth]{fig_size_comparison.png}\\
+%    \small\textit{E2 --- Repo size by adoption group}
+%  \end{minipage}
+%\end{center}
+
+\vspace{4pt}
+\hrule
+\vspace{4pt}
+
+% ── E4: First AI Commit Timing ────────────────────────────────────────────────
+\begin{multicols}{2}
+\footnotesize
+
+\subsection*{First AI Commit \& Adoption Timing}
+% If your sample for this analysis is small (< 100), add the warning below.
+\textbf{Population:} \FILLIN{N} sampled \FILLIN{AGENT}-agentic repos
+(trailer\_count $> 0$). Trailers found in \textbf{\FILLIN{n\_found}/\FILLIN{N}
+repos (\FILLIN{pct\_found}\%)}.
+
+\vspace{3pt}
+\textbf{Trailer timing (days from repo creation to first AI commit):}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Timing & Count & \% \\
+\midrule
+Day 1 ($\leq$7\,d)  & \FILLIN{n} & \FILLIN{r} \\
+Early (8--30\,d)    & \FILLIN{n} & \FILLIN{r} \\
+Late ($>$30\,d)     & \FILLIN{n} & \FILLIN{r} \\
+Not found           & \FILLIN{n} & \FILLIN{r} \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+Median days to first trailer: \textbf{\FILLIN{MEDIAN\_DAYS}\,d}.\\
+Median commits before AI: \textbf{\FILLIN{MEDIAN\_COMMITS\_PCT}\%}.
+
+\columnbreak
+
+\textbf{Adoption patterns:}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Pattern & Count & \% \\
+\midrule
+Trailer-only (no config)             & \FILLIN{n} & \FILLIN{r} \\
+AI-native (config + trailer $\leq$7d)& \FILLIN{n} & \FILLIN{r} \\
+Config-first                         & \FILLIN{n} & \FILLIN{r} \\
+Trailer-first                        & \FILLIN{n} & \FILLIN{r} \\
+Not found                            & \FILLIN{n} & \FILLIN{r} \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+Config files found in \textbf{\FILLIN{n\_config}/\FILLIN{N} repos (\FILLIN{r}\%)}.
+Median config day: \textbf{\FILLIN{med\_cfg}\,d}.
+
+\vspace{3pt}
+\textbf{Key findings:}
+\begin{itemize}\setlength\itemsep{0pt}
+  \item \FILLIN{What \% use the tool without a config file?}
+  \item \FILLIN{AI-native vs late adoption split — which dominates?}
+  \item \FILLIN{Any notable difference vs JS/TS or C\# stack?}
+\end{itemize}
+
+\end{multicols}
+
+\vspace{4pt}
+\hrule
+\vspace{4pt}
+
+% ── E5-E8: Tool loyalty, world regions, trailer density ──────────────────────
+\begin{multicols}{2}
+\footnotesize
+
+\subsection*{Tool Loyalty}
+
+\textbf{Single-agent vs multi-agent repos (agentic only, $n=\FILLIN{N\_AGENTIC}$):}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Category & Count & \% \\
+\midrule
+Single-agent repos & \FILLIN{n} & \FILLIN{r} \\
+Multi-agent repos  & \FILLIN{n} & \FILLIN{r} \\
+\midrule
+\textbf{Total agentic} & \textbf{\FILLIN{N\_AGENTIC}} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\small \FILLIN{Comment on how this compares to other stacks and what it implies.}}
+
+\vspace{3pt}
+\hrule
+\vspace{3pt}
+
+\subsection*{Adoption by World Region}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+World Region & Adoption\% & Notes \\
+\midrule
+North America   & \FILLIN{r} & \OPT{highest?} \\
+Western Europe  & \FILLIN{r} & \\
+East Asia       & \FILLIN{r} & \\
+South/SE Asia   & \OPT{r}    & \\
+Latin America   & \OPT{r}    & \\
+MENA            & \FILLIN{r} & \OPT{vs global mean} \\
+Sub-Saharan Af. & \OPT{r}    & \\
+Oceania         & \OPT{r}    & \\
+\bottomrule
+\end{tabular}
+
+\columnbreak
+
+\subsection*{Commit Trailer Density}
+
+\textbf{Measurement scope:}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Category & Count & Notes \\
+\midrule
+Repos measured        & \FILLIN{n} & Stage 3b agentic \\
+Had trailer commits   & \FILLIN{n} & \FILLIN{r}\% of measured \\
+Median trailer density & \FILLIN{r}\% & of all commits \\
+Not measured          & \FILLIN{n} & Stage 3a \& 3c agentic \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\small \FILLIN{Interpret: what fraction of commits carry an AI attribution?
+How does this compare to JS/TS (11.7\%) or C\# (11.7\%)?}}
+
+\vspace{3pt}
+\hrule
+\vspace{3pt}
+
+\subsection*{Adoption Timeline (Stage 5k)}
+\textbf{Coverage:} \FILLIN{n\_with\_date}/\FILLIN{n\_adopted} adopted repos
+have a confirmed \texttt{first\_ai\_date} (\FILLIN{pct}\%).
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Category & Count & \% \\
+\midrule
+AI-native ($\leq$7d)   & \FILLIN{n} & \FILLIN{r} \\
+Early adopter (8--30d) & \FILLIN{n} & \FILLIN{r} \\
+Late adopter ($>$30d)  & \FILLIN{n} & \FILLIN{r} \\
+Unknown (no date)      & \FILLIN{n} & \FILLIN{r} \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+Median days-to-adoption: \textbf{\FILLIN{med}\,d}.
+
+\end{multicols}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\end{document}

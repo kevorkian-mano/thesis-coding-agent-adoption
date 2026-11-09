@@ -1,0 +1,451 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{parskip}
+
+\definecolor{correct}{HTML}{d4edda}
+\definecolor{wrong}{HTML}{f8d7da}
+\definecolor{missed}{HTML}{fff3cd}
+\definecolor{hdr}{HTML}{2c3e50}
+
+\hypersetup{colorlinks=true, linkcolor=hdr, urlcolor=hdr}
+
+\titleformat{\section}{\large\bfseries\color{hdr}}{}{0em}{}[\vspace{4pt}\hrule]
+\titlespacing*{\section}{0pt}{14pt}{8pt}
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+\titlespacing*{\subsection}{0pt}{10pt}{4pt}
+
+\begin{document}
+
+% ── Title ─────────────────────────────────────────────────────────────────────
+\begin{center}
+  {\Large\bfseries Geo-Inference Validation Runs}\\[6pt]
+  {\small\color{gray} Each run takes 50 users whose country is known from their GitHub location field,
+  strips that field, and checks whether bio / company / email / org / network signals alone
+  recover the correct country.}
+\end{center}
+
+\vspace{8pt}
+
+\noindent\textbf{The metric that matters is Precision, not raw accuracy.}
+When the pipeline returns \texttt{not\_specified} (a \emph{missed} case), it is being
+honest - there is genuinely nothing to infer from. Those users remain labelled
+\texttt{not\_specified} in the data, which is already acknowledged as a limitation.
+They do not pollute any geographic analysis.
+
+The only real risk is a \textbf{wrong} prediction --- when the pipeline confidently
+assigns the \emph{incorrect} country. The key metric is therefore:
+
+\[
+  \text{Precision} = \frac{\text{Correct predictions}}{\text{Total predictions made}} \qquad
+  \text{Coverage} = \frac{\text{Total predictions made}}{\text{Total users}}
+\]
+
+
+
+\vspace{10pt}
+
+% ════════════════════════════════════════════════════════════════════════════
+\section{Run 1 — seed=42, n=50}
+% ════════════════════════════════════════════════════════════════════════════
+
+\subsection*{Summary}
+
+\begin{tabular}{lrrl}
+\toprule
+\textbf{Outcome} & \textbf{Count} & \textbf{\% of total} & \textbf{Note} \\
+\midrule
+Correct (inferred == known) & 27 & 54.0\% & \\
+Wrong   (inferred $\neq$ known) &  5 & 10.0\% & real errors \\
+Missed  (not\_specified)    & 18 & 36.0\% & not an error \\
+\midrule
+\textbf{Total} & \textbf{50} & \textbf{100\%} & \\
+\midrule
+\textbf{Predictions made (correct + wrong)} & \textbf{32} & \textbf{64.0\%} & coverage \\
+\textbf{Precision (correct / predicted)}    & \textbf{27/32} & \textbf{84.4\%} & key metric \\
+\bottomrule
+\end{tabular}
+
+\vspace{8pt}
+
+\subsection*{Per-Signal Accuracy}
+
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Signal} & \textbf{Correct} & \textbf{Tried} & \textbf{Accuracy} \\
+\midrule
+bio\_text          & 3 & 4  & 75.0\% \\
+network\_majority  & 12 & 15 & 80.0\% \\
+org\_location      & 7 & 8  & 87.5\% \\
+email\_tld         & 2 & 2  & 100.0\% \\
+website\_tld       & 3 & 3  & 100.0\% \\
+\midrule
+not\_specified     & 0 & 18 & — (missed) \\
+\bottomrule
+\end{tabular}
+
+\vspace{8pt}
+
+\subsection*{Per-User Results}
+
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{>{\ttfamily\small}p{4.4cm} p{3.0cm} p{3.0cm} p{2.6cm} p{1.6cm}}
+\toprule
+\textbf{Login} & \textbf{Known} & \textbf{Inferred} & \textbf{Signal} & \textbf{Result} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Login} & \textbf{Known} & \textbf{Inferred} & \textbf{Signal} & \textbf{Result} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+% India
+\rowcolor{missed}   sachinmandawi             & India          & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{correct}  Priya-Mehta436            & India          & India           & network\_majority & CORRECT \\
+\rowcolor{correct}  Mohammad-Ghouse-virtuoso  & India          & India           & network\_majority & CORRECT \\
+\rowcolor{wrong}    apoorvdarshan             & India          & United States   & network\_majority & WRONG   \\
+\rowcolor{missed}   prat555                   & India          & not\_specified  & not\_specified   & MISSED  \\
+% China
+\rowcolor{correct}  ninuan                    & China          & China           & network\_majority & CORRECT \\
+\rowcolor{missed}   NeoLi00                   & China          & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{missed}   BerryUIKI                 & China          & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{correct}  zhangjszs                 & China          & China           & org\_location    & CORRECT \\
+\rowcolor{correct}  preca-hoshino             & China          & China           & email\_tld       & CORRECT \\
+% United States
+\rowcolor{correct}  jlian                     & United States  & United States   & org\_location    & CORRECT \\
+\rowcolor{correct}  realzza                   & United States  & United States   & org\_location    & CORRECT \\
+\rowcolor{missed}   kbennett2000              & United States  & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{correct}  creativerezz              & United States  & United States   & network\_majority & CORRECT \\
+\rowcolor{missed}   atefkbenothman            & United States  & not\_specified  & not\_specified   & MISSED  \\
+% Germany
+\rowcolor{correct}  TheTrueVirus              & Germany        & Germany         & bio\_text        & CORRECT \\
+\rowcolor{missed}   psic4t                    & Germany        & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{correct}  jammsen                   & Germany        & Germany         & network\_majority & CORRECT \\
+\rowcolor{correct}  tkoehlerlg                & Germany        & Germany         & org\_location    & CORRECT \\
+\rowcolor{correct}  hyperremix                & Germany        & Germany         & website\_tld     & CORRECT \\
+% United Kingdom
+\rowcolor{wrong}    Dsazz                     & United Kingdom & Ukraine         & network\_majority & WRONG   \\
+\rowcolor{wrong}    7nohe                     & United Kingdom & Japan           & org\_location    & WRONG   \\
+\rowcolor{correct}  Nagi-ovo                  & United Kingdom & United Kingdom  & bio\_text        & CORRECT \\
+\rowcolor{missed}   sdw-online                & United Kingdom & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{missed}   firtoz                    & United Kingdom & not\_specified  & not\_specified   & MISSED  \\
+% France
+\rowcolor{missed}   LucasGallone              & France         & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{missed}   cdeust                    & France         & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{correct}  johnsamuelwrites          & France         & France          & org\_location    & CORRECT \\
+\rowcolor{missed}   doctor-io                 & France         & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{wrong}    Amix29                    & France         & United States   & network\_majority & WRONG   \\
+% Brazil
+\rowcolor{correct}  emytonton                 & Brazil         & Brazil          & network\_majority & CORRECT \\
+\rowcolor{correct}  renanlido                 & Brazil         & Brazil          & email\_tld       & CORRECT \\
+\rowcolor{missed}   rodrigobaron              & Brazil         & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{correct}  jprabernardes             & Brazil         & Brazil          & network\_majority & CORRECT \\
+\rowcolor{correct}  lucassasse                & Brazil         & Brazil          & network\_majority & CORRECT \\
+% Japan
+\rowcolor{correct}  yosuke-furukawa           & Japan          & Japan           & org\_location    & CORRECT \\
+\rowcolor{correct}  makeding                  & Japan          & Japan           & network\_majority & CORRECT \\
+\rowcolor{correct}  gpsnmeajp                 & Japan          & Japan           & network\_majority & CORRECT \\
+\rowcolor{missed}   eris-ths                  & Japan          & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{missed}   arita-yuto                & Japan          & not\_specified  & not\_specified   & MISSED  \\
+% Canada
+\rowcolor{missed}   Offxc                     & Canada         & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{missed}   npuckett                  & Canada         & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{missed}   HaruHunab1320             & Canada         & not\_specified  & not\_specified   & MISSED  \\
+\rowcolor{correct}  MatthewSullivn            & Canada         & Canada          & network\_majority & CORRECT \\
+\rowcolor{correct}  hannsxpeter               & Canada         & Canada          & bio\_text        & CORRECT \\
+% Indonesia
+\rowcolor{wrong}    AlpianPPLG                & Indonesia      & United Kingdom  & bio\_text        & WRONG   \\
+\rowcolor{correct}  rihid                     & Indonesia      & Indonesia       & network\_majority & CORRECT \\
+\rowcolor{correct}  suciptoid                 & Indonesia      & Indonesia       & website\_tld     & CORRECT \\
+\rowcolor{correct}  aashari                   & Indonesia      & Indonesia       & org\_location    & CORRECT \\
+\rowcolor{correct}  mastomii                  & Indonesia      & Indonesia       & website\_tld     & CORRECT \\
+
+\end{longtable}
+
+
+% ════════════════════════════════════════════════════════════════════════════
+\section{Run 2 — seed=123, n=49}
+% ════════════════════════════════════════════════════════════════════════════
+
+\subsection*{Summary}
+
+\begin{tabular}{lrrl}
+\toprule
+\textbf{Outcome} & \textbf{Count} & \textbf{\% of total} & \textbf{Note} \\
+\midrule
+Correct (inferred == known) & 28 & 57.1\% & \\
+Wrong   (inferred $\neq$ known) &  2 &  4.1\% & real errors \\
+Missed  (not\_specified)    & 19 & 38.8\% & not an error \\
+\midrule
+\textbf{Total (valid)} & \textbf{49} & \textbf{100\%} & \\
+\midrule
+\textbf{Predictions made (correct + wrong)} & \textbf{30} & \textbf{61.2\%} & coverage \\
+\textbf{Precision (correct / predicted)}    & \textbf{28/30} & \textbf{93.3\%} & key metric \\
+\bottomrule
+\end{tabular}
+
+\vspace{8pt}
+
+\subsection*{Per-Signal Accuracy}
+
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Signal} & \textbf{Correct} & \textbf{Tried} & \textbf{Accuracy} \\
+\midrule
+network\_majority  & 18 & 18 & 100.0\% \\
+org\_location      &  5 &  5 & 100.0\% \\
+company\_name      &  3 &  3 & 100.0\% \\
+email\_tld         &  1 &  1 & 100.0\% \\
+website\_tld       &  1 &  2 &  50.0\% \\
+bio\_text          &  0 &  1 &   0.0\% \\
+\midrule
+not\_specified     &  0 & 19 & — (missed) \\
+\bottomrule
+\end{tabular}
+
+\vspace{8pt}
+
+\subsection*{Per-User Results}
+
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{>{\ttfamily\small}p{4.4cm} p{3.0cm} p{3.0cm} p{2.6cm} p{1.6cm}}
+\toprule
+\textbf{Login} & \textbf{Known} & \textbf{Inferred} & \textbf{Signal} & \textbf{Result} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Login} & \textbf{Known} & \textbf{Inferred} & \textbf{Signal} & \textbf{Result} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+% India
+\rowcolor{correct}  MrChartist                & India          & India          & network\_majority & CORRECT \\
+\rowcolor{correct}  deepak-pandey1            & India          & India          & network\_majority & CORRECT \\
+\rowcolor{correct}  rahulgawale               & India          & India          & org\_location    & CORRECT \\
+\rowcolor{correct}  KunalKhandekar            & India          & India          & network\_majority & CORRECT \\
+                    pranav-pramod-dwivedi     & India          & —              & —                & SKIPPED \\
+% China
+\rowcolor{missed}   banyudu                   & China          & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  Stardust-math             & China          & China          & company\_name    & CORRECT \\
+\rowcolor{correct}  bdq460                    & China          & China          & network\_majority & CORRECT \\
+\rowcolor{correct}  duzexu                    & China          & China          & network\_majority & CORRECT \\
+\rowcolor{correct}  Aspirin0000               & China          & China          & company\_name    & CORRECT \\
+% United States
+\rowcolor{missed}   eeshansrivastava89        & United States  & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{missed}   t-mart                    & United States  & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{missed}   jasonyang-ee              & United States  & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{missed}   jfigge                    & United States  & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{wrong}    AmirHossein-84            & United States  & Iran           & website\_tld     & WRONG   \\
+% Germany
+\rowcolor{missed}   weedpump                  & Germany        & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{wrong}    saschb2b                  & Germany        & United States  & bio\_text        & WRONG   \\
+\rowcolor{correct}  SukramJ                   & Germany        & Germany        & network\_majority & CORRECT \\
+\rowcolor{correct}  karam2022                 & Germany        & Germany        & network\_majority & CORRECT \\
+\rowcolor{missed}   helmuthdu                 & Germany        & not\_specified & not\_specified   & MISSED  \\
+% United Kingdom
+\rowcolor{correct}  bocan                     & United Kingdom & United Kingdom & org\_location    & CORRECT \\
+\rowcolor{missed}   Avinash-jetwani           & United Kingdom & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{missed}   rohitg00                  & United Kingdom & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{missed}   seo-skills                & United Kingdom & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  joshhills                 & United Kingdom & United Kingdom & network\_majority & CORRECT \\
+% France
+\rowcolor{correct}  Axthauvin                 & France         & France         & website\_tld     & CORRECT \\
+\rowcolor{correct}  ababol                    & France         & France         & network\_majority & CORRECT \\
+\rowcolor{correct}  fchavonet                 & France         & France         & network\_majority & CORRECT \\
+\rowcolor{missed}   Si1S                      & France         & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  franck-gaspoz             & France         & France         & org\_location    & CORRECT \\
+% Brazil
+\rowcolor{correct}  LuizFelipeNeves           & Brazil         & Brazil         & network\_majority & CORRECT \\
+\rowcolor{missed}   Glucksberg                & Brazil         & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  combizera                 & Brazil         & Brazil         & org\_location    & CORRECT \\
+\rowcolor{correct}  wesleyramalho             & Brazil         & Brazil         & network\_majority & CORRECT \\
+\rowcolor{correct}  lucassasse                & Brazil         & Brazil         & network\_majority & CORRECT \\
+% Japan
+\rowcolor{correct}  TomoTom0                  & Japan          & Japan          & company\_name    & CORRECT \\
+\rowcolor{missed}   uonr                      & Japan          & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  kosuke55                  & Japan          & Japan          & network\_majority & CORRECT \\
+\rowcolor{correct}  gotalab                   & Japan          & Japan          & network\_majority & CORRECT \\
+\rowcolor{correct}  shiinayane                & Japan          & Japan          & network\_majority & CORRECT \\
+% Canada
+\rowcolor{missed}   maximecb                  & Canada         & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{missed}   arthurcloche              & Canada         & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  MatthewSullivn            & Canada         & Canada         & network\_majority & CORRECT \\
+\rowcolor{correct}  GodPuffin                 & Canada         & Canada         & org\_location    & CORRECT \\
+\rowcolor{missed}   NullCarrierNC             & Canada         & not\_specified & not\_specified   & MISSED  \\
+% Indonesia
+\rowcolor{missed}   akaanakbaik               & Indonesia      & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  Reishandy                 & Indonesia      & Indonesia      & email\_tld       & CORRECT \\
+\rowcolor{correct}  randhipp                  & Indonesia      & Indonesia      & network\_majority & CORRECT \\
+\rowcolor{missed}   perasyudha                & Indonesia      & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{missed}   irfndi                    & Indonesia      & not\_specified & not\_specified   & MISSED  \\
+
+\end{longtable}
+
+
+
+
+
+% ════════════════════════════════════════════════════════════════════════════
+\section{Run 3 — seed=456, n=50 (5 per country × 10 countries)}
+% ════════════════════════════════════════════════════════════════════════════
+
+\subsection*{Summary}
+
+\begin{tabular}{lrrl}
+\toprule
+\textbf{Outcome} & \textbf{Count} & \textbf{\% of total} & \textbf{Note} \\
+\midrule
+Correct (inferred == known) & 33 & 66.0\% & \\
+Wrong   (inferred $\neq$ known) &  3 &  6.0\% & real errors \\
+Missed  (not\_specified)    & 14 & 28.0\% & not an error \\
+\midrule
+\textbf{Total} & \textbf{50} & \textbf{100\%} & \\
+\midrule
+\textbf{Predictions made (correct + wrong)} & \textbf{36} & \textbf{72.0\%} & coverage \\
+\textbf{Precision (correct / predicted)}    & \textbf{33/36} & \textbf{91.7\%} & key metric \\
+\bottomrule
+\end{tabular}
+
+\vspace{8pt}
+
+\subsection*{Per-Signal Accuracy}
+
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Signal} & \textbf{Correct} & \textbf{Tried} & \textbf{Accuracy} \\
+\midrule
+network\_majority  & 18 & 19 &  94.7\% \\
+website\_tld       &  3 &  3 & 100.0\% \\
+bio\_text          &  3 &  3 & 100.0\% \\
+org\_location      &  6 &  7 &  85.7\% \\
+company\_name      &  2 &  2 & 100.0\% \\
+email\_tld         &  1 &  2 &  50.0\% \\
+\midrule
+not\_specified     &  0 & 14 & — (missed) \\
+\bottomrule
+\end{tabular}
+
+\vspace{8pt}
+
+\subsection*{Per-User Results}
+
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{>{\ttfamily\small}p{4.4cm} p{3.0cm} p{3.0cm} p{2.6cm} p{1.6cm}}
+\toprule
+\textbf{Login} & \textbf{Known} & \textbf{Inferred} & \textbf{Signal} & \textbf{Result} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Login} & \textbf{Known} & \textbf{Inferred} & \textbf{Signal} & \textbf{Result} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+% India
+\rowcolor{correct}  hardik-143               & India          & India          & network\_majority & CORRECT \\
+\rowcolor{correct}  atharvakanchan25         & India          & India          & network\_majority & CORRECT \\
+\rowcolor{correct}  akash-kumar5             & India          & India          & network\_majority & CORRECT \\
+\rowcolor{correct}  krishnapaul242           & India          & India          & website\_tld     & CORRECT \\
+\rowcolor{missed}   mkr-infinity             & India          & not\_specified & not\_specified   & MISSED  \\
+% China
+\rowcolor{missed}   humanfirework            & China          & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{missed}   unliftedq                & China          & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  TeFuirnever              & China          & China          & network\_majority & CORRECT \\
+\rowcolor{correct}  Here-Tim2354             & China          & China          & bio\_text        & CORRECT \\
+\rowcolor{correct}  caohaotiantian           & China          & China          & network\_majority & CORRECT \\
+% United States
+\rowcolor{correct}  panghy                   & United States  & United States  & network\_majority & CORRECT \\
+\rowcolor{missed}   chadnickbok              & United States  & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  DavidVeksler             & United States  & United States  & org\_location    & CORRECT \\
+\rowcolor{missed}   briannajzhang            & United States  & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{missed}   TimMikeladze             & United States  & not\_specified & not\_specified   & MISSED  \\
+% Germany
+\rowcolor{wrong}    meln1k                   & Germany        & United States  & org\_location    & WRONG   \\
+\rowcolor{correct}  JUVOJustin               & Germany        & Germany        & network\_majority & CORRECT \\
+\rowcolor{correct}  f1shyondrugs             & Germany        & Germany        & network\_majority & CORRECT \\
+\rowcolor{correct}  Shinigami92              & Germany        & Germany        & email\_tld       & CORRECT \\
+\rowcolor{correct}  ByteExceptionM           & Germany        & Germany        & org\_location    & CORRECT \\
+% United Kingdom
+\rowcolor{missed}   mksglu                   & United Kingdom & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  danielpokladek           & United Kingdom & United Kingdom & org\_location    & CORRECT \\
+\rowcolor{correct}  naughtyduk               & United Kingdom & United Kingdom & bio\_text        & CORRECT \\
+\rowcolor{correct}  thoukydides              & United Kingdom & United Kingdom & website\_tld     & CORRECT \\
+\rowcolor{wrong}    championswimmer          & United Kingdom & India          & email\_tld       & WRONG   \\
+% France
+\rowcolor{correct}  SebastienDegodez         & France         & France         & company\_name    & CORRECT \\
+\rowcolor{correct}  axelfrache               & France         & France         & network\_majority & CORRECT \\
+\rowcolor{correct}  Korben00                 & France         & France         & network\_majority & CORRECT \\
+\rowcolor{wrong}    mohammadrezwankhan       & France         & India          & network\_majority & WRONG   \\
+\rowcolor{correct}  NapoSky                  & France         & France         & network\_majority & CORRECT \\
+% Brazil
+\rowcolor{correct}  GuiDev-01                & Brazil         & Brazil         & network\_majority & CORRECT \\
+\rowcolor{correct}  marciogranzotto          & Brazil         & Brazil         & network\_majority & CORRECT \\
+\rowcolor{missed}   marcoarruda              & Brazil         & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  ericgandrade             & Brazil         & Brazil         & bio\_text        & CORRECT \\
+\rowcolor{correct}  TrindadeBRA              & Brazil         & Brazil         & network\_majority & CORRECT \\
+% Japan
+\rowcolor{missed}   HAYASAKA7                & Japan          & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  cumuloworks              & Japan          & Japan          & org\_location    & CORRECT \\
+\rowcolor{missed}   wat-hiroaki              & Japan          & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  tatsukamijo              & Japan          & Japan          & network\_majority & CORRECT \\
+\rowcolor{missed}   ryo-manba                & Japan          & not\_specified & not\_specified   & MISSED  \\
+% Canada
+\rowcolor{missed}   carolhsiaoo              & Canada         & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  d-liya                   & Canada         & Canada         & network\_majority & CORRECT \\
+\rowcolor{correct}  skywalk1411              & Canada         & Canada         & company\_name    & CORRECT \\
+\rowcolor{missed}   echennells               & Canada         & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  andrewromanenco          & Canada         & Canada         & network\_majority & CORRECT \\
+% Indonesia
+\rowcolor{missed}   asepindrak               & Indonesia      & not\_specified & not\_specified   & MISSED  \\
+\rowcolor{correct}  Eliasilyz                & Indonesia      & Indonesia      & website\_tld     & CORRECT \\
+\rowcolor{correct}  fiqrisr                  & Indonesia      & Indonesia      & org\_location    & CORRECT \\
+\rowcolor{correct}  cutefishaep              & Indonesia      & Indonesia      & network\_majority & CORRECT \\
+\rowcolor{correct}  hidessh99                & Indonesia      & Indonesia      & org\_location    & CORRECT \\
+
+\end{longtable}
+
+
+
+
+════════════════════════════════════════════════════════════════════════════
+\section{Combined Results — All 3 Runs}
+% ════════════════════════════════════════════════════════════════════════════
+
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Run} & \textbf{n} & \textbf{Correct} & \textbf{Coverage} & \textbf{Precision} & \textbf{Wrong rate} \\
+\midrule
+Run 1 (seed=42)  & 50 & 27 & 64.0\% & 84.4\% & 15.6\% \\
+Run 2 (seed=123) & 49 & 28 & 61.2\% & 93.3\% &  6.7\% \\
+Run 3 (seed=456) & 50 & 33 & 72.0\% & 91.7\% &  8.3\% \\
+\midrule
+\textbf{Total / Average} & \textbf{149} & \textbf{88} & \textbf{65.8\%} & \textbf{89.8\%} & \textbf{10.2\%} \\
+\bottomrule
+\end{tabular}
+
+\vspace{8pt}
+\noindent\textbf{Interpretation:} Across 149 ground-truth users and 3 independent random samples,
+the pipeline achieves a \textbf{precision of 89.8\%} --- meaning that when it commits to a country
+prediction, it is correct approximately 9 times out of 10. Coverage sits at \textbf{65.8\%},
+meaning roughly one third of users who lack a location field also lack any secondary signal strong
+enough to infer from and are conservatively left as \texttt{not\_specified}. This is expected and
+honest behaviour: the pipeline abstains rather than guesses.
+
+The wrong rate of \textbf{10.2\% of predictions} represents the actual risk to geographic analysis.
+The most common failure pattern is diaspora developers --- users whose network, email, or company
+signals point to their country of origin rather than their current country of residence.
+
+
+
+\end{document}

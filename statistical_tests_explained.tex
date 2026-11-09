@@ -1,0 +1,389 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{mdframed}
+\usepackage{microtype}
+
+\definecolor{hdr}{RGB}{30,70,130}
+\definecolor{boxbg}{RGB}{240,248,255}
+\definecolor{wherebg}{RGB}{235,255,235}
+\definecolor{rowgray}{RGB}{245,245,245}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\titleformat{\section}{\large\bfseries\color{hdr}}{}{0em}{}[\vspace{3pt}\hrule]
+\titlespacing*{\section}{0pt}{14pt}{8pt}
+
+\newmdenv[backgroundcolor=boxbg, linecolor=hdr, linewidth=1pt,
+          leftmargin=0pt, rightmargin=0pt, innerleftmargin=10pt,
+          innerrightmargin=10pt, innertopmargin=8pt, innerbottommargin=8pt,
+          skipabove=6pt, skipbelow=4pt]{conceptbox}
+
+\newmdenv[backgroundcolor=wherebg, linecolor=green!50!black, linewidth=1pt,
+          leftmargin=0pt, rightmargin=0pt, innerleftmargin=10pt,
+          innerrightmargin=10pt, innertopmargin=6pt, innerbottommargin=6pt,
+          skipabove=4pt, skipbelow=6pt]{wherebox}
+
+\setlist[itemize]{noitemsep, topsep=2pt, leftmargin=1.4em}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries\color{hdr} Statistical Tests Used in the Thesis}\\[4pt]
+{\normalsize Explained simply, with their exact location in the analysis}
+\end{center}
+\vspace{-4pt}\hrule\vspace{10pt}
+
+{\small This document explains every statistical test used in the thesis pipeline in plain language.
+No prior statistics knowledge is assumed. Each test has a \textbf{What it is} block (the concept),
+a \textbf{Simple example} (a real-world analogy), and a \textbf{Where we use it} block
+(exactly which script and research question).}
+
+\vspace{6pt}
+
+%% ═══════════════════════════════════════════════════════════════════════════
+\section{Wilson 95\% Confidence Interval (CI)}
+%% ═══════════════════════════════════════════════════════════════════════════
+
+\begin{conceptbox}
+\textbf{What it is.}
+When you calculate an adoption rate (e.g.\ ``30\% of repos in France are agentic''), that number
+comes from a limited sample. The Wilson CI gives you a \emph{range} around that number and says:
+``we are 95\% sure the true rate falls somewhere between X\% and Y\%''. The smaller the sample,
+the wider the range. The larger the sample, the tighter and more trustworthy the range.
+
+\medskip
+\textbf{Simple example.}
+You ask 10 people if they like pizza and 7 say yes --- that is 70\%. But with only 10 people,
+you are not very confident. The CI might say: ``somewhere between 35\% and 93\%''. Now ask
+1000 people and get 70\% --- the CI becomes ``67\% to 73\%''. Same percentage, much more trust.
+
+\medskip
+\textbf{Why Wilson specifically?}
+The standard formula for CIs breaks down when percentages are very close to 0\% or 100\%,
+or when samples are small. The Wilson formula is more accurate in those edge cases.
+\end{conceptbox}
+
+\begin{wherebox}
+\textbf{Where we use it.}
+\begin{itemize}
+  \item \textbf{Stage 4a (Geographic analysis):} every country gets an adoption rate + Wilson CI.
+        Countries with fewer than 30 repos are excluded because their CI would be too wide to be meaningful.
+  \item \textbf{Stage 5g (World regions):} each of the 10 macro-regions (North America, Europe,
+        East Asia, etc.) gets an adoption rate + Wilson CI.
+  \item \textbf{Stage 4b (Top/Bottom countries):} the dot-plot of top and bottom countries
+        shows the Wilson CI as error bars around each country's rate.
+\end{itemize}
+\end{wherebox}
+
+%% ═══════════════════════════════════════════════════════════════════════════
+\section{Binomial Test}
+%% ═══════════════════════════════════════════════════════════════════════════
+
+\begin{conceptbox}
+\textbf{What it is.}
+A binomial test checks whether an observed percentage is significantly higher (or lower) than
+a specific baseline you choose in advance. You set a null hypothesis --- a boring default
+assumption --- and ask: ``is my result too high to be a coincidence?''
+
+\medskip
+\textbf{Simple example.}
+You claim a coin is fair (50\% heads). You flip it 100 times and get 68 heads. The binomial
+test tells you: if the coin were truly fair, would you get 68 or more heads by pure luck?
+If the answer is ``less than 5\% chance'', you reject the fair-coin claim.
+
+\medskip
+In the thesis, the baseline is 5\%. The question is: ``is global AI adoption significantly
+higher than a trivial 5\%?'' The test confirms this with a p-value far below 0.05.
+\end{conceptbox}
+
+\begin{wherebox}
+\textbf{Where we use it.}
+\begin{itemize}
+  \item \textbf{Stage 4b, RQ1 --- Global adoption:} tests whether the observed global adoption
+        rate is significantly greater than the 5\% null hypothesis baseline.
+        Reports the rate, Wilson CI, and p-value.
+\end{itemize}
+\end{wherebox}
+
+%% ═══════════════════════════════════════════════════════════════════════════
+\section{McNemar Test}
+%% ═══════════════════════════════════════════════════════════════════════════
+
+\begin{conceptbox}
+\textbf{What it is.}
+McNemar is used when you apply two different methods to the \emph{same} set of items and want
+to know if the two methods give meaningfully different results. Because both methods look at
+the same repos, they are not independent --- McNemar accounts for this pairing.
+
+\medskip
+\textbf{Simple example.}
+A doctor tests 200 patients for a disease using two different tests (Test A and Test B) on the
+same patients. Some patients are positive on A but negative on B, and vice versa. McNemar
+checks whether the two tests disagree \emph{more than you would expect by chance}.
+
+\medskip
+In the thesis, the two ``tests'' are: (1) detecting adoption using only config files (Pass A),
+versus (2) detecting adoption using the full pipeline (all passes combined). The question is:
+does the full pipeline find significantly more agentic repos than Pass A alone?
+\end{conceptbox}
+
+\begin{wherebox}
+\textbf{Where we use it.}
+\begin{itemize}
+  \item \textbf{Stage 4b, RQ2 --- Multi-signal vs single-signal:} compares the adoption rate
+        found by Pass A alone against the full pipeline on the same corpus.
+        Reports the percentage-point difference ($\Delta$pp) and the McNemar $\chi^2$ statistic.
+\end{itemize}
+\end{wherebox}
+
+%% ═══════════════════════════════════════════════════════════════════════════
+\section{Chi-Squared Test ($\chi^2$)}
+%% ═══════════════════════════════════════════════════════════════════════════
+
+\begin{conceptbox}
+\textbf{What it is.}
+Chi-squared tests whether two categorical variables are related or independent. You make a table
+of counts (like a spreadsheet with groups in rows and outcomes in columns) and the test asks:
+``are the differences between groups too large to be random noise?''
+
+\medskip
+\textbf{Simple example.}
+You survey people in 5 cities and ask if they own a car (yes/no). Chi-squared tests whether
+car ownership rates differ significantly across cities, or whether the differences are just
+random fluctuations you would expect from sampling.
+
+\medskip
+In the thesis, the ``groups'' are countries (or regions), and the ``outcome'' is agentic
+versus non-agentic. Chi-squared is the \emph{omnibus} test --- it tells you that at least one
+country differs from the others, but not which one specifically (that is what Fisher does next).
+\end{conceptbox}
+
+\begin{wherebox}
+\textbf{Where we use it.}
+\begin{itemize}
+  \item \textbf{Stage 4b, RQ3 --- Geographic variation:} $\chi^2$ across all eligible countries
+        to confirm that adoption rates differ significantly by country.
+  \item \textbf{Stage 4e (MENA analysis):} within-MENA $\chi^2$ across the 5 sub-regions
+        (Gulf, Levant, North Africa, Turkey, Iran).
+  \item \textbf{Stage 5g (World regions):} $\chi^2$ omnibus across the 10 macro-regions.
+\end{itemize}
+\end{wherebox}
+
+%% ═══════════════════════════════════════════════════════════════════════════
+\section{Fisher Exact Test}
+%% ═══════════════════════════════════════════════════════════════════════════
+
+\begin{conceptbox}
+\textbf{What it is.}
+Fisher exact is similar to chi-squared but more reliable when sample sizes are small.
+Chi-squared is an approximation that becomes inaccurate with small counts (fewer than
+5--10 items in a cell). Fisher computes the exact probability, so it works even with
+very small groups.
+
+\medskip
+Fisher is typically used \emph{pairwise} --- comparing two specific groups against each other,
+or one group against a global baseline. It answers: ``is country X's adoption rate
+significantly different from the global average?''
+
+\medskip
+\textbf{Simple example.}
+You have only 12 repos from Luxembourg. Chi-squared would be unreliable here. Fisher exact
+handles the small number correctly and tells you whether Luxembourg's rate is genuinely
+different from the global rate.
+\end{conceptbox}
+
+\begin{wherebox}
+\textbf{Where we use it.}
+\begin{itemize}
+  \item \textbf{Stage 4b, RQ3:} pairwise Fisher for each country vs the global adoption mean,
+        after the chi-squared omnibus confirms that variation exists.
+  \item \textbf{Stage 4e (MENA):} each MENA country vs the global mean (Fisher exact +
+        BH correction). Also used for each MENA sub-region vs global.
+  \item \textbf{Stage 5g (World regions):} pairwise Fisher between all pairs of macro-regions
+        after the omnibus chi-squared.
+\end{itemize}
+\end{wherebox}
+
+%% ═══════════════════════════════════════════════════════════════════════════
+\section{Benjamini-Hochberg (BH) FDR Correction}
+%% ═══════════════════════════════════════════════════════════════════════════
+
+\begin{conceptbox}
+\textbf{What it is.}
+When you run many statistical tests at the same time --- say, 50 countries, each compared
+against the global mean --- you expect roughly 5\% of them to appear significant purely by
+chance (since we use a 5\% threshold). That means about 2--3 countries would look significant
+even if nothing real is happening. This is called the \emph{multiple testing problem}.
+
+\medskip
+Benjamini-Hochberg (BH) fixes this by adjusting the significance thresholds across all your
+tests together, controlling the \emph{False Discovery Rate} (FDR) --- the proportion of your
+``significant'' results that are actually false alarms.
+
+\medskip
+\textbf{Simple example.}
+Imagine testing 100 medicines for a side effect using p $<$ 0.05. By pure chance, about 5
+medicines will appear to have a side effect even if none of them do. BH correction raises the
+bar for the weakest results so that those 5 false alarms are filtered out.
+
+\medskip
+\textbf{BH vs Bonferroni:} Another common correction is Bonferroni, which is stricter.
+We use BH because it is less conservative --- it allows more true discoveries through while
+still controlling false alarms. Bonferroni can miss real effects when you have many tests.
+\end{conceptbox}
+
+\begin{wherebox}
+\textbf{Where we use it.}
+\begin{itemize}
+  \item \textbf{Stage 4b:} applied to all pairwise Fisher tests across countries (RQ3).
+  \item \textbf{Stage 4e (MENA):} applied to Fisher tests for each MENA country vs global mean.
+  \item \textbf{Stage 5g (World regions):} applied to all pairwise Fisher tests across
+        the 10 macro-regions.
+\end{itemize}
+BH correction is always applied together with Fisher exact whenever more than one pairwise
+comparison is made.
+\end{wherebox}
+
+%% ═══════════════════════════════════════════════════════════════════════════
+\section{Kruskal-Wallis Test}
+%% ═══════════════════════════════════════════════════════════════════════════
+
+\begin{conceptbox}
+\textbf{What it is.}
+Kruskal-Wallis tests whether three or more groups have different distributions.
+It is the non-parametric version of a one-way ANOVA, meaning it does \emph{not} assume
+the data follows a normal (bell-curve) distribution. This matters because repo sizes
+(commits, stars, lines of code) are heavily skewed --- a few enormous repos pull the
+average far from the typical repo.
+
+\medskip
+Kruskal-Wallis works by ranking all values together (smallest = rank 1, largest = rank N)
+and then checking whether the ranks are distributed evenly across groups.
+
+\medskip
+\textbf{Simple example.}
+You have three groups of students: beginners, intermediates, and experts. You measure their
+test scores. The scores are not normally distributed (a few geniuses skew the data). Kruskal-Wallis
+tests whether at least one group scores significantly differently from the others, without
+making assumptions about the shape of the distribution.
+
+\medskip
+In the thesis, the three groups are: Small repos / Medium repos / Large repos (split by percentile).
+The question is: do larger repos have significantly higher adoption rates?
+\end{conceptbox}
+
+\begin{wherebox}
+\textbf{Where we use it.}
+\begin{itemize}
+  \item \textbf{Stage 4d (Size analysis):} tests whether adoption rates differ across three
+        repo size strata (small / medium / large), applied separately for three size metrics:
+        star count, commit count, and code volume.
+  \item \textbf{Stage 5b (Repo size comparison):} 3-way Kruskal-Wallis comparing
+        No-AI / AI-Assisted / Agentic repos on four metrics: commits, code KB, stars, forks.
+\end{itemize}
+\end{wherebox}
+
+%% ═══════════════════════════════════════════════════════════════════════════
+\section{Mann-Whitney U Test}
+%% ═══════════════════════════════════════════════════════════════════════════
+
+\begin{conceptbox}
+\textbf{What it is.}
+Mann-Whitney U is a pairwise version of Kruskal-Wallis --- it compares exactly two groups.
+You use it after Kruskal-Wallis tells you ``at least one group differs'' to zoom in and
+identify which specific pair drives the difference.
+
+\medskip
+Like Kruskal-Wallis, it is rank-based and makes no assumptions about the distribution shape.
+
+\medskip
+\textbf{Simple example.}
+After Kruskal-Wallis tells you that beginners, intermediates, and experts score differently,
+Mann-Whitney U lets you specifically compare beginners vs experts to quantify that difference.
+\end{conceptbox}
+
+\begin{wherebox}
+\textbf{Where we use it.}
+\begin{itemize}
+  \item \textbf{Stage 5b (Repo size comparison):} pairwise comparison between the
+        \emph{Agentic} group and the \emph{No-AI} group specifically, for each of the four
+        size metrics (commits, code KB, stars, forks). This is the most informative comparison
+        since we want to know how agentic repos differ from repos with no AI at all.
+\end{itemize}
+\end{wherebox}
+
+%% ═══════════════════════════════════════════════════════════════════════════
+\section{Rank-Biserial Effect Size ($r_{rb}$)}
+%% ═══════════════════════════════════════════════════════════════════════════
+
+\begin{conceptbox}
+\textbf{What it is.}
+Statistical significance tells you whether a difference is real (not by chance).
+Effect size tells you whether the difference is \emph{meaningful in practice}.
+With tens of thousands of repos, even a difference of 1 commit between groups can be
+``statistically significant'' --- but that does not mean it matters.
+
+\medskip
+Rank-biserial ($r_{rb}$) is an effect size measure for Mann-Whitney U. It ranges from
+$-1$ to $+1$:
+\begin{itemize}
+  \item $|r_{rb}| \approx 0.1$ --- small effect (difference exists but is minor)
+  \item $|r_{rb}| \approx 0.3$ --- medium effect (noticeable in practice)
+  \item $|r_{rb}| \approx 0.5$ or higher --- large effect (practically meaningful)
+\end{itemize}
+
+\medskip
+\textbf{Simple example.}
+You find that agentic repos have significantly more commits (p $<$ 0.001). But $r_{rb} = 0.08$
+means the effect is tiny --- statistically real but practically irrelevant. If $r_{rb} = 0.52$,
+the difference is both statistically real and large enough to matter.
+
+\medskip
+\textbf{Why it matters for this thesis:}
+With $\sim$50{,}000 repos, almost any difference will be statistically significant.
+Reporting $r_{rb}$ alongside the p-value prevents over-interpreting trivial differences.
+\end{conceptbox}
+
+\begin{wherebox}
+\textbf{Where we use it.}
+\begin{itemize}
+  \item \textbf{Stage 5b (Repo size comparison):} reported alongside Mann-Whitney U for each
+        of the four size metrics (commits, code KB, stars, forks) comparing Agentic vs No-AI repos.
+        Tells us not just \emph{that} the groups differ in size, but \emph{how much} they differ.
+\end{itemize}
+\end{wherebox}
+
+%% ═══════════════════════════════════════════════════════════════════════════
+\section*{Quick Reference Summary}
+%% ═══════════════════════════════════════════════════════════════════════════
+
+\vspace{4pt}
+\begin{tabular}{L{3.8cm}L{4cm}L{6.5cm}}
+\toprule
+\textbf{Test} & \textbf{Question it answers} & \textbf{Used in} \\
+\midrule
+\rowcolor{rowgray}
+Wilson 95\% CI & How confident are we in this rate? & Stages 4a, 4b, 5g \\
+Binomial test & Is global adoption $>$ 5\%? & Stage 4b, RQ1 \\
+\rowcolor{rowgray}
+McNemar test & Does the full pipeline find more than Pass A alone? & Stage 4b, RQ2 \\
+Chi-squared ($\chi^2$) & Do rates differ across countries/regions? & Stages 4b, 4e, 5g \\
+\rowcolor{rowgray}
+Fisher exact & Is country X different from the global mean? & Stages 4b, 4e, 5g \\
+BH FDR correction & Are our many Fisher tests producing false alarms? & Stages 4b, 4e, 5g \\
+\rowcolor{rowgray}
+Kruskal-Wallis & Do small/medium/large repos differ in adoption? & Stages 4d, 5b \\
+Mann-Whitney U & Are agentic repos bigger than no-AI repos? & Stage 5b \\
+\rowcolor{rowgray}
+Rank-biserial $r_{rb}$ & How large is the agentic vs no-AI size difference? & Stage 5b \\
+\bottomrule
+\end{tabular}
+
+\end{document}

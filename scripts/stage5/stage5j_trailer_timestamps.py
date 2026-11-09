@@ -105,7 +105,8 @@ def gql_post(query: str, headers: dict) -> dict:
                                  headers=headers,
                                  timeout=60)
         except (requests.exceptions.ReadTimeout,
-                requests.exceptions.ConnectionError) as exc:
+                requests.exceptions.ConnectionError,
+                requests.exceptions.ChunkedEncodingError) as exc:
             if attempt < 5:
                 print(f"\n  Network error ({exc.__class__.__name__}), "
                       f"retry {attempt+1}/5 in {wait}s …", flush=True)
@@ -307,7 +308,8 @@ def main():
     print()
 
     write_header = not OUT_CSV.exists() or not args.resume
-    out_fh = open(OUT_CSV, "a", buffering=1)
+    file_mode = "a" if args.resume else "w"
+    out_fh = open(OUT_CSV, file_mode, buffering=1)
     if write_header:
         out_fh.write("full_name,first_ai_date,first_trailer_agent,"
                      "rounds_needed,api_status\n")

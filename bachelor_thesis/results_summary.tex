@@ -12,6 +12,8 @@
 \usepackage{colortbl}
 \usepackage{hyperref}
 
+\definecolor{rowgray}{RGB}{245,245,245}
+
 \graphicspath{{figures/}}
 
 \setlength{\parskip}{3pt}
@@ -108,7 +110,7 @@ Pass & Agentic & Input \\
 \midrule
 Pass 3a --- config files    & 28,397 (47.2\%) & 60,129 \\
 Pass 3b --- commit trailers & 11,937 (37.6\%) & 31,732 \\
-Pass 3c --- deep scan       & 70 agentic; 4,397 AI-asst & 19,795 \\
+Pass 3c --- deep scan       & 70 & 19,795 \\
 \bottomrule
 \end{tabular}
 
@@ -437,72 +439,6 @@ Morocco      &  81 & 38.3* \\
 \vspace{6pt}
 
 
-
-\newpage
-% ─── EXTENDED PIPELINE CHECK ──────────────────────────────────────────────────
-\section*{Extended Pipeline Check --- Coverage Validation (Saturation Check)}
-
-\textbf{Input:} 19,768 repos labelled \texttt{none} (15,368) or \texttt{ai\_assisted} (4,397) after Stage 3.\\
-\textbf{Purpose:} Verify Stage 3 saturation by scanning for signals not included in the original three passes.
-
-\vspace{4pt}
-\begin{tabular}{@{}p{2.2cm} p{5.8cm} p{2.4cm} r r@{}}
-\toprule
-\textbf{Pass} & \textbf{What was checked} & \textbf{Signal (tier)} & \textbf{Input} & \textbf{New agentic} \\
-\midrule
-\textbf{5a} --- Extended bots &
-  12 additional bot accounts as commit/PR authors:
-  \textit{sweep-ai, openhands-agent, codegen-sh, amazon-q-developer,
-  coderabbitai, junie, factory-bot, github-copilot,
-  devin-ai-integration, jules-google, ellipsis-dev, greptileai} &
-  bot\_author (STRONG) & 19,768 & \textbf{0} \\[6pt]
-\textbf{5b} --- Workflow scan &
-  11 AI GitHub Actions in \texttt{.github/workflows/} YAML content:
-  \textit{anthropic/claude-code-action, sweep-ai/sweep,
-  All-Hands-AI/OpenHands, codegen-sh/codegen, devin-ai-integration/devin,
-  junie-jetbrains/junie, amazon-q-developer-action,
-  greptileai/greptile-action, ellipsis-dev/ellipsis-action,
-  factory-ai/factory-action, github/copilot-autofix-action} &
-  ci\_ai\_action (STRONG) & 19,768 & \textbf{0} \\[6pt]
-\textbf{5c} --- Extended configs &
-  18 config paths/dirs not in Stage 3:
-  \texttt{.amazonq/}, \texttt{.continue/}, \texttt{.codeium/},
-  \texttt{sweep.yaml}, \texttt{coderabbit.yaml}, \texttt{.cursorrules},
-  \texttt{.cursor/}, \texttt{.mentat/}, \texttt{.sourcegraph/},
-  \texttt{.ellipsis.yaml}, \texttt{.tabnine/} and others &
-  config\_file (MEDIUM) & 19,768 & \textbf{0} \\
-\bottomrule
-\end{tabular}
-
-\vspace{4pt}
-\textbf{Conclusion:} Zero new detections across all three extended passes confirms that Stage 3's signal set
-has reached \textbf{saturation}. The remaining 19,768 repos show no detectable agentic footprint using any
-publicly observable signal. Silent IDE usage (e.g.\ Cursor, Copilot inline completions with no config file)
-remains undetectable by design and is documented as a validity threat.
-
-\vspace{6pt}
-\noindent
-\colorbox{green!15}{\parbox{0.975\linewidth}{
-\vspace{3pt}
-\centering
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{@{}
-  >{\centering\arraybackslash\columncolor{green!25}}p{3.8cm}
-  >{\centering\arraybackslash\columncolor{green!25}}p{3.8cm}
-  >{\centering\arraybackslash\columncolor{green!25}}p{3.8cm}
-  >{\centering\arraybackslash\columncolor{green!10}}p{4.4cm}@{}}
-\textbf{5a Extended bots} & \textbf{5b Workflows} & \textbf{5c Configs} & \textbf{Verdict} \\
-12 new bot accounts & 11 new AI actions & 18 new config paths & \\
-\textbf{0 new agentic} & \textbf{0 new agentic} & \textbf{0 new agentic} &
-\textbf{Stage 3 = saturated} \\
-\end{tabular}
-\renewcommand{\arraystretch}{1}
-\vspace{3pt}
-}}
-
-\vspace{6pt}
-\hrule
-\vspace{6pt}
 
 \newpage
 % ─── FRAMEWORK ANALYSIS ───────────────────────────────────────────────────────
@@ -865,69 +801,50 @@ CodeRabbit      &   144 &  2.2 \\
   \small\textit{E3 --- Top 15 countries by AI adoption in the React + Next.js subset}
 \end{center}
 
-\vspace{4pt}
+\vspace{6pt}
 \hrule
-\vspace{4pt}
+\vspace{6pt}
 
-% ── E4: First Agent Commit + Adoption Patterns ───────────────────────────────
+\newpage
+% ─── E4: TOOL DIVERSITY ───────────────────────────────────────────────────────
+\section*{Tool Diversity --- Single vs Multi-Agent Repos (Stage 5f)}
+
+\textbf{Population:} 40,364 agentic repos. \quad
+\textbf{Single-agent:} exactly 1 tool detected. \quad
+\textbf{Multi-agent:} 2+ tools detected.
+
+\vspace{4pt}
 \begin{multicols}{2}
 \footnotesize
 
-\subsection*{First Claude Code Commit \& Adoption Patterns}
-\textbf{Population:} 1,137 sampled Claude Code agentic repos (trailer\_count $> 0$).\\
-Trailers found in \textbf{1,088/1,137 repos (95.7\%)}.
-
-\vspace{3pt}
-\textbf{Trailer timing (days from repo creation to first AI commit):}
-
-\vspace{2pt}
 \begin{tabular}{@{}lrr@{}}
 \toprule
-Timing & Count & \% \\
+Tier & Repos & \% of agentic \\
 \midrule
-Day 1 ($\leq$7\,d)  & 453 & 41.6 \\
-Early (8--30\,d)    & 139 & 12.8 \\
-Late ($>$30\,d)     & 496 & 45.6 \\
-Not found           &  49 &  4.3 \\
+Single-agent (1 tool)   & 26,284 & 65.1 \\
+\midrule
+Dual (2 tools)          & 11,392 & 28.2 \\
+Small multi (3 tools)   &  2,016 &  5.0 \\
+Cluster (4 tools)       &    456 &  1.1 \\
+High diversity (5--9)   &    209 &  0.5 \\
+Extreme (10+ tools)     &      7 &  0.0 \\
+\midrule
+\textbf{Multi-agent total} & \textbf{14,080} & \textbf{34.9} \\
+\midrule
+\textbf{All agentic}    & \textbf{40,364} & \textbf{100.0} \\
 \bottomrule
 \end{tabular}
-
-\vspace{2pt}
-Median days to first trailer: \textbf{18.5\,d}.\quad
-Median commits before AI: \textbf{28.1\%}.
 
 \columnbreak
 
-\textbf{Adoption patterns:}
-
-\vspace{2pt}
-\begin{tabular}{@{}lrr@{}}
-\toprule
-Pattern & Count & \% \\
-\midrule
-Trailer-only (no config)        &   946 & 83.2 \\
-AI-native (config + trailer $\leq$7d) &  63 &  5.5 \\
-Config-first                    &    56 &  4.9 \\
-Trailer-first                   &    23 &  2.0 \\
-Not found                       &    49 &  4.3 \\
-\bottomrule
-\end{tabular}
-
-\vspace{2pt}
-Config files found in \textbf{148/1,137 repos (13.0\%)}.\;
-Median config day: \textbf{2\,d}.
-
-\vspace{3pt}
 \textbf{Key findings:}
-\begin{itemize}\setlength\itemsep{0pt}
-  \item Most developers (\textbf{83.2\%}) use Claude Code without ever
-        committing a config file.
-  \item The bimodal timing split (41.6\% day-1 vs 45.6\% late) suggests two
-        archetypes: \emph{AI-native} starters vs developers who adopt
-        Claude Code mid-project.
-  \item When a config file is present, it typically appears very early
-        (median day 2).
-  \item Only 5.5\% of repos show the full AI-native pattern.
+\begin{itemize}\setlength\itemsep{1pt}
+  \item \textbf{65.1\%} of agentic repos use exactly one AI tool.
+  \item Dual-agent (2 tools) is the dominant multi-tool tier at \textbf{28.2\%}.
+  \item Usage drops sharply after 2 tools: 3-tool repos are 5.0\%, 4-tool 1.1\%.
+  \item Only 7 repos use 10+ tools, representing extreme diversity.
+  \item Multi-agent rate of \textbf{34.9\%} exceeds the Robbes et al.\ (2025)
+        figure ($\approx$33\%) for a comparable corpus window.
 \end{itemize}
 
 \end{multicols}
@@ -936,15 +853,413 @@ Median config day: \textbf{2\,d}.
 \begin{center}
   \begin{minipage}[t]{0.47\textwidth}
     \centering
-    \includegraphics[width=\linewidth]{stage5/fig_adoption_timing.png}\\
-    \small\textit{E4 --- First AI commit timing (donut + histogram)}
+    \includegraphics[width=\linewidth]{stage5/fig_tool_loyalty_bar.png}\\
+    \small\textit{E4 --- Agent count distribution per agentic repo}
   \end{minipage}
   \hfill
   \begin{minipage}[t]{0.47\textwidth}
     \centering
-    \includegraphics[width=\linewidth]{stage5/fig_adoption_pattern.png}\\
-    \small\textit{E4 --- Adoption pattern distribution}
+    \includegraphics[width=\linewidth]{stage5/fig_tool_loyalty_heatmap.png}\\
+    \small\textit{E4 --- Tool co-occurrence heatmap (top agent pairs)}
   \end{minipage}
+\end{center}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── E5: WORLD REGIONS ────────────────────────────────────────────────────────
+\section*{World Regions Analysis (Stage 5g)}
+
+\textbf{Coverage:} 33,629 located repos across 10 macro-regions.
+Significance: pairwise Fisher exact vs global mean, BH FDR $\alpha = 0.05$.
+
+\vspace{4pt}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+\textbf{Region} & \textbf{Repos} & \textbf{\% corpus} & \textbf{Agentic\%} & \textbf{95\% CI} & \textbf{Sig.} \\
+\midrule
+\rowcolor{rowgray}
+North America              & 5,866 &  9.8 & 76.1 & [75.0, 77.2] & * \\
+Western Europe             & 5,749 &  9.6 & 72.8 & [71.6, 74.0] & * \\
+\rowcolor{rowgray}
+East Asia                  & 8,937 & 14.9 & 69.8 & [68.9, 70.8] & * \\
+Oceania                    &   748 &  1.2 & 68.3 & [64.9, 71.6] & * \\
+\rowcolor{rowgray}
+Eastern Europe \& C. Asia  & 1,197 &  2.0 & 63.7 & [61.0, 66.4] & -- \\
+Latin America \& Caribbean & 1,525 &  2.5 & 62.4 & [60.0, 64.9] & -- \\
+\rowcolor{rowgray}
+Southeast Asia             & 1,767 &  2.9 & 60.8 & [58.5, 63.2] & * \\
+MENA                       & 1,590 &  2.6 & 57.5 & [55.1, 60.0] & * \\
+\rowcolor{rowgray}
+South Asia                 & 5,517 &  9.2 & 44.3 & [42.9, 45.6] & * \\
+Sub-Saharan Africa         &   736 &  1.2 & 36.4 & [33.1, 39.9] & * \\
+\bottomrule
+\end{tabular}
+
+\vspace{3pt}
+{\small * = significantly different from global mean (Fisher exact, BH-corrected). \quad
+Range: \textbf{76.1\%} (North America) to \textbf{36.4\%} (Sub-Saharan Africa) = \textbf{39.7\,pp gap}.}
+
+\vspace{4pt}
+\begin{center}
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_world_regions_adoption.png}\\
+    \small\textit{E5 --- Agentic adoption rate by world region (95\% Wilson CI)}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_world_regions_agents.png}\\
+    \small\textit{E5 --- Agent tool breakdown by world region}
+  \end{minipage}
+\end{center}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── E6: COMMIT DENSITY ───────────────────────────────────────────────────────
+\section*{Commit Density Analysis (Stage 5h)}
+
+\textbf{Population:} 11,937 agentic repos with $\geq$1 commit trailer.
+\textbf{Metric:} $\text{ai\_density} = \text{trailer\_count} / \text{total\_commits}$.
+\textbf{Buckets:} follow Robbes et al.\ (2025).
+
+\vspace{4pt}
+\begin{multicols}{2}
+\footnotesize
+
+\begin{tabular}{@{}p{2.8cm}rrr@{}}
+\toprule
+Bucket & Range & Repos & \% \\
+\midrule
+\rowcolor{rowgray}
+Experimental & $<$1\%    & 2,438 & 20.4 \\
+Limited      & 1--5\%   & 3,442 & 28.8 \\
+\rowcolor{rowgray}
+Consistent   & 5--20\%  & 2,838 & 23.8 \\
+Pervasive    & $>$20\%  & 3,219 & 27.0 \\
+\midrule
+\textbf{Total} & & \textbf{11,937} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+
+\vspace{3pt}
+Density statistics:\\
+Mean: \textbf{0.171} \quad Median: \textbf{0.052}\\
+P25: 0.013 \quad P75: 0.227
+
+\columnbreak
+
+\textbf{Median density by agent:}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Agent & Median & $n$ \\
+\midrule
+Claude Code    & 0.101 & 8,107 \\
+Replit         & 0.157 &    25 \\
+Aider          & 0.113 &     8 \\
+Cursor         & 0.026 &   812 \\
+Devin          & 0.037 &    85 \\
+GitHub Copilot & n/a   &   999 \\
+\bottomrule
+\end{tabular}
+
+\vspace{3pt}
+\textbf{Key finding:} Distribution is roughly flat across the four
+buckets. Claude Code (0.101) shows higher commit integration than
+Cursor (0.026), consistent with its terminal-first workflow.
+
+\end{multicols}
+
+\vspace{4pt}
+\begin{center}
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_commit_density_buckets.png}\\
+    \small\textit{E6 --- Commit density bucket distribution}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_commit_density_by_agent.png}\\
+    \small\textit{E6 --- Median commit density by agent}
+  \end{minipage}
+\end{center}
+
+\vspace{4pt}
+\begin{center}
+  \includegraphics[width=0.70\textwidth]{stage5/fig_commit_density_hist.png}\\
+  \small\textit{E6 --- Commit density distribution histogram}
+\end{center}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+% ─── E7: COUNTRY ADOPTION TIMELINE ───────────────────────────────────────────
+\section*{Country Adoption Timeline (Stage 5e)}
+
+\textbf{Population:} 33,848 located repos across 66 countries (Feb 2025 -- Nov 2026).\\
+\textbf{Cell filter:} $\geq$5 repos per country $\times$ month. Total cells: 1,274.\\
+\textbf{Purpose:} Track whether adoption rates changed over time within individual countries.
+
+\vspace{4pt}
+\begin{center}
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_country_heatmap.png}\\
+    \small\textit{E7 --- Country $\times$ month adoption rate heatmap}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_country_bump.png}\\
+    \small\textit{E7 --- Country rank over time (bump chart)}
+  \end{minipage}
+\end{center}
+
+\vspace{4pt}
+\begin{center}
+  \includegraphics[width=0.78\textwidth]{stage5/fig_country_cumulative.png}\\
+  \small\textit{E7 --- Cumulative adoption curve by country}
+\end{center}
+
+\vspace{6pt}
+\hrule
+\vspace{6pt}
+
+\newpage
+% ─── STAGES 5i / 5j / 5k ─────────────────────────────────────────────────────
+\section*{First AI Signal Timestamps \& Adoption Timing (Stages 5i, 5j, 5k)}
+
+\textbf{Purpose:} Retrieve the date of the \emph{oldest} AI signal per repo (config file or commit trailer)
+and classify each agentic repo by how quickly it adopted AI relative to its creation date.
+
+\vspace{6pt}
+\begin{multicols}{2}
+\footnotesize
+
+% ── 5i ───────────────────────────────────────────────────────────────────────
+\subsection*{Stage 5i --- Config File Timestamps}
+\textbf{Input:} 28,397 agentic repos with $\geq$1 config file (Pass 3a).\\
+\textbf{Method:} GraphQL batch (10 repos/query); oldest commit touching each
+detected config path → \texttt{first\_ai\_date}.
+
+\vspace{3pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Status & Repos & \% \\
+\midrule
+ok (date found)       & 28,369 & 99.9 \\
+No date found         &      2 &  0.0 \\
+Deleted / not found   &     26 &  0.1 \\
+\midrule
+\textbf{Total}        & \textbf{28,397} & \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Top first config files:}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+File & Repos & \% \\
+\midrule
+\texttt{CLAUDE.md}                       & 12,162 & 42.9 \\
+\texttt{AGENTS.md}                       &  9,078 & 32.0 \\
+\texttt{.claude}                         &  3,526 & 12.4 \\
+\texttt{.github/copilot-instructions.md} &    984 &  3.5 \\
+\texttt{.cursor/rules}                   &    871 &  3.1 \\
+\texttt{.coderabbit.yaml}                &    255 &  0.9 \\
+\texttt{.cursorrules}                    &    245 &  0.9 \\
+\texttt{.kiro}                           &    152 &  0.5 \\
+\texttt{GEMINI.md}                       &    149 &  0.5 \\
+\texttt{.opencode}                       &    147 &  0.5 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+Peak adoption month: \textbf{March 2026} (3,283 repos).\\
+Growth onset: accelerated from Jan 2026 onward.
+
+\columnbreak
+
+% ── 5j ───────────────────────────────────────────────────────────────────────
+\subsection*{Stage 5j --- Commit Trailer Timestamps}
+\textbf{Input:} 11,937 agentic repos with \texttt{trailer\_count} $> 0$ (Pass 3b).\\
+\textbf{Method:} GraphQL oldest-first pagination; scans all commits until
+earliest AI trailer found.
+
+\vspace{3pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Status & Repos & \% \\
+\midrule
+ok (date found)      & 10,723 & 89.8 \\
+Trailer not found    &  1,210 & 10.1 \\
+Null response        &      4 &  0.1 \\
+\midrule
+\textbf{Total}       & \textbf{11,937} & \\
+\bottomrule
+\end{tabular}
+
+\vspace{3pt}
+{\footnotesize\textit{10.1\% trailer-not-found: detected in Stage 3 from a sample of
+100 commits; exhaustive full-history scan found no matching commit —
+likely deep-history or force-pushed repos.}}
+
+\vspace{4pt}
+\textbf{First trailer agent (10,723 ok repos):}
+
+\vspace{2pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Agent & Repos & \% \\
+\midrule
+Claude Code     & 6,362 & 59.3 \\
+Generic         & 2,507 & 23.4 \\
+GitHub Copilot  &   999 &  9.3 \\
+Cursor          &   702 &  6.5 \\
+OpenAI Codex    &    41 &  0.4 \\
+Devin           &    34 &  0.3 \\
+Gemini CLI      &    32 &  0.3 \\
+CodeRabbit      &    27 &  0.3 \\
+Other           &    19 &  0.2 \\
+\midrule
+\textbf{Total}  & \textbf{10,723} & \\
+\bottomrule
+\end{tabular}
+
+\vspace{3pt}
+Median rounds per repo: \textbf{2} \quad Mean: 4.5 \quad Max: 1,629
+
+\end{multicols}
+
+\vspace{4pt}
+% ── 5k ───────────────────────────────────────────────────────────────────────
+\subsection*{Stage 5k --- Adoption Timeline Classification}
+\textbf{Input:} 44,761 repos (40,364 agentic + 4,397 AI-assisted).\\
+\textbf{Method:} Merge best \texttt{first\_ai\_date} from 5i + 5j per repo; compute
+days from \texttt{created\_at}; classify by timing thresholds.
+
+\vspace{3pt}
+\begin{tabular}{@{}p{4cm} p{3cm} rr p{5.8cm}@{}}
+\toprule
+\textbf{Category} & \textbf{Threshold} & \textbf{Repos} & \textbf{\%} & \textbf{Note} \\
+\midrule
+\rowcolor{rowgray}
+Immediate (AI-native) & $\leq 7$ days  & 21,828 & 55.9 & Repo started with AI from day one \\
+Early                 & 8 -- 30 days   &  4,831 & 12.4 & Adopted within first month \\
+\rowcolor{rowgray}
+Late                  & $>$ 30 days    & 12,393 & 31.7 & Mid-project adoption \\
+Unknown               & No date found  &  1,312 &  3.3 & Config-only with no datable commit \\
+\midrule
+\textbf{Total (agentic)} & & \textbf{39,052} & \textbf{100.0} & Known timing only \\
+\bottomrule
+\end{tabular}
+
+\vspace{3pt}
+\textbf{Days to first AI signal (agentic, known):}
+Median \textbf{3.0\,d} \quad Mean 54.1\,d \quad Std 101.4\,d \quad Min 0\,d \quad P75 57\,d \quad Max 615\,d
+
+\vspace{3pt}
+\textbf{Key finding:} \textbf{55.9\%} of agentic repos adopted AI within 7 days of creation,
+confirming that the majority of repos in this corpus were created \emph{with} AI tooling
+already in place, not retrofitted later. The long tail (mean 54.1\,d vs median 3.0\,d)
+is driven by the 31.7\% late-adoption group.
+
+\vspace{6pt}
+\begin{center}
+  \includegraphics[width=0.82\textwidth]{stage5/fig_5k_adoption_timing.png}\\
+  \small\textit{5k --- Adoption timing breakdown for all 40,364 agentic repos}
+\end{center}
+
+\vspace{4pt}
+\begin{center}
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_5i_first_config.png}\\
+    \small\textit{5i --- Top 10 first detected config files (28,369 repos)}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{stage5/fig_5ij_monthly_first_signal.png}\\
+    \small\textit{5i + 5j --- Monthly first AI signal date (config vs trailer)}
+  \end{minipage}
+\end{center}
+
+% ── Stage 5l ─────────────────────────────────────────────────────────────────
+\subsection*{Stage 5l --- TypeScript Adoption in JavaScript Repos (JS/TS Topic 2)}
+\textbf{Input:} 14,815 JavaScript-primary repos from the corpus (8,158 agentic, 5,633 non-agentic).\\
+\textbf{Method:} For each repo, fetch the oldest commit that added \texttt{tsconfig.json} via GraphQL.
+Compare that date to the repo's first AI signal date to classify TypeScript adoption timing.
+
+\vspace{3pt}
+\textbf{Research question:} Do coding agents drive TypeScript adoption in JavaScript repos?
+
+\vspace{4pt}
+\textbf{Finding 1 --- Agentic repos adopt TypeScript at 2$\times$ the rate of non-agentic repos:}
+
+\vspace{3pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Group} & \textbf{Repos} & \textbf{With tsconfig.json} & \textbf{Rate} \\
+\midrule
+\rowcolor{rowgray}
+Agentic     & 8,158 & 1,279 & 15.7\% \\
+Non-agentic & 5,633 &   435 &  7.7\% \\
+\midrule
+\textbf{Ratio} & & & \textbf{2.03$\times$} \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Finding 2 --- Timing of TypeScript adoption (among 1,234 agentic JS repos with tsconfig.json):}
+
+\vspace{3pt}
+\begin{tabular}{@{}p{5.5cm} rr p{6cm}@{}}
+\toprule
+\textbf{Category} & \textbf{Repos} & \textbf{\%} & \textbf{Interpretation} \\
+\midrule
+\rowcolor{rowgray}
+Before first AI signal      & 664 & 53.8\% & Already on the TS path before agent arrived \\
+Same day as first AI signal & 319 & 25.9\% & Agent bootstrapped TS on day one \\
+\rowcolor{rowgray}
+After first AI signal       & 251 & 20.3\% & Agent-era adoption \\
+\midrule
+\textbf{On or after AI signal} & \textbf{570} & \textbf{46.2\%} & Consistent with agent-driven TS setup \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\textbf{Key finding:} Agentic JS repositories are \textbf{2$\times$ more likely} to use TypeScript
+than non-agentic repos (15.7\% vs 7.7\%). Among those that did adopt TypeScript, \textbf{46.2\%}
+did so on or after their first AI signal. The same-day group (25.9\%) is particularly notable ---
+these repos added TypeScript configuration on the \emph{exact same day} as their first agent signal,
+strongly suggesting the agent was involved in the initial TypeScript setup. While causality cannot
+be established from observational data, the results are consistent with coding agents actively
+encouraging or bootstrapping TypeScript adoption in JavaScript projects.
+
+\vspace{6pt}
+\begin{center}
+  \includegraphics[width=0.72\textwidth]{stage5/fig_5l_ts_adoption_rate.png}\\
+  \small\textit{5l --- TypeScript adoption rate: agentic repos (15.7\%) vs non-agentic (7.7\%),
+  JavaScript-primary repos only}
+\end{center}
+
+\vspace{4pt}
+\begin{center}
+  \includegraphics[width=0.82\textwidth]{stage5/fig_5l_ts_timing.png}\\
+  \small\textit{5l --- TypeScript adoption timing relative to first AI signal
+  (1,234 agentic JS repos with tsconfig.json)}
 \end{center}
 
 \end{document}
