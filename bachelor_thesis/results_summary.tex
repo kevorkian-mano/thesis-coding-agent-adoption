@@ -99,6 +99,7 @@ Top countries: China 5,829 (20.6\%), US 3,981 (14.1\%), India 3,945 (14.0\%)
 \hrule
 \vspace{6pt}
 
+\newpage
 % ─── STAGE 3 ──────────────────────────────────────────────────────────────────
 \section*{Stage 3 --- AI Adoption Detection (Three Passes)}
 
@@ -143,7 +144,6 @@ TypeScript 78.5\% \quad JavaScript 62.0\%\\
 pnpm 84.0\% \quad npm 75.3\% \quad vanilla 58.9\%\\[3pt]
 \textbf{Tool loyalty:} 66.3\% of adopters use 1 tool\\
 Claude Code only: 34.4\% of adopters\\
-Top pair: Claude Code + Generic (9,245 repos, 20.7\%)
 \end{multicols}
 
 \vspace{4pt}
@@ -236,67 +236,6 @@ Rk & Country & Repos & Rate\% \\
 \hrule
 \vspace{6pt}
 
-% ─── CLASSIFICATION LABELS ────────────────────────────────────────────────────
-\section*{Classification Labels --- What Each Label Means}
-
-\begin{multicols}{2}
-
-\begin{tabular}{@{}lrrp{4.2cm}@{}}
-\toprule
-Label & Repos & \% & Condition \\
-\midrule
-Agentic     & 40,364 & 67.1 &
-  $\geq$1 STRONG signal \emph{or} $\geq$2 MEDIUM families \\[2pt]
-AI-assisted &  4,397 &  7.3 &
-  1 MEDIUM only \emph{or} WEAK only, configured but unconfirmed \\[2pt]
-None        & 15,368 & 25.6 &
-  No signal found in any of the three passes \\
-\bottomrule
-\end{tabular}
-
-\columnbreak
-
-\textbf{STRONG} (agent \emph{did} work):\\
-bot\_author, ci\_workflow, pr\_branch,\\
-agent\_attribution (commit trailers).\\[4pt]
-\textbf{MEDIUM} (agent \emph{configured}):\\
-config\_file (CLAUDE.md, .cursorrules\ldots), pr\_label.\\[4pt]
-\textbf{WEAK} (incidental mention):\\
-pr\_body, editor\_config.\\[4pt]
-\textbf{AI-assisted} = evidence present but unconfirmed.
-Included in 74.4\% total; \textbf{67.1\% agentic-only}
-is the conservative figure.
-
-\end{multicols}
-
-\vspace{6pt}
-\noindent\textbf{Signal strength hierarchy:}
-\vspace{4pt}
-
-\noindent
-\renewcommand{\arraystretch}{1.35}
-\begin{tabular}{@{}
-  >{\centering\arraybackslash\columncolor{red!18}}p{5.2cm}
-  >{\centering\arraybackslash\columncolor{yellow!35}}p{5.2cm}
-  >{\centering\arraybackslash\columncolor{gray!18}}p{5.2cm}@{}}
-\textbf{STRONG} --- agent \emph{did} work &
-\textbf{MEDIUM} --- agent \emph{configured} &
-\textbf{WEAK} --- incidental mention \\[2pt]
-\small\texttt{bot\_author} &
-\small\texttt{config\_file} (CLAUDE.md, .cursorrules) &
-\small\texttt{pr\_body} \\
-\small\texttt{ci\_workflow} &
-\small\texttt{pr\_label} &
-\small\texttt{editor\_config} \\
-\small\texttt{pr\_branch} & & \\
-\small\texttt{agent\_attribution} (trailers) & & \\
-\end{tabular}
-\renewcommand{\arraystretch}{1}
-
-\vspace{6pt}
-\hrule
-\vspace{6pt}
-
 \newpage
 % ─── THREE SIZING APPROACHES ──────────────────────────────────────────────────
 \section*{Repository Size \& Adoption --- Three Operationalisations}
@@ -331,14 +270,15 @@ Approach & Small & Medium & Large & Range \\
 \hrule
 \vspace{6pt}
 
+
+
+\newpage
 % ─── MENA ─────────────────────────────────────────────────────────────────────
 \section*{MENA Regional Analysis}
 
 \textbf{Coverage:} 1,587 repos (2.6\% corpus, 4.7\% of located repos),
 19 countries defined, 9 eligible ($\geq$30 repos).\\
-\textbf{Overall MENA: 65.9\%} [63.5\%, 68.1\%] ---
-below global 74.4\%.
-Fisher exact vs global: $p = 1.38 \times 10^{-14}$ (significant).
+\textbf{Overall MENA: 65.9\%.}
 
 \begin{multicols}{2}
 
@@ -397,49 +337,6 @@ Morocco      &  81 & 38.3* \\
 \hrule
 \vspace{6pt}
 
-% ─── RESEARCH QUESTIONS ───────────────────────────────────────────────────────
-\section*{Research Questions --- Statistical Test Results}
-
-\begin{tabular}{@{}p{3.2cm} p{5.5cm} p{3.2cm} p{3.0cm}@{}}
-\toprule
-\textbf{RQ} & \textbf{Finding} & \textbf{Test} & \textbf{Decision} \\
-\midrule
-\textbf{RQ1} Scope of adoption &
-  74.4\% adoption rate (44,761/60,129). Wilson 95\% CI: [74.09\%, 74.79\%] &
-  Binomial test vs $H_0{:}\ p \leq 5\%$ \newline $p = 0.00$ &
-  \textcolor{red}{\textbf{Reject $H_0$}} \\[4pt]
-\textbf{RQ2} Undercounting &
-  Single-signal (Pass 3a): 47.2\%. Multi-signal: 74.4\%. Delta: \textbf{+27.21 pp}. $b=16{,}404$, $c=40$ &
-  McNemar $\chi^2 = 16{,}282$ \newline $p = 0.00$ &
-  \textcolor{red}{\textbf{Reject $H_0$}} \\[4pt]
-\textbf{RQ3} Geographic variation &
-  Rates range from 90.9\% (Saudi Arabia) to 27.5\% (Rwanda). 45/66 countries significantly differ from global mean &
-  $\chi^2 = 2577.03$, $df=65$ \newline $p = 0.00$ &
-  \textcolor{red}{\textbf{Reject $H_0$}} \\
-\bottomrule
-\end{tabular}
-
-\vspace{6pt}
-\renewcommand{\arraystretch}{1.4}
-\noindent
-\begin{tabular}{@{}
-  >{\centering\arraybackslash\columncolor{red!15}}p{2.8cm}
-  >{\columncolor{red!8}}p{14.0cm}@{}}
-\textbf{RQ1 Reject $H_0$} &
-  74.4\% adoption (44,761/60,129). Wilson 95\% CI: [74.09\%--74.79\%]. Binomial $p = 0.00$. \\
-\textbf{RQ2 Reject $H_0$} &
-  Multi-signal detects \textbf{+27.21\,pp} more than single-signal (47.2\% $\to$ 74.4\%). McNemar $\chi^2 = 16{,}282$, $p = 0.00$. \\
-\textbf{RQ3 Reject $H_0$} &
-  66-country range 27.5\%--90.9\%. 45/66 countries deviate significantly from global mean. $\chi^2 = 2577.03$, $p = 0.00$. \\
-\end{tabular}
-\renewcommand{\arraystretch}{1}
-
-\vspace{6pt}
-\hrule
-\vspace{6pt}
-
-
-
 \newpage
 % ─── FRAMEWORK ANALYSIS ───────────────────────────────────────────────────────
 \section*{AI Adoption by Framework \& Package Ecosystem}
@@ -481,7 +378,7 @@ Preact         &    472 & 74.2 & 7.0 & 18.9 \\
 \vspace{6pt}
 \textbf{Highest agentic adoption:} Astro 83.5\%, Hono 82.1\%, TanStack Start 79.4\%, VitePress + Solid 77.8\%\\
 \textbf{Lowest agentic adoption:} Express 57.8\%, NestJS 62.0\%, Next.js 63.6\%\\
-\textbf{Largest corpus:} React (30,614 repos, 65.2\%) --- over half the entire corpus uses React.
+\textbf{Largest corpus:} React (30,614 repos, 65.2\%) - over half the entire corpus uses React.
 
 \vspace{6pt}
 \textbf{Framework combinations} (React paired, mutually exclusive; 965 repos using all three excluded):
@@ -514,10 +411,7 @@ vanilla       & 10,177 & 50.9 & 7.9 & 41.1 \\
 \bottomrule
 \end{tabular}
 
-\vspace{4pt}
-{\small pnpm (77.0\%) and deno (76.0\%) show highest agentic adoption; vanilla (50.9\%) and yarn (57.2\%) lowest.
-pnpm's higher rate likely reflects modern toolchain projects where AI agent setup is more common.
-vanilla repos (no lockfile) skew older or simpler projects with less AI tooling.}
+
 
 \vspace{4pt}
 \begin{center}
@@ -530,6 +424,10 @@ vanilla repos (no lockfile) skew older or simpler projects with less AI tooling.
 \vspace{6pt}
 
 \newpage
+
+
+
+
 % ─── PRICING ANALYSIS ─────────────────────────────────────────────────────────
 \section*{AI Tool Pricing vs Country Income --- Adoption Analysis}
 
@@ -674,7 +572,7 @@ Month & Repos & Adopt\% & Agentic\% \\
 
 % ── E2: Size Comparison ───────────────────────────────────────────────────────
 \subsection*{Repo Size by Adoption Category}
-Kruskal-Wallis (3-way) + Mann-Whitney U (Agentic vs No AI).
+
 
 \vspace{2pt}
 \begin{tabular}{@{}lrrr@{}}
@@ -684,15 +582,11 @@ Metric & No AI & AI-Asst & Agentic \\
 \midrule
 Commits   & 134 & 162 & 200 \\
 Code (KB) & 495 & 802 & 1{,}021 \\
-\midrule
-Stars     &   7 &  11 &   11 \\
-Forks     &   1 &   2 &    2 \\
 \bottomrule
 \end{tabular}
 
 \vspace{2pt}
-\textit{All MW $p < 10^{-300}$;\;
-Commits and code volume both increase monotonically across adoption groups.}
+
 
 \columnbreak
 
@@ -752,16 +646,6 @@ CodeRabbit      &   144 &  2.2 \\
 \bottomrule
 \end{tabular}
 
-\vspace{4pt}
-\textbf{Key findings:}
-\begin{itemize}\setlength\itemsep{0pt}
-  \item Overall adoption (73.2\%) is slightly below the full corpus (74.4\%).
-  \item Claude Code takes \textbf{69.3\%} of agent detections in this
-        subset; Generic (44.0\%) is unusually high, reflecting many
-        multi-agent repos.
-  \item Colombia and South Korea lead; US (\#7) and China (\#8) rank
-        lower than in the full corpus.
-\end{itemize}
 
 \end{multicols}
 
@@ -807,7 +691,7 @@ CodeRabbit      &   144 &  2.2 \\
 
 \newpage
 % ─── E4: TOOL DIVERSITY ───────────────────────────────────────────────────────
-\section*{Tool Diversity --- Single vs Multi-Agent Repos (Stage 5f)}
+\section*{Tool Diversity --- Single vs Multi-Agent Repos}
 
 \textbf{Population:} 40,364 agentic repos. \quad
 \textbf{Single-agent:} exactly 1 tool detected. \quad
@@ -837,15 +721,7 @@ Extreme (10+ tools)     &      7 &  0.0 \\
 
 \columnbreak
 
-\textbf{Key findings:}
-\begin{itemize}\setlength\itemsep{1pt}
-  \item \textbf{65.1\%} of agentic repos use exactly one AI tool.
-  \item Dual-agent (2 tools) is the dominant multi-tool tier at \textbf{28.2\%}.
-  \item Usage drops sharply after 2 tools: 3-tool repos are 5.0\%, 4-tool 1.1\%.
-  \item Only 7 repos use 10+ tools, representing extreme diversity.
-  \item Multi-agent rate of \textbf{34.9\%} exceeds the Robbes et al.\ (2025)
-        figure ($\approx$33\%) for a comparable corpus window.
-\end{itemize}
+
 
 \end{multicols}
 
@@ -856,12 +732,6 @@ Extreme (10+ tools)     &      7 &  0.0 \\
     \includegraphics[width=\linewidth]{stage5/fig_tool_loyalty_bar.png}\\
     \small\textit{E4 --- Agent count distribution per agentic repo}
   \end{minipage}
-  \hfill
-  \begin{minipage}[t]{0.47\textwidth}
-    \centering
-    \includegraphics[width=\linewidth]{stage5/fig_tool_loyalty_heatmap.png}\\
-    \small\textit{E4 --- Tool co-occurrence heatmap (top agent pairs)}
-  \end{minipage}
 \end{center}
 
 \vspace{6pt}
@@ -869,37 +739,34 @@ Extreme (10+ tools)     &      7 &  0.0 \\
 \vspace{6pt}
 
 % ─── E5: WORLD REGIONS ────────────────────────────────────────────────────────
-\section*{World Regions Analysis (Stage 5g)}
+\section*{World Regions Analysis}
 
 \textbf{Coverage:} 33,629 located repos across 10 macro-regions.
-Significance: pairwise Fisher exact vs global mean, BH FDR $\alpha = 0.05$.
 
 \vspace{4pt}
 \begin{tabular}{@{}lrrrrrr@{}}
 \toprule
-\textbf{Region} & \textbf{Repos} & \textbf{\% corpus} & \textbf{Agentic\%} & \textbf{95\% CI} & \textbf{Sig.} \\
+\textbf{Region} & \textbf{Repos} & \textbf{\% corpus} & \textbf{Agentic\%} \\
 \midrule
 \rowcolor{rowgray}
-North America              & 5,866 &  9.8 & 76.1 & [75.0, 77.2] & * \\
-Western Europe             & 5,749 &  9.6 & 72.8 & [71.6, 74.0] & * \\
+North America              & 5,866 &  9.8 & 76.1 & \\
+Western Europe             & 5,749 &  9.6 & 72.8 & \\
 \rowcolor{rowgray}
-East Asia                  & 8,937 & 14.9 & 69.8 & [68.9, 70.8] & * \\
-Oceania                    &   748 &  1.2 & 68.3 & [64.9, 71.6] & * \\
+East Asia                  & 8,937 & 14.9 & 69.8 & \\
+Oceania                    &   748 &  1.2 & 68.3 & \\
 \rowcolor{rowgray}
-Eastern Europe \& C. Asia  & 1,197 &  2.0 & 63.7 & [61.0, 66.4] & -- \\
-Latin America \& Caribbean & 1,525 &  2.5 & 62.4 & [60.0, 64.9] & -- \\
+Eastern Europe \& C. Asia  & 1,197 &  2.0 & 63.7 & \\
+Latin America \& Caribbean & 1,525 &  2.5 & 62.4 & \\
 \rowcolor{rowgray}
-Southeast Asia             & 1,767 &  2.9 & 60.8 & [58.5, 63.2] & * \\
-MENA                       & 1,590 &  2.6 & 57.5 & [55.1, 60.0] & * \\
+Southeast Asia             & 1,767 &  2.9 & 60.8 & \\
+MENA                       & 1,590 &  2.6 & 57.5 & \\
 \rowcolor{rowgray}
-South Asia                 & 5,517 &  9.2 & 44.3 & [42.9, 45.6] & * \\
-Sub-Saharan Africa         &   736 &  1.2 & 36.4 & [33.1, 39.9] & * \\
+South Asia                 & 5,517 &  9.2 & 44.3 & \\
+Sub-Saharan Africa         &   736 &  1.2 & 36.4 & \\
 \bottomrule
 \end{tabular}
 
-\vspace{3pt}
-{\small * = significantly different from global mean (Fisher exact, BH-corrected). \quad
-Range: \textbf{76.1\%} (North America) to \textbf{36.4\%} (Sub-Saharan Africa) = \textbf{39.7\,pp gap}.}
+
 
 \vspace{4pt}
 \begin{center}
@@ -920,12 +787,11 @@ Range: \textbf{76.1\%} (North America) to \textbf{36.4\%} (Sub-Saharan Africa) =
 \hrule
 \vspace{6pt}
 
-\newpage
-% ─── E6: COMMIT DENSITY ───────────────────────────────────────────────────────
-\section*{Commit Density Analysis (Stage 5h)}
 
-\textbf{Population:} 11,937 agentic repos with $\geq$1 commit trailer.
-\textbf{Metric:} $\text{ai\_density} = \text{trailer\_count} / \text{total\_commits}$.
+% ─── E6: COMMIT DENSITY ───────────────────────────────────────────────────────
+\section*{Commit Density Analysis}
+
+\textbf{Population:} 11,937 agentic repos with $\geq$1 commit trailer.\\ \textbf{Metric:} $\text{ai\_density} = \text{trailer\_count} / \text{total\_commits}$.\\
 \textbf{Buckets:} follow Robbes et al.\ (2025).
 
 \vspace{4pt}
@@ -947,10 +813,7 @@ Pervasive    & $>$20\%  & 3,219 & 27.0 \\
 \bottomrule
 \end{tabular}
 
-\vspace{3pt}
-Density statistics:\\
-Mean: \textbf{0.171} \quad Median: \textbf{0.052}\\
-P25: 0.013 \quad P75: 0.227
+
 
 \columnbreak
 
@@ -970,10 +833,7 @@ GitHub Copilot & n/a   &   999 \\
 \bottomrule
 \end{tabular}
 
-\vspace{3pt}
-\textbf{Key finding:} Distribution is roughly flat across the four
-buckets. Claude Code (0.101) shows higher commit integration than
-Cursor (0.026), consistent with its terminal-first workflow.
+
 
 \end{multicols}
 
@@ -1002,11 +862,11 @@ Cursor (0.026), consistent with its terminal-first workflow.
 \hrule
 \vspace{6pt}
 
+\newpage
 % ─── E7: COUNTRY ADOPTION TIMELINE ───────────────────────────────────────────
-\section*{Country Adoption Timeline (Stage 5e)}
+\section*{Country Adoption Timeline}
 
 \textbf{Population:} 33,848 located repos across 66 countries (Feb 2025 -- Nov 2026).\\
-\textbf{Cell filter:} $\geq$5 repos per country $\times$ month. Total cells: 1,274.\\
 \textbf{Purpose:} Track whether adoption rates changed over time within individual countries.
 
 \vspace{4pt}
@@ -1036,7 +896,7 @@ Cursor (0.026), consistent with its terminal-first workflow.
 
 \newpage
 % ─── STAGES 5i / 5j / 5k ─────────────────────────────────────────────────────
-\section*{First AI Signal Timestamps \& Adoption Timing (Stages 5i, 5j, 5k)}
+\section*{First AI Signal Timestamps \& Adoption Timing}
 
 \textbf{Purpose:} Retrieve the date of the \emph{oldest} AI signal per repo (config file or commit trailer)
 and classify each agentic repo by how quickly it adopted AI relative to its creation date.
@@ -1046,25 +906,12 @@ and classify each agentic repo by how quickly it adopted AI relative to its crea
 \footnotesize
 
 % ── 5i ───────────────────────────────────────────────────────────────────────
-\subsection*{Stage 5i --- Config File Timestamps}
-\textbf{Input:} 28,397 agentic repos with $\geq$1 config file (Pass 3a).\\
-\textbf{Method:} GraphQL batch (10 repos/query); oldest commit touching each
-detected config path → \texttt{first\_ai\_date}.
+\subsection*{Config File Timestamps}
+\textbf{Input:} 28,397 agentic repos with $\geq$1 config file.\\
+
 
 \vspace{3pt}
-\begin{tabular}{@{}lrr@{}}
-\toprule
-Status & Repos & \% \\
-\midrule
-ok (date found)       & 28,369 & 99.9 \\
-No date found         &      2 &  0.0 \\
-Deleted / not found   &     26 &  0.1 \\
-\midrule
-\textbf{Total}        & \textbf{28,397} & \\
-\bottomrule
-\end{tabular}
 
-\vspace{4pt}
 \textbf{Top first config files:}
 
 \vspace{2pt}
@@ -1086,37 +933,17 @@ File & Repos & \% \\
 \end{tabular}
 
 \vspace{4pt}
-Peak adoption month: \textbf{March 2026} (3,283 repos).\\
-Growth onset: accelerated from Jan 2026 onward.
+
 
 \columnbreak
 
 % ── 5j ───────────────────────────────────────────────────────────────────────
-\subsection*{Stage 5j --- Commit Trailer Timestamps}
-\textbf{Input:} 11,937 agentic repos with \texttt{trailer\_count} $> 0$ (Pass 3b).\\
-\textbf{Method:} GraphQL oldest-first pagination; scans all commits until
-earliest AI trailer found.
+\subsection*{Commit Trailer Timestamps}
+\textbf{Input:} 11,937 agentic repos with \texttt{trailer\_count} $> 0$.\\
 
 \vspace{3pt}
-\begin{tabular}{@{}lrr@{}}
-\toprule
-Status & Repos & \% \\
-\midrule
-ok (date found)      & 10,723 & 89.8 \\
-Trailer not found    &  1,210 & 10.1 \\
-Null response        &      4 &  0.1 \\
-\midrule
-\textbf{Total}       & \textbf{11,937} & \\
-\bottomrule
-\end{tabular}
 
-\vspace{3pt}
-{\footnotesize\textit{10.1\% trailer-not-found: detected in Stage 3 from a sample of
-100 commits; exhaustive full-history scan found no matching commit —
-likely deep-history or force-pushed repos.}}
-
-\vspace{4pt}
-\textbf{First trailer agent (10,723 ok repos):}
+\textbf{First trailer agent:}
 
 \vspace{2pt}
 \begin{tabular}{@{}lrr@{}}
@@ -1138,16 +965,14 @@ Other           &    19 &  0.2 \\
 \end{tabular}
 
 \vspace{3pt}
-Median rounds per repo: \textbf{2} \quad Mean: 4.5 \quad Max: 1,629
+
 
 \end{multicols}
 
 \vspace{4pt}
 % ── 5k ───────────────────────────────────────────────────────────────────────
-\subsection*{Stage 5k --- Adoption Timeline Classification}
-\textbf{Input:} 44,761 repos (40,364 agentic + 4,397 AI-assisted).\\
-\textbf{Method:} Merge best \texttt{first\_ai\_date} from 5i + 5j per repo; compute
-days from \texttt{created\_at}; classify by timing thresholds.
+\subsection*{Adoption Timeline Classification}
+\textbf{Input:} 44,761 repos.\\
 
 \vspace{3pt}
 \begin{tabular}{@{}p{4cm} p{3cm} rr p{5.8cm}@{}}
@@ -1155,7 +980,7 @@ days from \texttt{created\_at}; classify by timing thresholds.
 \textbf{Category} & \textbf{Threshold} & \textbf{Repos} & \textbf{\%} & \textbf{Note} \\
 \midrule
 \rowcolor{rowgray}
-Immediate (AI-native) & $\leq 7$ days  & 21,828 & 55.9 & Repo started with AI from day one \\
+Immediate & $\leq 7$ days  & 21,828 & 55.9 & Repo started with AI from day one \\
 Early                 & 8 -- 30 days   &  4,831 & 12.4 & Adopted within first month \\
 \rowcolor{rowgray}
 Late                  & $>$ 30 days    & 12,393 & 31.7 & Mid-project adoption \\
@@ -1167,13 +992,10 @@ Unknown               & No date found  &  1,312 &  3.3 & Config-only with no dat
 
 \vspace{3pt}
 \textbf{Days to first AI signal (agentic, known):}
-Median \textbf{3.0\,d} \quad Mean 54.1\,d \quad Std 101.4\,d \quad Min 0\,d \quad P75 57\,d \quad Max 615\,d
+Median \textbf{3.0\,d} \quad Mean 54.1\,d \quad Std 101.4\,d
 
 \vspace{3pt}
-\textbf{Key finding:} \textbf{55.9\%} of agentic repos adopted AI within 7 days of creation,
-confirming that the majority of repos in this corpus were created \emph{with} AI tooling
-already in place, not retrofitted later. The long tail (mean 54.1\,d vs median 3.0\,d)
-is driven by the 31.7\% late-adoption group.
+\textbf{Key finding:} \textbf{55.9\%} of agentic repos adopted AI within 7 days of creation.
 
 \vspace{6pt}
 \begin{center}
@@ -1197,16 +1019,16 @@ is driven by the 31.7\% late-adoption group.
 \end{center}
 
 % ── Stage 5l ─────────────────────────────────────────────────────────────────
-\subsection*{Stage 5l --- TypeScript Adoption in JavaScript Repos (JS/TS Topic 2)}
+\section{TypeScript Adoption in JavaScript Repos}
 \textbf{Input:} 14,815 JavaScript-primary repos from the corpus (8,158 agentic, 5,633 non-agentic).\\
-\textbf{Method:} For each repo, fetch the oldest commit that added \texttt{tsconfig.json} via GraphQL.
+\textbf{Method:} For each repo, fetch the oldest commit that added \texttt{tsconfig.json}.
 Compare that date to the repo's first AI signal date to classify TypeScript adoption timing.
 
 \vspace{3pt}
 \textbf{Research question:} Do coding agents drive TypeScript adoption in JavaScript repos?
 
 \vspace{4pt}
-\textbf{Finding 1 --- Agentic repos adopt TypeScript at 2$\times$ the rate of non-agentic repos:}
+\textbf{Finding 1 - Agentic repos adopt TypeScript at 2$\times$ the rate of non-agentic repos:}
 
 \vspace{3pt}
 \begin{tabular}{@{}lrrr@{}}
@@ -1222,7 +1044,7 @@ Non-agentic & 5,633 &   435 &  7.7\% \\
 \end{tabular}
 
 \vspace{4pt}
-\textbf{Finding 2 --- Timing of TypeScript adoption (among 1,234 agentic JS repos with tsconfig.json):}
+\textbf{Finding 2 - Timing of TypeScript adoption (among 1,234 agentic JS repos with tsconfig.json):}
 
 \vspace{3pt}
 \begin{tabular}{@{}p{5.5cm} rr p{6cm}@{}}
@@ -1241,12 +1063,7 @@ After first AI signal       & 251 & 20.3\% & Agent-era adoption \\
 
 \vspace{4pt}
 \textbf{Key finding:} Agentic JS repositories are \textbf{2$\times$ more likely} to use TypeScript
-than non-agentic repos (15.7\% vs 7.7\%). Among those that did adopt TypeScript, \textbf{46.2\%}
-did so on or after their first AI signal. The same-day group (25.9\%) is particularly notable ---
-these repos added TypeScript configuration on the \emph{exact same day} as their first agent signal,
-strongly suggesting the agent was involved in the initial TypeScript setup. While causality cannot
-be established from observational data, the results are consistent with coding agents actively
-encouraging or bootstrapping TypeScript adoption in JavaScript projects.
+than non-agentic repos (15.7\% vs 7.7\%).
 
 \vspace{6pt}
 \begin{center}
@@ -1260,6 +1077,42 @@ encouraging or bootstrapping TypeScript adoption in JavaScript projects.
   \includegraphics[width=0.82\textwidth]{stage5/fig_5l_ts_timing.png}\\
   \small\textit{5l --- TypeScript adoption timing relative to first AI signal
   (1,234 agentic JS repos with tsconfig.json)}
+\end{center}
+
+% ─── STAGE 5n ─────────────────────────────────────────────────────────────────
+\section{Chinese Developer Agent Adoption}
+
+China is the \textbf{largest single country} in the corpus with \textbf{6,764 repositories} more than the United States (4,926). Despite China's internet restrictions that formally block
+access to Claude, GitHub Copilot, and other Western AI tools, \textbf{69.2\%} of Chinese agentic
+repositories use exclusively Western tools, and Claude Code appears in \textbf{53.3\%} of
+Chinese agentic repos (vs.\ 65.5\% globally). This reflects that GitHub's Chinese user base is
+a self-selected community of internationally active developers who bypass restrictions via VPN.
+
+Chinese-made AI coding agents direct domestic alternatives to Western tools are detected in only \textbf{2.3\%} of Chinese agentic repositories:
+
+\vspace{4pt}
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Agent} & \textbf{Company} & \textbf{Western equivalent} & \textbf{Global repos} \\
+\midrule
+\rowcolor{rowgray}
+Trae / MarsCode & ByteDance   & Cursor (agentic IDE)         & 167 \\
+Qwen Code       & Alibaba     & Claude Code (terminal agent) & 54  \\
+\rowcolor{rowgray}
+Kimi Code       & Moonshot AI & Claude Code (terminal agent) & 11  \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+
+
+\vspace{6pt}
+\begin{center}
+  \includegraphics[width=0.80\textwidth]{stage5/fig_5n_chinese_tools_by_country.png}\\
+  \small\textit{5n --- Chinese-made AI agent adoption by country:
+  Trae/MarsCode (ByteDance), Qwen Code (Alibaba), and Kimi Code (Moonshot AI).
+  China leads in Trae/MarsCode adoption; Qwen Code and Kimi Code show a broader international spread.}
 \end{center}
 
 \end{document}
