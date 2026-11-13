@@ -33,6 +33,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[english]{babel}
+\usepackage{csquotes}
 \usepackage{lmodern}
 \usepackage{microtype}
 \usepackage{amsmath}
@@ -238,7 +239,13 @@ This is to certify that:
 
 \label{chap:abstract}
 
-% TODO: Write abstract
+AI coding agents --- tools such as Claude Code, Cursor, and GitHub Copilot that can plan, write, and execute code autonomously --- have spread rapidly since 2025. Despite this growth, no prior study has focused on the JavaScript, TypeScript, and npm ecosystem specifically, the world's largest package registry with more than two million packages. This thesis asks three questions: what fraction of active npm projects show evidence of agent use, how much adoption single-signal detection methods miss, and whether adoption rates differ significantly across countries.
+
+To answer these questions, the study applies a four-phase computational pipeline to a corpus of \textbf{60,129 public GitHub repositories} created on or after 24~February 2025, all satisfying minimum activity criteria (four or more stars, fifty or more commits, at least 175\,KB of JS/TS source code). AI adoption is detected through a three-pass layered pipeline ordered by cost: configuration file scanning, commit trailer and PR branch scanning, and a deep multi-signal scan. Owner locations are inferred from a four-pass geographic pipeline covering profile fields, bio text, company domains, time-zone signals, and organisation membership.
+
+The study finds that \textbf{74.4\%} of repositories show evidence of AI agent use, with a Wilson 95\% confidence interval of [74.09\%, 74.79\%], rising from 50.5\% in February 2025 to 84.3\% by March 2026. Single-signal detection (configuration files only) classifies only 47.2\% as adopted --- a \textbf{+27.21 percentage-point undercounting gap} confirmed by McNemar's test ($\chi^2 = 16{,}282.40$, $p \approx 0$). Among 66 eligible countries, adoption ranges from Saudi Arabia (90.9\%) to Rwanda (27.4\%), a 63.5-percentage-point spread that is statistically significant ($\chi^2 = 2{,}577.03$, $df = 65$, $p \approx 0$), with 45 countries individually significant after Benjamini-Hochberg correction. Adoption follows a steep income gradient: high-income countries adopt at 81.3\%, lower-middle-income at 52.4\%. In lower-income countries, free tools account for 24.3\% of adopted repositories, more than double the high-income share of 11.4\%.
+
+The findings establish that AI coding agent adoption in the JS/TS/npm ecosystem is a majority practice, that single-signal measurement significantly underestimates it, and that a substantial geographic divide --- broadly aligned with income --- is already measurable within 18 months of the agentic era beginning.
 
 
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -277,31 +284,38 @@ This is to certify that:
 
 
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-% Chapter 3 — Methodology (to be written)
+% Chapter 3 — Methodology
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-% \input{chapters/methodology}
-
-
-%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-% Chapter 4 — Results (to be written)
-%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-% \input{chapters/results}
+\input{chapters/methodology}
 
 
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-% Chapter 5 — Discussion (to be written)
+% Chapter 4 — Implementation
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-% \input{chapters/discussion}
+\input{chapters/implementation}
 
 
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-% Chapter 6 — Conclusion (to be written)
+% Chapter 5 — Results
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-% \input{chapters/conclusion}
+\input{chapters/results}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Chapter 5 — Discussion
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\input{chapters/discussion}
+
+
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+% Chapter 6 — Conclusion
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+\input{chapters/conclusion}
 
 
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -1,0 +1,61 @@
+% ============================================================
+% Chapter 6: Conclusion
+% ============================================================
+
+\chapter{Conclusion}
+\label{chap:conclusion}
+
+% ------------------------------------------------------------
+\section{Summary of Contributions}
+\label{sec:conc:contributions}
+% ------------------------------------------------------------
+
+This thesis set out to measure AI coding agent adoption in the JavaScript, TypeScript, and npm ecosystem on GitHub, to quantify the undercounting introduced by single-signal detection, and to rank countries by their adoption rate using a statistically grounded approach. The study makes three contributions to the empirical software engineering literature.
+
+\textbf{First ecosystem-scoped adoption estimate.} By restricting the corpus to the JS/TS/npm ecosystem and classifying repositories by package manager and primary language, the study provides adoption estimates that practitioners and tool vendors can map directly to a specific technical community. The 74.4\% overall adoption rate, the per-ecosystem breakdown (pnpm 84.0\%, npm 75.3\%, vanilla 58.9\%), and the TypeScript--JavaScript gap (78.5\% vs.\ 62.0\%) are all specific to this ecosystem and would not be recoverable from a cross-language average.
+
+\textbf{Multi-signal undercounting quantification.} Applying the full four-pass detection pipeline to the same 60,129 repositories and comparing it to a configuration-file-only approach produces a concrete, formally tested estimate of undercounting: +27.21~pp ($\chi^2 = 16{,}282.40$, $p \approx 0$). This directly addresses the measurement concern raised by Khosravani and Mockus~\cite{khosravani2026} and shows that the undercounting gap in a focused ecosystem-specific study is consistent with the general direction and approximate magnitude they documented.
+
+\textbf{Country-level adoption ranking.} The study produces the first country-level ranking of AI coding agent adoption within the JS/TS/npm ecosystem. Wilson confidence intervals, an omnibus chi-squared test, and Benjamini-Hochberg-corrected pairwise comparisons together establish that the 63.5-percentage-point spread from Saudi Arabia (90.9\%) to Rwanda (27.4\%) is statistically robust rather than a sampling artefact.
+
+% ------------------------------------------------------------
+\section{Answers to the Research Questions}
+\label{sec:conc:answers}
+% ------------------------------------------------------------
+
+\textbf{RQ1: Scope of adoption.}
+74.4\% of the 60,129 active JS/TS/npm repositories created on or after 24~February 2025 show evidence of AI coding agent use, with a Wilson 95\% confidence interval of [74.09\%, 74.79\%]. A one-sample binomial test against a 5\% null baseline yields $p \approx 0$, decisively rejecting the null hypothesis that adoption is negligible. AI coding agent adoption in the JS/TS/npm ecosystem is a majority practice.
+
+\textbf{RQ2: Signal undercounting.}
+Relying solely on configuration file detection (single-signal) classifies 28,397 repositories as adopted (47.2\%). The full multi-signal pipeline classifies 44,761 as adopted (74.4\%), a gap of +27.21~percentage points. McNemar's test confirms this difference is statistically significant ($\chi^2 = 16{,}282.40$, $p \approx 0$). Single-signal detection misses 16,364 adopted repositories --- 36.6\% of the true adopted count.
+
+\textbf{RQ3: Geographic ranking.}
+Adoption rates differ significantly across countries within the JS/TS/npm ecosystem ($\chi^2 = 2{,}577.03$, $df = 65$, $p \approx 0$). 45 of the 66 eligible countries are individually significant against the global mean after Benjamini-Hochberg FDR correction. The gradient broadly follows the World Bank income classification: high-income countries adopt at 81.3\%, upper-middle-income at 74.6\%, lower-middle-income at 52.4\%, and low-income at 27.5\%. Saudi Arabia leads at 90.9\% and Rwanda is lowest at 27.4\%.
+
+% ------------------------------------------------------------
+\section{Limitations}
+\label{sec:conc:limitations}
+% ------------------------------------------------------------
+
+Three limitations warrant particular attention when interpreting the findings.
+
+The \textbf{geographic coverage gap} (43.4\% of owners not attributed to any country) is the most consequential limitation for the geographic analysis. The located subset of 56.6\% may be systematically biased if the propensity to leave location information blank correlates with country. Attempts to quantify this bias --- for example, by comparing detection rates between early-pass and late-pass resolved owners --- are hampered by the fact that late-pass resolution itself carries higher uncertainty.
+
+The \textbf{construct validity gap} between signal presence and productive use means that the 74.4\% adoption rate should be read as a measure of AI agent artefacts in the repository, not as a measure of AI agent contribution to the project's output. A repository with a single \texttt{CLAUDE.md} file and no other signals is counted as adopted; a repository that uses an agent for 80\% of its commits but leaves no repository-level trace is counted as none. The pipeline is designed to minimise false negatives across the 60,129-repository corpus, but false positives and false negatives at the individual-repository level cannot be fully eliminated.
+
+The \textbf{scope restriction to public GitHub and npm} means the findings cannot be directly generalised to private development, to other package registries (PyPI, Maven, crates.io), or to development practices that do not use GitHub. The npm ecosystem is the world's largest package registry, but it represents a specific segment of software development.
+
+% ------------------------------------------------------------
+\section{Future Work}
+\label{sec:conc:future}
+% ------------------------------------------------------------
+
+Four directions for future research follow directly from the limitations and findings.
+
+\textbf{Extension to other ecosystems.} Applying the multi-signal pipeline to Python (PyPI), Rust (crates.io), Go modules, and Java (Maven Central) would reveal whether the 74.4\% adoption rate is specific to the npm ecosystem or representative of a broader trend. The ecosystem-specific signals used in this study (npm SDK dependencies, \texttt{package.json} lockfiles) would need to be adapted but the core tiered classification approach is transferable.
+
+\textbf{Longitudinal re-measurement.} Collecting data at regular intervals (every six months) would distinguish permanent adoption from temporary experimentation and track whether the plateau at 82--84\% observed in early 2026 is a stable saturation ceiling or a temporary slowdown before further growth. The time-series analysis in this study is cross-sectional; a true panel design would allow tracking individual repositories over time.
+
+\textbf{Causal study of pricing barriers.} The income-group pricing gradient (free-tool share rising from 11.4\% in HIC to 24.3\% in LMIC) is consistent with pricing being a binding constraint, but the observational design cannot establish causation. A natural experiment design --- for example, exploiting the announcement of a free-tier by a previously paid-only tool --- could estimate the causal effect of price reduction on adoption in lower-income developer communities.
+
+\textbf{Qualitative interviews.} The quantitative pipeline cannot answer why developers adopt (or do not adopt) agents, what signals are present in their workflow but absent from repository metadata, or how accurately the adoption label reflects actual agent-driven development. Qualitative interviews with developers in both high-adoption and low-adoption countries would provide context for the aggregate patterns, particularly the within-MENA divide between Gulf states (87.9\%) and Iran and North Africa (47.1\% and 50.8\%).
