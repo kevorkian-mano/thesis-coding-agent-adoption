@@ -118,26 +118,32 @@ by Galster et al.\ may reflect a systematically filtered subset of agentic
 development whose configuration patterns differ from the broader population of
 agent users who adopt less explicitly.
 
-Galster et al.~\cite{galsterHarness2026} examined \emph{agent harness engineering},
-analysing the structure and content of skill definitions and tool configurations
-used by AI coding agents across a corpus of repositories. Their approach involved
-parsing harness files to categorise skill definitions by their use of dynamic
-scripts versus static natural-language instructions. The key finding is that 85.5\%
-of skill definitions lack dynamic scripts, meaning that most agentic configuration
-is written as plain instructions rather than executable code. The study's strength
-is that it establishes the prevalence of plain-language harness configurations,
-which has direct implications for detection methodology: configuration-file-based
-detection is broadly applicable because the files are human-readable and parseable
-without specialised tooling, and the 85.5\% figure provides a quantitative basis
-for this claim. A limitation is that this pattern may reflect the current early-stage
-maturity of harness engineering rather than a permanent property of the field, and
-the proportion of dynamically scripted harnesses may increase as the practice matures.
-A counter-argument is that the dominance of plain-language instructions may reflect
-tooling constraints rather than developer preference: Agarwal et al.~\cite{agarwal2026}
-found that more precise agent control is associated with better quality outcomes,
-suggesting that if dynamic scripting were more accessible developers would adopt it
-at higher rates, and the current instruction-dominant pattern would shift as the
-tooling matures.
+Denisov-Blanch et al.~\cite{denisovBlanch2026} introduced RAMP (Repository AI
+Maturity Profile), a four-level framework measuring how systematically a project
+commits AI configuration artifacts to version control, ranging from basic behavioural
+rules up to multi-agent orchestration. Their approach applied observational panel
+analysis to 441 repositories stratified by RAMP level, comparing velocity and
+software quality metrics before and after agent adoption; independent human validation
+achieved 97\% accuracy on held-out samples. Development velocity increased
+consistently (28--38\% more commits) across all RAMP levels, but quality outcomes
+diverged: repositories without committed AI configuration showed roughly double the
+cognitive complexity increase and $1.7\times$ more static-analysis warnings relative
+to those with committed configuration. The study also documents that 73.8\% of
+configuration artifacts were committed once and never updated, a ``set-and-forget''
+pattern that prevails even among projects at higher maturity levels. The study's
+strength is the RAMP framework itself, which turns configuration maturity into a
+reproducible, operationalisable measure and directly links committed configuration
+to downstream quality outcomes, moving the question beyond whether a configuration
+file exists to how systematically it is maintained. A limitation is the observational
+design: projects that commit AI configuration may differ from those that do not in
+team discipline and software engineering practices, meaning the quality advantage
+could partly reflect a confound rather than a causal effect of configuration itself.
+A counter-argument is that the ``set-and-forget'' pattern observed for 73.8\% of
+artifacts undermines a purely disciplinary explanation: if the quality benefit were
+driven by generally more disciplined teams, one would expect those teams to also
+update their configuration regularly, yet the data show that static configuration is
+still associated with lower quality costs, suggesting the initial act of committing
+configuration has an effect independent of ongoing maintenance.
 
 Agarwal, He, and Vasilescu~\cite{agarwal2026} conducted a longitudinal study
 distinguishing between AI IDEs (editor-integrated tools such as Cursor and
@@ -185,7 +191,7 @@ Gemini Code Assist   & Google           & Assistant + Agent & 2024 \\
 \end{tabular}
 \end{table}
 
-It is important to note that agentic tools did not appear suddenly in early 2025.
+Agentic tools did not arrive without precedent.
 GitHub Copilot launched in 2021, Cursor and Aider in 2023, and Windsurf and Devin
 in 2024. The date 24 February 2025 is not when agentic AI was invented; it is the
 point at which this study considers the ecosystem to have reached broad mainstream
@@ -280,6 +286,34 @@ and if AI tools disproportionately generate such throwaway projects, the
 AI-created repositories classified as inactive, paradoxically suppressing the
 measured rate even while those repositories constitute evidence of AI use.
 
+\subsection{Early Adoption Patterns}
+
+Raida and Hou~\cite{raida2026} studied the early adoption phase of agentic coding
+tools by analysing 25,264 pull requests from 2,361 GitHub repositories, characterising
+project-level adoption intensity and the human--agent collaboration models that emerged
+during this period. Their approach identified agentic PRs across repositories and
+measured productivity proxies --- PRs per participant per quarter --- alongside
+collaboration structure metrics. The study documents concentrated rather than
+widespread adoption: the median repository generated only one to two agentic PRs
+over a three-month window, well below an industry benchmark of 36 PRs per participant
+per quarter, and smaller projects with one to five contributors showed higher
+participation rates with agentic tools than medium and large projects. The dominant
+collaboration model was a single-human oversight pattern, in which one developer
+reviews and optionally modifies the agent's output before merging, with multi-developer
+review remaining rare. The study's strength is its project-level unit of analysis,
+which captures the intensity and collaboration structure of agent adoption rather
+than simply whether a repository has ever used an agent. A limitation is that the
+corpus is restricted to repositories with identifiable agentic PRs, which represent
+the most visibly committed adopters: repositories where agents were used without
+leaving explicit PR-level signals are absent, making the measured patterns
+unrepresentative of the full distribution of early users. A counter-argument is that
+the low median intensity of one to two agentic PRs may reflect detection gaps rather
+than genuinely low usage: Khosravani and Mockus~\cite{khosravani2026} found that
+single-signal detection misses up to 30 times the AI activity captured by a full
+multi-signal approach, implying that many repositories classified as low-intensity
+adopters here may have had substantially more agent activity that did not surface as
+attributable PRs.
+
 % ------------------------------------------------------------
 \section{Detection Methodology and the Multi-Signal Challenge}
 \label{sec:lr:detection}
@@ -303,8 +337,7 @@ of the true adoption signal. A limitation is that heuristics are static and may
 become outdated as agents change their default behaviours, and they are
 deliberately vulnerable to developers who modify commit trailers to conceal or
 simulate agent use. A counter-argument is that heuristic catalogues face an inherent coverage ceiling
-as agents evolve and developers customise or disable default signals: Ghaleb
-~\cite{ghaleb2026} demonstrated that individual agents leave distinguishable
+as agents evolve and developers customise or disable default signals: Ghaleb~\cite{ghaleb2026} demonstrated that individual agents leave distinguishable
 fingerprints in repository structure and commit metadata that extend beyond the
 patterns captured in standardised heuristic catalogues, suggesting that the
 coverage of any fixed catalogue will erode over time as agents diversify their
@@ -339,7 +372,7 @@ Ghaleb~\cite{ghaleb2026} addressed the problem of attributing repository contrib
 to specific AI coding agents, going beyond the binary question of whether AI was
 used to the finer-grained question of which agent was responsible. Participating in
 the MSR 2026 Mining Challenge, their approach analysed observable patterns in GitHub
-repositories to fingerprint agent-specific contributions, leveraging the distinctive
+repositories to fingerprint agent-specific contributions, using the distinctive
 traces that different agents leave in commit metadata, branch naming conventions, and
 repository structure. The approach's strength is its focus on agent-level attribution,
 which is more informative than binary AI/human classification and directly supports
@@ -549,13 +582,14 @@ human-authored commits, suggesting that some accepted agent contributions are
 subsequently identified as incorrect, and the 83.8\% acceptance rate may
 overstate the durability of those contributions.
 
-Hora and Robbes~\cite{horaRobbes2026} investigated how AI coding agents affect
-mocking practices in test suites by comparing mock usage patterns in commits
-attributed to AI agents against commits by human authors in the same repositories.
-Their approach involved automated classification of test commits by authorship type
-and automated analysis of mock library imports and mock object instantiations. They
-found measurable differences in mocking patterns, with AI agents tending to introduce
-mocking patterns that differ from those already established in the repository.
+Hora and Robbes~\cite{horaRobbes2026} investigated whether AI coding agents generate
+over-mocked tests by comparing mock usage patterns in commits attributed to AI agents
+against commits by human authors in the same repositories. Their approach involved
+automated classification of test commits by authorship type and automated analysis of
+mock library imports and mock object instantiations. They found that AI agents
+introduce substantially more mock objects than human-authored commits in the same
+codebases, confirming a systematic over-mocking tendency that diverges from the
+conventions established by human contributors.
 The study's strength is its focus on a specific, measurable test-writing behaviour
 that is amenable to automated analysis at scale. A limitation is that the study
 focuses on mocking practices as a proxy for test quality, which captures only one
@@ -641,9 +675,7 @@ capturing a distributional shift rather than organic evolution of the registry.
 \subsection{Ecosystem Affinity with AI Coding Agents}
 
 Galster et al.~\cite{galsterConfig2026} found TypeScript to be the most common
-primary language (24.5\%) in repositories with agent configuration files, and the
-companion harness engineering study~\cite{galsterHarness2026} likewise found
-TypeScript to be the top language in repositories with agent skill definitions.
+primary language (24.5\%) in repositories with agent configuration files.
 Robbes et al.~\cite{robbesAgenticVery2026} found Claude Code to dominate new-project
 repositories by a factor of approximately $3\times$ over Copilot, consistent with
 its terminal-first design that fits naturally into the npm toolchain.
@@ -737,7 +769,7 @@ country-specific adoption studies.
 
 \subsection{Geographic Distribution of Open-Source Contribution}
 
-Wachs, T\"{o}r\"{o}k, Hann\'{a}k, and Vedres~\cite{wachs2022} carried out the
+Wachs, Nitecki, Schueller, and Polleres~\cite{wachs2022} carried out the
 most comprehensive study of geographic patterns in open-source software on GitHub,
 analysing contributor location data for millions of repositories combined with
 network analysis of collaboration graphs to measure the visibility and reach of
