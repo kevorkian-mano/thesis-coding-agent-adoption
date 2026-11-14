@@ -5,106 +5,100 @@
 \chapter{Methodology}
 \label{chap:methodology}
 
-This chapter describes the research design and the conceptual decisions that underpin the four-phase study. The technical implementation of each phase is described in Chapter~\ref{chap:implementation}. The pipeline is entirely observational: no repositories were modified, no developers were contacted, and no randomisation was performed.
+This chapter describes the research design and the conceptual decisions that underpin the four-phase study. The technical implementation of each phase is described in Chapter~\ref{chap:implementation}. The pipeline is entirely observational: no repositories were modified, no developers were contacted, and no randomisation was introduced.
 
 % ------------------------------------------------------------
 \section{Research Design}
 \label{sec:meth:design}
 % ------------------------------------------------------------
 
-The study adopts an observational, computational pipeline approach. The unit of analysis is the GitHub repository; the target population is active JavaScript, TypeScript, and npm-ecosystem repositories created on or after 24~February 2025. The design is cross-sectional: each repository is observed at a single point in time, and no longitudinal tracking of individual repositories is attempted beyond the time-series analysis in Stage~5, which uses repository creation date as a time axis rather than repeated measurement.
+The study is observational and computational. Its unit of analysis is the GitHub repository; the target population is active JavaScript, TypeScript, and npm-ecosystem repositories created on or after 24~February 2025. Each repository is observed once, at the point of data collection, making the design cross-sectional. The one exception is Stage~5, which uses repository creation date as a time axis to track how adoption evolved across cohorts, though this remains descriptive rather than a true longitudinal study.
 
-No experimental manipulation was introduced. The study makes no causal claims: a detected AI signal in a repository establishes that some form of AI coding agent was used or configured, not that the agent caused any particular outcome. The inference from signal presence to adoption status rests on the signal taxonomy described in Section~\ref{sec:meth:detection}, which was developed with reference to prior work~\cite{robbesHeuristics2026, galsterConfig2026} and extended with npm-specific signals.
+No experimental treatment was introduced. The study makes no causal claims. Finding an AI signal in a repository establishes that some form of coding agent was used or configured there, not that the agent caused any particular outcome. The inference from signal presence to adoption status rests on the signal taxonomy described in Section~\ref{sec:meth:detection}, built from prior work~\cite{robbesHeuristics2026, galsterConfig2026} and extended with npm-specific signals.
 
-The choice of an observational design follows directly from the research questions. RQ1 asks for a proportion, which requires a well-defined population and a reliable detection instrument rather than a controlled experiment. RQ2 compares two detection strategies applied to the same corpus --- a natural within-corpus comparison requiring no treatment assignment. RQ3 tests for differences across countries, which requires representativeness within each country rather than random assignment between them.
+The observational design follows directly from the research questions. RQ1 asks for a proportion, which requires a well-defined population and a reliable detection instrument rather than a controlled experiment. RQ2 compares two detection strategies applied to the same corpus, a natural within-corpus comparison that needs no treatment assignment. RQ3 tests for differences across countries, which requires representativeness within countries rather than random assignment between them.
 
 % ------------------------------------------------------------
 \section{Phase 1: Corpus Design}
 \label{sec:meth:corpus}
 % ------------------------------------------------------------
 
-GitHub was chosen as the data source because it is the dominant platform for public open-source development~\cite{dabic2021} and because its API exposes the metadata and content signals required for multi-signal AI detection at scale. The corpus is restricted to the npm ecosystem because it is the world's largest package registry and because npm-specific signals (lockfiles, SDK dependencies in \texttt{package.json}) provide detection opportunities unavailable in language-agnostic studies.
+GitHub was chosen as the data source because it is the dominant platform for public open-source development~\cite{dabic2021} and because its API surfaces the metadata and content signals required for multi-signal AI detection at scale. The corpus is restricted to the npm ecosystem because it is the world's largest package registry and because npm-specific signals (lockfiles, SDK dependencies in \texttt{package.json}) provide detection opportunities unavailable in language-agnostic studies.
 
 \subsection{Inclusion Criteria}
 
-Six inclusion criteria define the target population:
+Six criteria define the target population:
 
 \begin{enumerate}
-  \item \textbf{Creation date $\geq$ 24 February 2025.} This threshold marks the point at which the npm ecosystem had broad simultaneous access to multiple independent, mature AI coding agents. Claude Code launched in March 2025; OpenAI Codex CLI in April 2025; Gemini CLI in May 2025. Repositories created before this date were started before their authors had access to the full current range of agentic tools and are therefore outside the population of interest.
+  \item \textbf{Creation date $\geq$ 24 February 2025.} This date marks broad, simultaneous access to multiple independent, mature AI coding agents across the npm ecosystem. Claude Code launched in March 2025, OpenAI Codex CLI in April 2025, and Gemini CLI in May 2025. Repositories created before this threshold predate the full current range of agentic tools and are outside the population of interest.
 
-  \item \textbf{Stars $\geq$ 4.} Kalliamvakou et al.~\cite{kalliamvakou2016} showed that a substantial fraction of GitHub repositories are personal experiments or empty initialisations that do not represent real software projects. A minimum star count of four removes the most trivial of these while retaining small but genuine projects.
+  \item \textbf{Stars $\geq$ 4.} A substantial fraction of GitHub repositories are personal experiments or empty initialisations~\cite{kalliamvakou2016}. A minimum of four stars removes the most trivial of these while keeping small but genuine projects.
 
-  \item \textbf{Commits $\geq$ 50.} This threshold ensures that a repository reflects sustained development activity rather than a single-push upload. It also ensures that the commit-trailer-based detection pass has a meaningful history to scan.
+  \item \textbf{Commits $\geq$ 50.} This threshold selects repositories with sustained development activity rather than a single-push upload. It also ensures the commit-history channel has a meaningful window to scan.
 
-  \item \textbf{Not a fork.} Forked repositories inherit the commit history and configuration files of their upstream parent. Including forks would artificially inflate detection rates, since an agent-adopted upstream would propagate its signals to all downstream forks.
+  \item \textbf{Not a fork.} Forked repositories inherit the commit history and configuration files of their upstream parent. Including them would inflate detection rates: an agent-adopted upstream would propagate its signals to every downstream fork.
 
-  \item \textbf{JS+TS bytes $\geq$ 175,000.} The combined byte count of JavaScript and TypeScript source files must meet this threshold after GitHub Linguist excludes \texttt{node\_modules/}, \texttt{dist/}, and vendored files. Repositories below this threshold are predominantly stubs, documentation repositories, or configuration-only projects with insufficient source code to represent active JS/TS development.
+  \item \textbf{JS+TS bytes $\geq$ 175,000.} The combined byte count of JavaScript and TypeScript source files must meet this threshold after GitHub Linguist excludes \texttt{node\_modules/}, \texttt{dist/}, and vendored files. Repositories below this level are predominantly stubs, documentation repositories, or configuration-only projects with insufficient source code to represent active JS/TS development.
 
-  \item \textbf{Ecosystem membership.} A \texttt{package.json} file must be present, or the repository must qualify as a Deno or vanilla JavaScript project. This restricts the corpus to the npm ecosystem and its close relatives.
+  \item \textbf{Ecosystem membership.} A \texttt{package.json} file must be present, or the repository must qualify as a Deno or vanilla JavaScript project. This bounds the corpus to the npm ecosystem and its close relatives.
 \end{enumerate}
 
 \subsection{Ecosystem Classification Scheme}
 
-Repositories are classified into mutually exclusive ecosystem categories based on the lockfile present at the root: npm, pnpm, yarn, bun, deno, npm\_no\_lock (package.json without a lockfile), and vanilla (no package.json). The classification captures meaningful variation in engineering culture and tool compatibility across package managers.
+Repositories are assigned to mutually exclusive ecosystem categories based on the lockfile present at the repository root: npm, pnpm, yarn, bun, deno, npm\_no\_lock (package.json without a lockfile), and vanilla (no package.json). The classification captures variation in engineering culture and tool compatibility across package managers.
 
 % ------------------------------------------------------------
 \section{Phase 2: Owner Geographic Inference}
 \label{sec:meth:geography}
 % ------------------------------------------------------------
 
-GitHub does not require location information, and roughly 60\% of developers leave the location field blank~\cite{wachs2022}. A dataset restricted to owners who self-report location would be subject to systematic selection bias, since the propensity to self-report correlates with nationality, development context, and community norms. To reduce this bias, the study applies a two-stage geographic inference pipeline that combines a fast batch stage (querying the profile location field for all owners at once) with a deep supplementary-signals stage (applying a sequence of weaker evidence sources to owners not resolved in the fast stage). The technical details of each stage are given in Section~\ref{sec:impl:geography}.
+GitHub does not require location information. Roughly 60\% of developers leave the location field blank~\cite{wachs2022}. A dataset restricted to owners who self-report would face systematic selection bias, since the propensity to self-report correlates with nationality, development context, and community norms. To reduce this bias, the study applies a two-stage geographic inference pipeline: a fast batch stage that queries the profile location field for all owners at once, followed by a deep supplementary stage that applies weaker evidence sources to owners not resolved in the first stage. The technical details are in Section~\ref{sec:impl:geography}.
 
-Country-level analyses are restricted to countries with \textbf{at least 30 repositories} in the located corpus after the geographic join. This threshold excludes countries with insufficient data to produce reliable estimates; countries below it are reported for completeness in regional breakdowns but excluded from formal statistical tests.
+Country-level analyses are restricted to countries with \textbf{at least 30 repositories} in the located corpus after the geographic join. Countries below this threshold are excluded from formal statistical tests; they appear in regional summaries where appropriate.
 
 % ------------------------------------------------------------
 \section{Phase 3: AI Signal Detection Design}
 \label{sec:meth:detection}
 % ------------------------------------------------------------
 
-\subsection{Design Principles}
+\subsection{Detection Approach}
 
-The detection pipeline is organised around three principles. First, signals are drawn from multiple independent evidence families so that no single tool's trace conventions dominate the results. Second, passes are ordered by cost: the cheapest signals are applied first, and expensive signals are applied only to repositories that remain unclassified after earlier passes. Third, the classification rule applies a tiered confidence scheme so that weak evidence alone does not produce an \emph{agentic} label.
+The 60,129 repositories from Phase~1 are fed into a purpose-built multi-channel detection pipeline that scans each repository for traces of AI coding agent activity. The pipeline examines five independent evidence channels, each targeting a different part of the repository record. No single channel is treated as definitive; the pipeline collects all available evidence across channels before making a classification decision.
 
-The signal taxonomy was developed with reference to prior work~\cite{robbesHeuristics2026, galsterConfig2026, ghaleb2026, khosravani2026}, adapted to the JS/TS/npm ecosystem, and extended with npm-specific signals not present in language-agnostic studies.
+Detection patterns are stored in a \emph{trace pack}: a versioned, immutable catalogue of author identities, file names, branch prefixes, and commit message patterns for more than 60 AI coding agents. Using a single frozen version across all 60,129 repositories ensures that classification is consistent. The same commit receives the same label regardless of when it is processed.
 
-\subsection{Signal Taxonomy}
+The detection window is the last 100 commits of each repository. This window is uniform across all repositories and reflects the period most likely to contain agent traces, since the corpus starts from February 2025.
 
-Three confidence tiers are defined based on how directly a signal evidences active agent use:
+\subsection{Detection Channels}
 
-\textbf{STRONG signals} record that an agent performed work:
-\begin{itemize}
-  \item \emph{Commit trailers}: \texttt{Co-authored-by:}, \texttt{Generated-by:}, or \texttt{Agent:} lines naming a known agent.
-  \item \emph{Bot-author commits}: commits authored by a known agent bot account (\eg\ \texttt{github-copilot[bot]}, \texttt{devin-ai-integration[bot]}).
-  \item \emph{Agent-style PR branch prefixes}: pull requests opened on branches with known agent prefixes (\eg\ \texttt{devin/}, \texttt{cline/}, \texttt{codex/}).
-  \item \emph{CI workflow invocations}: GitHub Actions steps that call a known agent action.
-\end{itemize}
+Evidence is collected across five active channels. A sixth channel, the bot channel, detects known automation services (CI runners, dependency updaters, release bots) and is recorded separately; bot activity is excluded from adoption measurements.
 
-\textbf{MEDIUM signals} record that a developer configured or labelled something for an agent:
-\begin{itemize}
-  \item \emph{Configuration files}: known agent configuration files at the repository root (\eg\ \texttt{CLAUDE.md}, \texttt{AGENTS.md}, \texttt{.cursorrules}, \texttt{GEMINI.md}). Developers create these files by following their chosen agent's recommended project-setup workflow; their presence is therefore strong evidence of intentional adoption~\cite{galsterConfig2026}.
-  \item \emph{PR labels}: pull requests carrying labels such as \texttt{ai-generated} or \texttt{claude-code}.
-  \item \emph{npm SDK dependencies}: agent SDK packages in \texttt{package.json} (\eg\ \texttt{@anthropic-ai/sdk}), a signal unique to the npm ecosystem.
-\end{itemize}
+\textbf{File channel.} Checks the repository's default-branch file tree for known agent configuration and guidance files. Examples include \texttt{CLAUDE.md}, \texttt{.claude/}, \texttt{.cursorrules}, \texttt{.copilot-*.md}, and \texttt{AGENTS.md}. Developers create these files when they follow the recommended setup workflow of a specific tool~\cite{galsterConfig2026, chatlatanagulchai2025}. The channel also reads \texttt{.gitignore} for agent-specific entries.
 
-\textbf{WEAK signals} record incidental awareness without direct evidence of use:
-\begin{itemize}
-  \item \emph{PR body text}: pull request descriptions that mention an agent tool in passing without a corresponding label or trailer.
-  \item \emph{Editor/ignore configuration}: \texttt{.gitignore} entries referencing agent-specific patterns.
-\end{itemize}
+\textbf{Commit trailer channel.} Parses each commit message in the detection window for trailer lines (Git-style footer fields) that attribute the commit to a known agent. Patterns include \texttt{Co-authored-by: Claude}, \texttt{Generated-by: Claude Code}, \texttt{Assisted-by:}, and related variants across all catalogued agents. This channel is the most productive: in a validation run on 17,757 repositories, commit trailers accounted for over 53\% of all evidence rows collected~\cite{robbesHeuristics2026}.
+
+\textbf{Author channel.} Matches commit author and committer names and email addresses against the trace pack's identity catalogue. This covers official agent email domains (e.g., \texttt{noreply@anthropic.com}) and display-name patterns that specific agents produce by default.
+
+\textbf{PR metadata channel.} Fetches pull request tip commits to recover agent-authored commits that were removed from the main branch by squash-merges. It also checks PR author logins and PR body text for agent-specific markers. This channel is what makes the pipeline resilient to repositories that squash all commits before merging.
+
+\textbf{Branch channel.} Recovers branch names from merge commit messages by parsing the standard ``Merge pull request \#N from owner/branch'' pattern. Recovered names are matched against known agent branch prefixes (\eg\ \texttt{claude/}, \texttt{codex/}, \texttt{devin/}). This channel contributes less than other channels; squash-merging projects leave no branch name in the commit history, so coverage depends on the project's merge strategy.
 
 \subsection{Classification Rule}
 
-A single \texttt{classify()} function is applied identically in all detection passes and in the reclassification stage. The rule applies in priority order:
+For each repository, the pipeline computes a \emph{commit ratio}: the fraction of commits in the detection window that carry a hit from any active channel (file and bot channels excluded from the ratio, since they don't record agent-authored commits):
 
-\begin{enumerate}
-  \item $\geq 1$ STRONG signal family $\rightarrow$ \textbf{agentic}
-  \item $\geq 2$ distinct MEDIUM signal families $\rightarrow$ \textbf{agentic}
-  \item $\geq 1$ MEDIUM family \emph{and} $\geq 1$ agent-attributed commit $\rightarrow$ \textbf{agentic}
-  \item Any signal (MEDIUM or WEAK) but conditions~1--3 not met $\rightarrow$ \textbf{AI-assisted}
-  \item No signal of any kind $\rightarrow$ \textbf{none}
-\end{enumerate}
+\[
+\text{commit\_ratio} = \frac{\text{agent-attributed commits}}{\text{agent-attributed commits} + \text{human commits}}
+\]
 
-The rule requires either unambiguous active use (condition~1) or corroborating evidence from multiple independent families (conditions~2--3) to reach the \emph{agentic} label. A single configuration file without any usage trace falls into \emph{AI-assisted}: the agent may run interactively leaving no server-side trace, or the file may be an abandoned template, and the pipeline cannot distinguish the two. Both \emph{agentic} and \emph{AI-assisted} together constitute the \emph{adopted} population that answers RQ1.
+The binary classification follows directly:
+
+\begin{itemize}
+  \item \textbf{agentic}: commit\_ratio $> 0$ (at least one commit in the window is attributed to a known AI coding agent)
+  \item \textbf{none}: commit\_ratio $= 0$ (no agent-attributed commits detected)
+\end{itemize}
+
+Repositories where the file channel found a configuration file but the commit ratio is zero are classified as \emph{none}. The agent may have been used interactively without leaving commit-level traces, or the configuration file may have been copied from a project scaffold and never activated. The pipeline can't distinguish the two cases. This is a conservative design choice: the cost is that some genuine adoption goes uncounted, and this under-detection is discussed as a limitation in Chapter~\ref{chap:discussion}.
 
 % ------------------------------------------------------------
 \section{Phase 4: Statistical Analysis Plan}
@@ -113,20 +107,20 @@ The rule requires either unambiguous active use (condition~1) or corroborating e
 
 \subsection{Adoption Rate Estimation}
 
-All adoption rates are expressed as proportions accompanied by Wilson 95\% confidence intervals. The Wilson interval was chosen over the simpler Wald interval because it remains accurate for proportions near 0 or 1 and for small sample sizes --- both conditions arise in the country-level analysis~\cite{barke2023}.
+All adoption rates are proportions accompanied by Wilson 95\% confidence intervals. The Wilson interval is preferred over the simpler Wald interval because it stays accurate when proportions are near 0 or 1 and when sample sizes are small, both conditions arise in the country-level analysis~\cite{barke2023}.
 
 \subsection{RQ1: Binomial Test}
 
-A one-sample binomial test with $H_0: p \leq 0.05$ tests whether the observed adoption rate is statistically non-trivial. The 5\% threshold represents negligible uptake: if fewer than 1 in 20 repositories used an AI agent, the phenomenon would not warrant the ecosystem-scoped study this thesis undertakes.
+A one-sample binomial test with $H_0: p \leq 0.05$ tests whether the observed adoption rate is statistically non-trivial. The 5\% threshold represents negligible uptake: if fewer than 1 in 20 repositories used an AI coding agent, the phenomenon would not warrant the ecosystem-scoped study this thesis undertakes.
 
 \subsection{RQ2: McNemar's Test}
 
-McNemar's test for paired proportions compares the single-signal classifier (Pass~1 configuration files only) against the full multi-signal pipeline on the same 60,129 repositories. The test is appropriate here because the two classifiers produce a paired observation for each repository, and the question is whether the two classifiers disagree symmetrically or in one direction only. The statistic is computed with continuity correction.
+McNemar's test for paired proportions compares two classifiers applied to the same 60,129 repositories: a single-channel detector that considers only configuration file presence, and the full multi-channel pipeline. The test is appropriate because both classifiers produce a paired observation for each repository, and the question is whether the two detectors disagree symmetrically or systematically in one direction. The statistic is computed with continuity correction.
 
 \subsection{RQ3: Geographic Tests}
 
-Two levels of test address the geographic question. First, an omnibus Pearson chi-squared test of independence across all eligible countries establishes whether any country-level difference exists at all. Second, pairwise Fisher's exact tests (each country vs.\ rest-of-world) with Benjamini-Hochberg false discovery rate correction at $\alpha = 0.05$ identify which countries are individually significant. Fisher's exact test is preferred over chi-squared for pairwise comparisons because some country--rest-of-world contingency tables contain small expected counts.
+Two levels of test address the geographic question. First, an omnibus Pearson chi-squared test across all 66 eligible countries establishes whether any country-level difference exists at all. Second, pairwise Fisher's exact tests (each country vs.\ rest-of-world) with Benjamini--Hochberg false discovery rate correction at $\alpha = 0.05$ identify which individual countries are significant. Fisher's exact test is used for pairwise comparisons because some country--rest-of-world contingency tables contain small expected counts.
 
 \subsection{Size Comparisons}
 
-Adoption rate comparisons across repository size strata use non-parametric tests (Kruskal-Wallis for the omnibus comparison, Mann-Whitney U with Bonferroni correction for pairwise comparisons) because the size distributions in the corpus are heavily right-skewed.
+Adoption rate comparisons across repository size strata use non-parametric tests: Kruskal-Wallis for the omnibus comparison, Mann-Whitney~U with Bonferroni correction for pairwise comparisons. The choice is non-parametric because size distributions in the corpus are heavily right-skewed.

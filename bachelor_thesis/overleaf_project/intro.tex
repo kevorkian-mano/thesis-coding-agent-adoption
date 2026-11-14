@@ -21,22 +21,22 @@ The pace of adoption is striking. GitHub's Octoverse 2025 report recorded
 TypeScript as the most-used language on the platform for the first time, with
 the JavaScript and TypeScript ecosystem making up the single largest share of
 public activity~\cite{octoverse2025}. This makes the \emph{npm}
-ecosystem, which is the package registry behind both languages, a natural place to
+ecosystem, the package registry behind both languages, a natural place to
 study how AI coding tools are being adopted. npm repositories leave behind
 observable traces: lockfiles, dependency declarations, configuration files,
 and commit histories that can all be analysed at scale.
 
-Despite how fast these tools are spreading, we still do not have a clear
+Despite how fast these tools are spreading, we still don't have a clear
 picture of how many developers actually use them or who those developers are.
 Robbes and colleagues produced the first large-scale estimates, reporting
 22--28\% adoption globally in established projects and 71--76\% in newly
 created repositories~\cite{robbesAgenticMuch2026, robbesAgenticVery2026},
-but their studies cover all GitHub languages and do not focus specifically on
+but their studies cover all GitHub languages and don't focus specifically on
 JS/TS or npm. Khosravani and Mockus~\cite{khosravani2026} found that earlier
 studies using only one detection signal may miss up to 30 times more usage
-than they report, but they also do not break results down by language or
+than they report, but they also don't break results down by language or
 registry. No prior study focuses on the npm ecosystem specifically, even
-though it is the world's largest package registry with more than two million
+though it's the world's largest package registry with more than two million
 packages and tens of billions of weekly downloads~\cite{octoverse2025}.
 
 A second gap is about where in the world developers are using these tools.
@@ -73,7 +73,7 @@ To reach this aim, the thesis pursues the following objectives:
     AI coding agent usage from multiple independent signal families, and to
     quantify the undercounting error introduced by single-signal approaches.
 
-  \item To infer the country of each repository owner using a two-pass
+  \item To infer the country of each repository owner using a two-stage
     geographic inference pipeline applied to GitHub profile data.
 
   \item To rank countries by AI coding agent adoption rate within the
@@ -124,16 +124,17 @@ had broad, simultaneous access to multiple mature AI coding agents. Ecosystem
 membership is confirmed by the presence of \texttt{package.json} alongside a
 lockfile at the repository root (npm, Yarn, pnpm, or Bun).
 
-AI coding agent adoption is detected using three signal families applied in
-three passes ordered by cost: agent configuration files (checked first, batch
-GraphQL), commit message trailers and PR branch prefixes (checked second, REST
-API), and PR body text, PR labels, and npm SDK dependency declarations
-(checked third, deep scan). A repository is classified as \emph{agentic} if
-it shows three or more signals or signals from two or more distinct agents,
-\emph{AI-assisted} if it shows one or two signals from a single agent, and
-\emph{none} otherwise.
+AI coding agent adoption is detected using multiple independent signal families
+across a multi-channel detection pipeline ordered by API cost: agent
+configuration files (checked first, batch GraphQL), commit message trailers
+and PR branch prefixes (checked second, REST API), and PR body text, PR
+labels, and npm SDK dependency declarations (checked third, deep scan).
+A repository is classified as \emph{agentic} if the evidence meets the
+threshold of a strong direct signal or corroborating evidence from at least
+two independent signal families. Repositories below that threshold are
+classified as \emph{none}.
 
-Country attribution is based on a two-pass geographic inference pipeline
+Country attribution is based on a two-stage geographic inference pipeline
 applied to the GitHub profile of each unique repository owner. Countries with
 fewer than 30 repositories in the corpus are excluded from the geographic
 ranking. The comparison is observational; no causal claims are made about why
@@ -147,11 +148,11 @@ adoption rates differ across countries.
 The study follows a four-phase computational pipeline implemented in Python
 using the GitHub GraphQL and REST APIs. First, repositories are collected via
 the GitHub Search API using date-window partitioning and filtered by the
-agreed team criteria. Second, a two-pass geographic inference pipeline assigns
+the corpus criteria. Second, a two-stage geographic inference pipeline assigns
 a country to each repository owner using profile location fields, bio text,
 company fields, email and website domains, organisation memberships, and
 social network signals. Third, each repository is scanned for AI adoption
-signals using the three-pass layered detection pipeline. Fourth, adoption
+signals using the multi-channel detection pipeline. Fourth, adoption
 labels are joined with owner countries to produce a per-country ranking, and
 formal statistical tests are applied to answer each research question. All
 data and scripts are archived to ensure reproducibility; full technical
