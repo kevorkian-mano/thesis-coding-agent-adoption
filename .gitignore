@@ -1,8 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
 .env
 /venv
 /.claude
 /local_docs
 /local_workspace
+/scripts/local_scripts
 
 # PDFs are large and may contain copyrighted material — keep local only
 docs/pdfs/
