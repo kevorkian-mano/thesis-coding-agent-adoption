@@ -5,14 +5,14 @@
 \chapter{Agent Detection Catalogues}
 \label{app:agents}
 
-This appendix lists the AI coding agents and detection signal patterns from two sources used in this study. Section~\ref{app:paper-agents} reproduces the agent catalogue from Robbes et al.~\cite{robbesAgenticMuch2026}, which defines 196 heuristics across 63 agents. Section~\ref{app:e2e-agents} lists all agents and patterns from the trace pack of the e2e detection tool (version 2026-10-19), which covers 67 agents across five signal channels. The two catalogues share 61 agents; the e2e tool adds 6 agents released after the paper's data collection period (Abacus~AI, Kimi~Code, OpenCode, Letta~Code, Mistral~Vibe, Crush) and reclassifies two paper entries (CopilotSwe and Factory~Droid are merged into Copilot and Factory respectively).
+This appendix lists the AI coding agents and detection signal patterns from two sources used in this study. Section~\ref{app:paper-agents} reproduces the agent catalogue from Robbes et al.~\cite{robbesAgenticMuch2026}, which defines 196 heuristics across 63 agents. Section~\ref{app:e2e-agents} lists all agents and patterns from the trace pack of the e2e detection tool (version 2026-11-15), which covers 91 agents (78 active, 12 adjacent, 1 pseudo) across five signal channels. The two catalogues share 61 agents; the e2e tool adds agents released after the paper's data collection period and reclassifies two paper entries (CopilotSwe and Factory~Droid are merged into Copilot and Factory respectively).
 
 % -------------------------------------------------------
 \section{Robbes et al.\ (2026) --- 63-Agent Signal Catalogue}
 \label{app:paper-agents}
 % -------------------------------------------------------
 
-The paper defines four signal categories across 63 agents: \textbf{Files} (93 patterns), \textbf{Authors} (79 patterns), \textbf{Branches} (20 patterns), and \textbf{Labels} (4 patterns). Full heuristics are available in the replication package~\cite{agentImpactRepo}. Agents whose exact patterns are not stated in the paper text are marked ``see replication package.'' All 196 heuristics together represent what the paper calls a \emph{frozen} catalogue: every repository in the paper's corpus was scanned with the same version.
+The paper defines four signal categories across 63 agents: \textbf{Files} (93 patterns), \textbf{Authors} (79 patterns), \textbf{Branches} (20 patterns), and \textbf{Labels} (4 patterns). Full heuristics are available in the companion replication package. Agents whose exact patterns are not stated in the paper text are marked ``see replication package.'' All 196 heuristics together represent what the paper calls a \emph{frozen} catalogue: every repository in the paper's corpus was scanned with the same version.
 
 \begin{small}
 \begin{longtable}{@{}p{3.0cm}p{11.5cm}@{}}
@@ -93,15 +93,15 @@ Zed              & File + Author (see replication package) \\
 \end{small}
 
 % -------------------------------------------------------
-\section{E2E Tool Trace Pack (v2026-10-19) --- Signal Catalogue}
+\section{E2E Tool Trace Pack (v2026-11-15) --- Signal Catalogue}
 \label{app:e2e-agents}
 % -------------------------------------------------------
 
-The trace pack shipped with the e2e detection tool (version 2026-10-19) covers 67 agents across five signal channels. \textbf{Config} patterns match files and directories in the repository tree. \textbf{Author} patterns match commit author names, committer identities, and email addresses appearing in commit trailers (\texttt{Co-authored-by:}, \texttt{Generated-by:}, and related trailer tokens). \textbf{Branch} patterns match the head-ref name of pull requests. \textbf{Label} patterns match GitHub PR labels. A sixth channel, \textbf{Bot}, covers approximately 86 CI and dependency-update automation accounts (dependabot, renovate, github-actions, etc.) that are recorded separately and excluded from adoption counts; those are not listed here. The commit ratio and binary adoption label are derived from the author, trailer, and PR-metadata channels only; config and branch channels contribute supporting evidence but do not directly affect the ratio.
+The trace pack shipped with the e2e detection tool (version 2026-11-15) covers 91 agents (78 active, 12 adjacent, 1 pseudo) across five signal channels. \textbf{Config} patterns match files and directories in the repository tree. \textbf{Author} patterns match commit author names, committer identities, and email addresses appearing in commit trailers (\texttt{Co-authored-by:}, \texttt{Generated-by:}, and related trailer tokens). \textbf{Branch} patterns match the head-ref name of pull requests. \textbf{Label} patterns match GitHub PR labels. A sixth channel, \textbf{Bot}, covers approximately 86 CI and dependency-update automation accounts (dependabot, renovate, github-actions, etc.) that are recorded separately and excluded from adoption counts; those are not listed here. The commit ratio and binary adoption label are derived from the author, trailer, and PR-metadata channels only; config and branch channels contribute supporting evidence but do not directly affect the ratio.
 
 \begin{small}
 \begin{longtable}{@{}p{2.8cm}p{3.8cm}p{4.8cm}p{3.1cm}@{}}
-\caption[E2E tool trace pack agent signal catalogue]{E2E tool trace pack (v2026-10-19) --- all 67 agents, detection patterns, and signal channels.}
+\caption[E2E tool trace pack agent signal catalogue]{E2E tool trace pack (v2026-11-15) --- 91 agents, detection patterns, and signal channels.}
 \label{tab:e2e-agents}\\
 \toprule
 \textbf{Agent} & \textbf{Config / file patterns} & \textbf{Author / email patterns} & \textbf{Branch / label} \\

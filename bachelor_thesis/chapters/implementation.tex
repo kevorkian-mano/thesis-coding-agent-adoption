@@ -5,7 +5,7 @@
 \chapter{Implementation}
 \label{chap:implementation}
 
-This chapter describes the technical implementation of the four-phase pipeline introduced in Chapter~\ref{chap:methodology}. All scripts are written in Python~3.11. The pipeline has five numbered stages, each in its own directory, with stage dependencies strictly one-directional: each stage reads from the previous stage's output and writes to its own output directory. No script modifies a prior stage's output.
+All scripts are written in Python~3.11. The pipeline has five numbered stages, each in its own directory, with stage dependencies strictly one-directional: each stage reads from the previous stage's output and writes to its own output directory. No script modifies a prior stage's output.
 
 % ------------------------------------------------------------
 \section{Pipeline Architecture}
@@ -16,10 +16,10 @@ The five stages are:
 
 \begin{enumerate}
   \item \textbf{Stage 1: Corpus construction}: repository discovery via the GitHub Search API and application of the six inclusion filters.
-  \item \textbf{Stage 2: Owner location inference}: two-stage geographic attribution of repository owners.
-  \item \textbf{Stage 3: AI signal detection}: multi-channel evidence collection across five independent signal channels, followed by binary classification.
-  \item \textbf{Stage 4: Statistical analysis}: adoption rate computation, formal hypothesis tests, and geographic ranking.
-  \item \textbf{Stage 5: Extended analyses}: time series, commit density, tool diversity, framework breakdown, and country-specific analyses.
+  \item \textbf{Stage 2: Owner location inference}: four-pass geographic attribution covering profile fields, supplementary profile signals, timezone and script detection, and company or organisation inference.
+  \item \textbf{Stage 3: AI signal detection}: multi-channel evidence collection across five active channels via the GitHub GraphQL and REST APIs, followed by binary classification.
+  \item \textbf{Stage 4: Statistical analysis}: adoption rate computation, formal hypothesis tests, geographic ranking, ecosystem and size breakdowns, MENA regional analysis, and pricing analysis.
+  \item \textbf{Stage 5: Extended analyses}: time series, repository size comparison, commit density, tool diversity, adoption timing, country timeline, world regions, and China analysis.
 \end{enumerate}
 
 Data collection used authenticated GitHub API requests (OAuth personal access token), subject to GitHub's rate limits of 5,000 requests per hour for the REST API and 5,000 points per hour for the GraphQL API. All raw API responses were cached locally in Parquet format before any processing step, so the entire pipeline can be re-run without additional API calls.
@@ -31,195 +31,375 @@ Data collection used authenticated GitHub API requests (OAuth personal access to
 
 \subsection{Repository Discovery}
 
-Repositories were collected using the GitHub GraphQL Search API. The API's 1,000-result cap per query was handled by a date-window partitioning algorithm:
+Repositories were collected using the GitHub GraphQL Search API. The API's hard limit of 1,000 results per query was handled by a date-window partitioning algorithm. The script initialises a queue of non-overlapping date windows, each \texttt{WINDOW\_DAYS = 5} days wide, starting from \texttt{CREATED\_FROM = 2025-02-24}. For each window, it issues a GraphQL Search query with a \texttt{created:YYYY-MM-DD..YYYY-MM-DD} range filter and either \texttt{language:JavaScript} or \texttt{language:TypeScript}. Each query page fetches 50 repositories (the \texttt{PAGE\_SIZE} constant). If a query returns exactly 1,000 results, the window is split at its midpoint and both halves are re-enqueued. The minimum split unit is one second, preventing infinite recursion on dense time ranges. This continues until every window returns fewer than 1,000 results.
 
-\begin{enumerate}
-  \item Initialise a queue of windows: \texttt{[(start\_date, start\_date + 5 days), ...]}.
-  \item For each window, issue a GraphQL Search query with \texttt{created:YYYY-MM-DD..YYYY-MM-DD} and the target language (\texttt{language:JavaScript} or \texttt{language:TypeScript}).
-  \item If the query returns exactly 1,000 results, split the window at its midpoint and re-enqueue both halves.
-  \item Collect all results once the queue is empty.
-\end{enumerate}
+JavaScript-primary and TypeScript-primary repositories were queried separately because the GitHub Search API doesn't support combined language filters in a single query. Repositories returned in both queries were deduplicated by GraphQL node ID before any further processing. The \texttt{primary\_language} field was set to whichever of JavaScript or TypeScript contributed more bytes to the repository.
 
-JavaScript-primary and TypeScript-primary repositories were queried separately, because the GitHub Search API does not support combined language filters. Repositories returned in both queries were deduplicated by node ID before any further processing.
+The script writes progress to \texttt{progress\_stage1a.txt} after each completed window. If the collection run is interrupted and restarted, it resumes from the last completed window rather than starting over.
 
 \subsection{Applying Inclusion Filters}
 
-Filters were applied in a fixed order chosen to minimise API credit usage. Cheap metadata filters (fork flag, star count, commit count) ran first using fields returned by the Search API; the expensive JS+TS byte check ran last, using a separate \texttt{GET /repos/\{owner\}/\{repo\}} call that includes Linguist byte counts.
+Filters were applied in two passes, ordered to minimise API credit usage.
+
+\textbf{Pass 1 (search-time):} The Search API response already carries per-repository language byte counts, fork flags, stargazer counts, and creation dates. These fields are sufficient to apply four of the six inclusion criteria at no extra cost: \texttt{is\_fork = false}, \texttt{stars >= 4}, \texttt{js\_bytes + ts\_bytes >= 175,000}, and \texttt{created\_at >= 2025-02-24}. All four checks happen in memory on each search result page as it arrives.
+
+\textbf{Pass 2 (commit count, batch GraphQL):} The Search API doesn't return commit counts. Only repositories that survived Pass~1 were submitted to a batch GraphQL query that fetches \texttt{defaultBranchRef.target.history.totalCount} for each. Repositories with \texttt{total\_count < 50} were discarded. By running this expensive call only on Pass~1 survivors, the number of API requests stays well below what a full scan would require.
+
+The two passes are implemented in \texttt{stage1a\_collect\_repos.py}. Rate-limit handling uses exponential backoff: HTTP 403 or 429 responses trigger a sleep until the \texttt{X-RateLimit-Reset} header timestamp plus five seconds; HTTP 5xx responses use \texttt{min(15 × attempt, 120)} seconds of backoff, with a maximum of 10 retries per request.
 
 \subsection{Ecosystem Classification}
 
-Each repository's ecosystem was determined by checking for lockfiles at the repository root using a batch GraphQL query that retrieved the flat file list of the default branch. Where multiple lockfiles were present, a precedence order (pnpm $>$ yarn $>$ bun $>$ npm) resolved the conflict. The result is stored in an \texttt{ecosystem\_type} column for use in later stages.
+Ecosystem classification is handled by \texttt{stage1b\_categorize\_ecosystem.py}. For each batch of 15 repositories, a single GraphQL query checks for seven files at the repository root by calling \texttt{object(expression: "HEAD:<path>")} for each: \texttt{package.json}, \texttt{package-lock.json}, \texttt{yarn.lock}, \texttt{pnpm-lock.yaml}, \texttt{bun.lockb}, \texttt{deno.json}, and \texttt{deno.jsonc}. Each lookup costs one GraphQL node, keeping the total well within GitHub's 500-node complexity limit per request. The script checkpoints every 300 repositories.
+
+Categorisation applies a fixed precedence order: \textbf{deno} (if \texttt{deno.json} or \texttt{deno.jsonc} is present), then \textbf{npm} (package.json + package-lock.json), \textbf{yarn} (package.json + yarn.lock), \textbf{pnpm} (package.json + pnpm-lock.yaml), \textbf{bun} (package.json + bun.lockb), \textbf{npm\_no\_lock} (package.json without any lockfile), and finally \textbf{vanilla} (no package.json at all). The \texttt{ecosystem\_type} column is appended to the corpus for use in all later stages.
 
 \subsection{Output}
 
-Stage~1 produces \texttt{corpus.csv} with one row per repository: \texttt{full\_name}, \texttt{owner\_login}, \texttt{created\_at}, \texttt{stars}, \texttt{commits}, \texttt{is\_fork}, \texttt{lang\_bytes}, \texttt{primary\_language}, \texttt{ecosystem\_type}.
+Stage~1 produces two CSV files. \texttt{global\_corpus\_raw.csv} is written by Stage~1a and contains: \texttt{full\_name}, \texttt{stars}, \texttt{forks}, \texttt{commits}, \texttt{lang\_bytes}, \texttt{url}, \texttt{owner\_login}, \texttt{repo\_name}, \texttt{primary\_language}, \texttt{size\_stratum}, \texttt{created\_at}. The \texttt{size\_stratum} field classifies repositories by star count: small ($\leq 50$), medium (51--500), and large ($> 500$). \texttt{global\_corpus.csv} is produced by Stage~1b and appends the \texttt{ecosystem\_type} and \texttt{corpus\_source} columns.
 
 % ------------------------------------------------------------
 \section{Stage 2: Owner Location Inference}
 \label{sec:impl:geography}
 % ------------------------------------------------------------
 
-Stage~2 applies a two-stage geographic inference pipeline to all 50,002 unique owner logins in the corpus.
+Stage~2 applies a five-pass geographic inference pipeline to all unique owner logins in the corpus. Each pass feeds its unresolved owners to the next. The passes are implemented in five separate scripts: \texttt{stage2a\_location\_fast.py}, \texttt{stage2b\_location\_deep.py}, \texttt{stage2c\_timezone\_readme.py}, \texttt{stage2d\_company\_orgs.py}, and \texttt{stage2e\_commit\_email.py}.
 
-\subsection{Fast Stage: Profile Location Field}
+\subsection{Pass 1: Profile Location Field}
 
-A batch GraphQL query fetched the \texttt{location} profile field for all 50,002 owners (50 owners per request, to stay within GraphQL complexity limits). The raw location string was normalised against a custom country-name lookup table of approximately 2,500 entries covering official country names, ISO~3166 codes, common demonyms, and transliterations in English, French, Spanish, German, and Arabic. Owners whose normalised string matched exactly one country were attributed here and excluded from the deep stage.
+A batch GraphQL query fetches the \texttt{location} profile field for all owners (50 owners per request, to stay within GraphQL complexity limits). The raw location string is normalised against a custom country-name lookup table: approximately 155 countries plus over 400 city-to-country mappings, covering official country names, ISO~3166 codes, common demonyms, and transliterations in English, French, Spanish, German, Arabic, and Persian. Matching uses a longest-key-first substring scan to avoid partial matches (\eg\ ``New York'' resolving to ``York'' in the United Kingdom before reaching ``United States''). Owners whose normalised string resolves to exactly one country are attributed here with confidence \texttt{high} and excluded from Pass~2. All others are written to \texttt{not\_specified\_owners.csv} and forwarded to the next pass.
 
-\subsection{Deep Stage: Supplementary Signals}
+\subsection{Pass 2: Supplementary Profile Signals}
 
-Owners not resolved in the fast stage were processed individually through a chain of six supplementary signals, stopping at the first successful resolution:
+Owners not resolved in Pass~1 are processed individually through a chain of seven supplementary signals, stopping at the first successful resolution. Each request fetches 10 owners (a smaller batch than Pass~1 because the query is more complex):
 
 \begin{enumerate}
-  \item \textbf{Bio text}: the owner's GitHub bio was parsed for country names and demonyms using the same lookup table.
-  \item \textbf{Company field}: the company string was looked up against the Research Organisation Registry (ROR) API and a custom company-to-country mapping built from 500 major technology employers.
-  \item \textbf{Email domain TLD}: if the owner had a public email, the top-level domain was mapped to a country (\eg\ \texttt{.de} → Germany).
-  \item \textbf{Website URL TLD}: the same TLD mapping was applied to the owner's website URL.
-  \item \textbf{Social links}: Twitter and LinkedIn profile URLs were fetched and their bio and location fields parsed.
-  \item \textbf{Organisation majority vote}: if 60\% or more of the already-resolved members of an organisation shared the same country, the unresolved owner was attributed to that country.
+  \item \textbf{Bio text:} The owner's GitHub bio is parsed for country names and demonyms using the same lookup table.
+  \item \textbf{Company name:} The company string is scanned directly for country names and demonyms.
+  \item \textbf{Company domain TLD:} If the company field contains a URL or email address, its country-code top-level domain is mapped to a country using a table of 71 ccTLD entries (\eg\ \texttt{.de} → Germany, \texttt{.eg} → Egypt).
+  \item \textbf{Email domain TLD:} The same 71-entry TLD mapping is applied to the owner's public email address.
+  \item \textbf{Website URL TLD:} The TLD mapping is applied to the owner's website URL.
+  \item \textbf{Organisation locations:} For each of the owner's public GitHub organisation memberships (up to 10), the organisation's location field is parsed with the same country lookup table.
+  \item \textbf{Network majority vote:} The location fields of up to 30 followers and 30 following accounts (60 total) that were already resolved in Pass~1 are collected. If at least three resolved connections share a single country and that country accounts for at least 40\% of all resolved connections, the unresolved owner is attributed to it. Confidence is set to \texttt{medium}; signal source is recorded as \texttt{network\_majority}.
 \end{enumerate}
 
-For owners still unresolved after these six signals, two weaker methods were applied: UTC time-zone inference from commit timestamps (the modal UTC offset across the owner's 30 most recent commits) and Unicode writing-script detection (Arabic, Devanagari, Hangul, Kanji/Kana, Thai) on the display name and bio. Neither method was used as sole attribution; each required agreement with at least one TLD or company signal from steps (2)--(4) before it contributed to a decision.
+\subsection{Pass 3: Timezone and Script Detection}
+
+Owners still unresolved after Pass~2 are processed by three weaker signals that run in sequence within \texttt{stage2c\_timezone\_readme.py}.
+
+\textbf{Nominatim geocoding.} Owners who have a non-empty but unparsed location string are submitted to the OpenStreetMap Nominatim API (\texttt{https://nominatim.openstreetmap.org/search}) at a maximum rate of one request per second (enforced by a 1.1-second sleep after each call). Results are keyed against a 159-entry ISO~3166-1 alpha-2 mapping. Nominatim results are cached in memory within the run to avoid duplicate lookups.
+
+\textbf{UTC offset inference.} For owners still unresolved, the pipeline fetches up to 20 commits from the owner's most-starred repository via a batch GraphQL query (10 owners per request). Each commit's \texttt{author.date} field carries a UTC offset suffix in the format \texttt{+HH:MM} or \texttt{-HH:MM}. The modal offset across all fetched commits is extracted. Some offsets map unambiguously to a single country (\eg\ \texttt{+05:30} → India, \texttt{+09:30} → Australia), while others are ambiguous (\eg\ \texttt{+09:00} covers Japan, South Korea, and others). Unambiguous offsets are accepted; ambiguous offsets produce a candidate list that must be corroborated by a script signal in the next step.
+
+\textbf{Unicode writing-script detection.} The commit messages and the repository README (fetched via \texttt{GET /repos/\{owner\}/\{repo\}/readme}, first 8,000 characters, base64-decoded) are scanned for 13 Unicode block patterns. Each pattern maps to a country or a regional candidate set:
+
+\begin{itemize}
+  \item Hangul (\texttt{U+AC00--U+D7AF}, \texttt{U+1100--U+11FF}) → South Korea
+  \item Hiragana/Katakana (\texttt{U+3040--U+30FF}) → Japan
+  \item CJK Unified (\texttt{U+4E00--U+9FFF}) → candidate set (China, Taiwan, Singapore, \ldots)
+  \item Arabic (\texttt{U+0600--U+06FF}) → candidate set (all Arab-script countries)
+  \item Persian-specific codepoints (\texttt{U+06A9}, \texttt{U+06AF}, \texttt{U+06CC}, \texttt{U+0686}) combined with Arabic → Iran specifically
+  \item Devanagari (\texttt{U+0900--U+097F}) → India
+  \item Thai (\texttt{U+0E00--U+0E7F}) → Thailand
+  \item Cyrillic (\texttt{U+0400--U+04FF}) → candidate set (Russia, Ukraine, \ldots)
+  \item Hebrew (\texttt{U+0590--U+05FF}) → Israel
+  \item Bengali (\texttt{U+0980--U+09FF}) → Bangladesh
+  \item Ethiopic (\texttt{U+1200--U+137F}) → Ethiopia
+  \item Armenian (\texttt{U+0530--U+058F}) → Armenia
+  \item Vietnamese combining diacritics (\texttt{U+1EA0--U+1EF9}) → Vietnam
+\end{itemize}
+
+Detection requires at least 30 characters in the matched block to trigger. When a script pattern produces a single country, it's accepted with confidence \texttt{medium}. When a script pattern produces a candidate list, the pipeline checks whether the UTC offset list from the previous step includes any country from that set; if it does, that country is accepted with confidence \texttt{low}. Script-only decisions without any UTC corroboration are accepted only when the script maps to a unique country.
+
+\subsection{Pass 4: Company and Organisation Membership}
+
+A fourth pass (\texttt{stage2d\_company\_orgs.py}) handles owners still unresolved after Pass~3. It makes two further attempts.
+
+\textbf{Academic institution lookup.} If the owner's company field contains academic keywords (university, institute of technology, polytechnic, iit, mit, and 35 more), the company name is submitted to the Research Organisation Registry (ROR) API at \texttt{https://api.ror.org/v1/organizations}. Only results with a confidence score of at least 0.85 are accepted; below that threshold the lookup is treated as inconclusive. Accepted results return an ISO~3166-1 alpha-2 country code. Results are cached in memory to avoid repeat queries for the same institution.
+
+\textbf{Organisation membership majority vote.} For each public GitHub organisation the owner belongs to (up to 10), the organisation's location is geocoded via Nominatim. A blocklist of approximately 90 globally distributed organisations is applied before geocoding: it covers major technology companies (Google, Microsoft, Amazon, Apple, Meta, Netflix), open-source foundations (Apache, Mozilla, CNCF, Linux Foundation, Python Software Foundation, Kubernetes), and global SaaS platforms (GitHub, GitLab, Slack, Stripe, Datadog). Organisations on the blocklist are skipped because their location is uninformative for inferring individual developer geography. For remaining organisations, geocoded countries are collected and the most frequent country is recorded with its vote count. This signal is accepted with confidence \texttt{low}.
+
+\subsection{Pass 5: Commit Author Email TLD}
+
+\texttt{stage2e\_commit\_email.py} runs on the owners still unresolved after Pass~4. The key insight is that GitHub exposes two separate email addresses per developer and the previous four passes only used one of them.
+
+\textbf{Why the profile email was insufficient.} Passes~1 through~4 read the GitHub \emph{profile} email: the address a developer optionally enters on their public profile page. The vast majority leave it blank or use a generic provider (Gmail, Yahoo, Outlook, QQ, Naver). These addresses carry no country signal. A 30-entry blocklist of generic providers confirms this: the email field in the deep-pass data for the remaining unresolved owners was either empty or dominated by \texttt{gmail.com}.
+
+\textbf{The git-level author email.} Every Git commit object carries an \texttt{author.email} field set by the developer's local \texttt{git config user.email}. This is configured on the developer's own machine, independently of the GitHub profile, and many developers set it to a work, university, or ISP address with a country-code top-level domain. GitHub exposes this field in the REST commits API response under \texttt{commit.author.email}.
+
+\textbf{Per-owner repository selection.} The script reads \texttt{global\_corpus.csv} and selects each owner's repository with the highest commit count. More commits increases the chance of encountering a non-generic work email and provides more data points for the majority vote.
+
+\textbf{Commit fetch.} A single REST call per owner fetches the 10 most recent commits:
+\begin{verbatim}
+GET /repos/{owner}/{repo}/commits?per_page=10
+\end{verbatim}
+The \texttt{commit.author.email} field of each commit object is extracted.
+
+\textbf{Filtering and mapping.} Emails whose domain matches the 30-entry generic-provider blocklist are dropped. The remaining email domains are matched against a 71-entry ccTLD table (the same table used in Pass~2). Matching uses a suffix scan: \texttt{john@tu-berlin.de} → \texttt{.de} → Germany; \texttt{ana@usp.br} → \texttt{.br} → Brazil; \texttt{wei@pku.edu.cn} → \texttt{.cn} → China.
+
+\textbf{Majority vote.} All ccTLD countries extracted from the 10-commit window are collected. The most frequent country is selected. Confidence is set to \texttt{medium} if two or more commits agree, \texttt{low} if only one commit produced a ccTLD email.
+
+\textbf{Resumability.} Results are written to a JSON cache (\texttt{owner\_locations\_e\_cache.json}) every 500 owners. Interrupted runs resume by skipping owners already present in the cache, consuming zero additional API calls for cached owners.
+
+\textbf{Output.} Newly resolved owners are appended to \texttt{owner\_locations\_all.csv}, replacing their \texttt{not\_specified} rows. The full per-owner result table is written to \texttt{owner\_locations\_e.csv}. The full run on 21,223 unresolved owners resolved 1,419 (6.7\%), raising the cumulative resolution rate from 56.7\% to 59.5\% (29,746 of 50,002 owners located). The leading ccTLD countries recovered are Germany (186 owners), China (105), Colombia (103), Russia (82), and the United Kingdom (77).
 
 \subsection{Validation}
 
-The deep-stage pipeline was validated against a ground truth of 149 GitHub users whose country was confirmed from their self-reported profile location field. Each validation run stripped that field and tested whether the supplementary signals alone recovered the correct country. Three independent random samples (seeds 42, 123, and 456) of approximately 50 users each were drawn, with no overlap between runs.
+The deep-stage pipeline was validated against a ground truth of 149 GitHub users whose country was confirmed from their self-reported profile location field. Each validation run stripped that field and tested whether the supplementary signals alone recovered the correct country. Three independent random samples (seeds 42, 123, and 456) of approximately 50 users each were drawn with no overlap between runs.
 
 Combined across all three runs, the pipeline achieved a \textbf{precision of 89.8\%} (correct predictions as a share of all predictions made) at a \textbf{coverage of 65.8\%} (predictions made as a share of all users tested). When the pipeline can't reach a confident decision, it returns \texttt{not\_specified} rather than guessing; those abstentions are already counted in the unlocated share and don't introduce wrong labels into the geographic analysis. Wrong predictions, which carry the real analytic risk, occurred in 10.2\% of cases where the pipeline did make a prediction. The most common failure pattern was diaspora developers whose network or email signals reflected their country of origin rather than current residence.
 
+Pass~5 was validated separately using \texttt{stage2e\_validate.py}. A stratified sample of 150 owners whose country was known from Pass~1 was drawn across 15 countries. For each owner the same commit-fetch and ccTLD-inference logic as \texttt{stage2e\_commit\_email.py} was applied, and the result was compared against the known ground-truth country. The pass achieved a \textbf{precision of 87.5\%} (14 correct out of 16 predictions made) at a \textbf{coverage of 10.7\%} (16 of 150 owners had any ccTLD email). The two wrong predictions were both edge cases: one owner used \texttt{ya.ru} (a Yandex short-domain alias not covered by the generic-provider blocklist) and was inferred as Russian despite being located in the United States; the other owner committed with a Belgian institutional address despite their GitHub profile indicating Russia, a pattern consistent with a developer employed at a foreign institution. The low coverage (10.7\%) directly explains the modest but non-trivial gain of 6.7\% on the full unresolved set: the signal is sparse but highly precise, and abstentions introduce no wrong labels.
+
 \subsection{Output}
 
-Stage~2 produces \texttt{owners\_located.csv}: \texttt{owner\_login}, \texttt{inferred\_country}, \texttt{resolution\_pass}.
+Stage~2 produces five intermediate CSV files and one merged final file. \texttt{owner\_locations\_fast.csv} carries \texttt{owner\_login}, \texttt{location\_raw}, \texttt{inferred\_country}, \texttt{confidence}, \texttt{source} from Pass~1. \texttt{owner\_locations\_deep.csv} adds the same columns plus \texttt{bio}, \texttt{company}, \texttt{email} from Pass~2. \texttt{owner\_locations\_c.csv} adds timezone and script results from Pass~3. \texttt{owner\_locations\_d.csv} adds company/org results from Pass~4. \texttt{owner\_locations\_e.csv} adds commit-email results from Pass~5. All five are merged into \texttt{owner\_locations\_all.csv}, which is the input to Stage~4.
 
 % ------------------------------------------------------------
 \section{Stage 3: AI Signal Detection}
 \label{sec:impl:detection}
 % ------------------------------------------------------------
 
-Stage~3 feeds the 60,129-repository corpus from Stage~1 into a purpose-built multi-channel detection pipeline. The pipeline clones each repository lightly, reads commit history and file trees locally, and matches all evidence against a frozen trace pack. No GitHub API quota is consumed during detection: the approach uses plain git operations on public repositories, completing the full 60,129-repo scan without authentication.
+Stage~3 feeds the corpus from Stage~1 into the e2e detection tool's multi-channel detection pipeline. The pipeline queries each repository entirely through GitHub's GraphQL and REST APIs: no repository is cloned, no local disk space is consumed beyond the response cache, and no git operations are required. This API-only design makes the scan fully parallelisable across multiple authentication tokens.
 
 \subsection{Trace Pack}
 
-All pattern matching is driven by a \emph{trace pack}: a versioned, immutable JSON catalogue covering more than 60 AI coding agents. The pack contains four pattern categories:
+All pattern matching is driven by a \emph{trace pack}: a versioned, immutable JSON catalogue (version 2026-11-15) covering 91 AI coding agents (78 active, 12 adjacent, 1 pseudo), 521 detection rules, and 107 rejection patterns. The pack is compiled from five CSV sources: \texttt{authors.csv}, \texttt{files.csv}, \texttt{branches.csv}, \texttt{labels.csv}, and \texttt{bots.csv}. It defines four detection pattern categories:
 
 \begin{itemize}
-  \item \textbf{Author patterns}: email addresses and display-name patterns that specific agents produce by default (\eg\ \texttt{noreply@anthropic.com} for Claude Code, \texttt{aider@aider.chat} for Aider).
-  \item \textbf{File patterns}: configuration and guidance file names and directory paths (\eg\ \texttt{CLAUDE.md}, \texttt{.claude/}, \texttt{.cursorrules}, \texttt{AGENTS.md}, \texttt{.copilot-*.md}).
-  \item \textbf{Branch patterns}: known agent branch prefixes (\eg\ \texttt{claude/}, \texttt{codex/}, \texttt{devin/}, \texttt{copilot/}).
-  \item \textbf{Bot patterns}: automation account name patterns for known CI and dependency-update services, used to separate bot commits from agent commits.
+  \item \textbf{Author patterns:} Email addresses, GitHub login patterns, and display-name strings that specific agents produce by default (\eg\ \texttt{noreply@anthropic.com} for Claude Code, \texttt{aider@aider.chat} for Aider, \texttt{cascade@windsurf.ai} for Windsurf). The pack distinguishes \emph{distinctive} patterns, which are matched directly, from \emph{ambiguous} patterns (10 tokens: aider, claude, copilot, cline, junie, cursor, coderabbit, chatgpt, roomote, codex) that require corroboration from at least one other field before they're accepted.
+  \item \textbf{File patterns:} Configuration and guidance file names and directory paths (\eg\ \texttt{CLAUDE.md}, \texttt{.claude/}, \texttt{.cursorrules}, \texttt{AGENTS.md}). Dots in patterns are automatically escaped; patterns that don't start with an anchor receive a path prefix (\texttt{(?:\^{}|/)}) to prevent false matches on filename substrings.
+  \item \textbf{Branch patterns:} Known agent branch prefixes (\eg\ \texttt{claude/}, \texttt{codex/}, \texttt{devin/}, \texttt{copilot/}), matched against pull request head-ref names.
+  \item \textbf{Bot patterns:} Approximately 86 automation account name patterns for known CI and dependency-update services (dependabot, renovate, github-actions, etc.), used to separate bot commits from the human commit pool before the ratio is computed.
 \end{itemize}
 
-Using a single frozen pack version across all 60,129 repositories ensures that the same commit receives the same label regardless of when it is processed. The pack is the shared research artefact across a family of studies covering multiple language ecosystems; the JS/TS results are therefore directly comparable to companion studies using the same detection patterns. The complete agent roster and all signal patterns for both the Robbes et al.~\cite{robbesAgenticMuch2026} catalogue and the e2e tool trace pack are reproduced in Appendix~\ref{app:agents}.
+Using a single frozen pack version across the entire corpus ensures consistent classification: the same commit receives the same label regardless of when it's processed. The pack is the shared research artefact across a family of studies covering multiple language ecosystems; the JS/TS results are therefore directly comparable to companion studies using the same detection patterns. The complete agent roster and all signal patterns for both the Robbes et al.~\cite{robbesAgenticMuch2026} catalogue and the e2e tool trace pack are reproduced in Appendix~\ref{app:agents}.
 
-\subsection{Repository Scan}
+\subsection{API-Based Repository Scan}
 
-For each repository, the pipeline runs a lean git clone:
+For each repository, the pipeline issues three parallel API calls, then processes the responses through five detection channels. No repository is cloned.
+
+\textbf{File tree (REST):}
+\begin{verbatim}
+GET /repos/{owner}/{name}/git/trees/HEAD?recursive=1
+\end{verbatim}
+The call returns the entire file tree in one request. If GitHub marks the response \texttt{truncated: true} (over 100,000 entries), the pipeline falls back to a non-recursive root-level query and separately probes up to 20 candidate file paths that could match a pack pattern, using \texttt{GET /repos/\{owner\}/\{name\}/contents/\{path\}?ref=HEAD} for each. The \texttt{.gitignore} file is also fetched via \texttt{GET /repos/\{owner\}/\{name\}/contents/.gitignore?ref=HEAD} so that agent-specific entries in the ignore file can be captured.
+
+\textbf{Commit history (GraphQL):} A single GraphQL query fetches the 100 most recent commits on the default branch:
 
 \begin{verbatim}
-git clone --depth=100 --filter=blob:none --no-checkout \
-  https://github.com/{owner}/{repo}.git  <scan-dir>/{owner}__{repo}
+repository(owner: $owner, name: $name) {
+  defaultBranchRef { name }
+  object(expression: "HEAD") {
+    ... on Commit {
+      history(first: 100) {
+        nodes {
+          oid
+          committedDate
+          message
+          author   { name email user { login } }
+          committer{ name email user { login } }
+        }
+      }
+    }
+  }
+}
 \end{verbatim}
 
-This downloads the last 100 commits and the file tree without any file contents. At 0.07--5.4 MB per repository, the approach is practical at 60,129-repo scale. File contents are fetched on demand via lazy blob resolution, only when a path already matched a file pattern. Each clone is deleted immediately after its scan completes, keeping peak disk usage under 1 GB.
+\textbf{Pull request metadata (GraphQL):} A second GraphQL query fetches the 100 most recently created pull requests:
+
+\begin{verbatim}
+pullRequests(first: 100,
+             orderBy: {field: CREATED_AT, direction: DESC}) {
+  nodes {
+    number createdAt headRefName bodyText
+    author { login }
+    labels(first: 20) { nodes { name } }
+    comments(first: 50) { nodes { author { login } } }
+    commits(first: 100) {
+      nodes { commit { oid author { user { login } } } }
+    }
+  }
+}
+\end{verbatim}
+
+An issues query also fetches the 100 most recently created issues with their authors, assignees (first 10), and commenters (first 50). The issue channel contributes less signal than the other channels in practice; it's described further in Section~\ref{sec:impl:detection:channels}.
+
+\textbf{Batching and concurrency:} The GraphQL calls for 29 repositories are merged into a single request (\texttt{DEFAULT\_BATCH\_SIZE = 29}). The pipeline runs with 10 concurrent workers (\texttt{ThreadPoolExecutor}), so up to 290 repositories are in flight simultaneously. For the full 60,129-repository corpus, this produces approximately 2,074 GraphQL batch requests for commit history, the same number again for PR metadata, and 60,129 individual REST requests for file trees.
 
 \subsection{Detection Channels}
+\label{sec:impl:detection:channels}
 
 The pipeline collects evidence from five active channels. A sixth channel (bot) is recorded separately and excluded from adoption calculations.
 
-\textbf{File channel.} \texttt{git ls-tree -r --name-only HEAD} retrieves every path in the repository. Paths are matched against the pack's file patterns. \texttt{.gitignore} is read as a blob (\texttt{git show HEAD:.gitignore}) so agent-specific entries in the ignore file are also captured.
+\textbf{File channel.} The file tree returned by the REST call is matched against the pack's file patterns. Each pattern is compiled as a case-sensitive regular expression with the \texttt{(?:\^{}|/)} path prefix. When a file is matched, its size and emptiness are checked via a content probe (up to 5 matched paths per repository). The gitignore file is parsed separately and its entries are matched against the same file-pattern list, so agents that only appear in \texttt{.gitignore} but not in the file tree are still detected. The file channel contributes supporting evidence to the adoption record but doesn't directly increment the commit ratio, since config files aren't commits.
 
-\textbf{Commit trailer and author channels.} A single \texttt{git log} command retrieves the last 100 commits with full message text and author/committer identity fields:
+\textbf{Commit trailer and author channels.} The 100 fetched commit messages are scanned for trailer lines. The trailer detector uses three pattern tiers:
 
-\begin{verbatim}
-git log -n 100 \
-  --format=%H%x1f%an%x1f%ae%x1f%cn%x1f%ce%x1f%cI%x1f%B
-\end{verbatim}
+\begin{enumerate}
+  \item \textbf{Trailer/footer lines} (case-insensitive): lines matching the tokens \texttt{co-authored-by}, \texttt{authored-by}, \texttt{author}, \texttt{committer}, \texttt{signed-off-by}, \texttt{assisted-by}, \texttt{co-developed-by}, \texttt{developed-by}, \texttt{generated-by}, \texttt{written-by}, \texttt{ai-assisted}. Lines of the form ``Generated/Created/Written/Made \ldots with/by/using'' also match. These are the most reliable trailer forms.
+  \item \textbf{Generic token lines} (after the last blank line in the message): lines of the form \texttt{Token: value} where the token is not a prose word (not: note, warning, fix, todo, example, update, changes). These are treated as lower-confidence trailers.
+  \item \textbf{Email addresses anywhere in the message}: caught as a fallback when no Tier~1 trailer is found.
+\end{enumerate}
 
-Commit messages are scanned for trailer lines matching any of the following token patterns: \texttt{co-authored-by}, \texttt{generated-by}, \texttt{assisted-by}, \texttt{written-by}, and related variants, with the agent name matched against the pack's author catalogue. Author and committer identity fields are matched independently. This is the highest-yield channel: in a validation run on 17,757 repositories, commit trailers alone accounted for over 53\% of all evidence rows collected~\cite{robbesHeuristics2026}.
+Author and committer identity fields (name, email, GitHub login) are matched independently for each commit. Email patterns are compiled as case-insensitive regex. Login patterns are normalised (the \texttt{[bot]} suffix is stripped, the string is lowercased) and matched either as exact string or as substring, depending on whether the pattern contains spaces or hyphens. Ambiguous name tokens require that the same agent also appear in the email or login field of the same entry before the match is accepted.
 
-\textbf{PR metadata channel.} The pipeline fetches the tip commit of every pull request via \texttt{refs/pull/*/head} and then fetches those commits with \texttt{--filter=tree:0} (commit metadata only, no file content). This recovers agent-authored commits that a squash-merge removed from the default branch. The same author and trailer matching runs against these PR commits. In measured runs, PR ref fetching recovers 86\% of otherwise-invisible PR-only evidence.
+\textbf{PR metadata channel.} The PR GraphQL response carries branch names (matched against the pack's branch prefix patterns), PR labels (matched against the pack's label patterns), and PR body text. For OpenAI Codex specifically, the PR body is checked for a marker URL (\texttt{chatgpt.com/codex/tasks}). Beyond these direct PR fields, the channel implements commit propagation: if a PR carries a hit from any channel, every commit in that PR whose author is the same as the PR author is moved from the human commit set to the AI commit set. This recovers agent contributions that weren't individually signed but were submitted as part of an agent-opened PR. In measured runs, PR propagation recovers attribution for commits that would otherwise appear as ordinary human commits.
 
-\textbf{Branch channel.} Merge commits in the cloned history are parsed for the standard pattern ``Merge pull request \#N from owner/branch''. Recovered branch names are matched against the pack's branch prefix list. This channel contributes supporting evidence in projects that use merge commits; it produces no signal in squash-merging or rebase-merging projects because those histories contain no branch name trace.
+\textbf{Branch channel.} Head-ref names from the PR query are matched against the pack's branch prefix list (\eg\ \texttt{claude/}, \texttt{codex/}, \texttt{devin/}, \texttt{copilot/}). This channel contributes supporting evidence; it doesn't add commit OIDs to the ratio because branch names themselves aren't commits.
+
+\textbf{Issue channel.} Issue authors, assignees, and commenters are matched against the pack's author patterns. This channel is included for completeness but contributes little signal in practice compared to commit trailers and PR metadata.
+
+\textbf{Bot channel.} The 86 bot account patterns are matched against commit author and committer identities. Bot-attributed commits are recorded separately and removed from both the AI and human commit sets before the ratio is calculated. This prevents merge bots, dependabot, renovate, and CI runners from inflating or deflating the ratio.
 
 \subsection{Commit Ratio and Classification}
 
-After all channels have produced their evidence, the pipeline computes a \emph{commit ratio} for each repository:
+After all channels have been processed, the pipeline constructs two disjoint sets of commit OIDs from the 100-commit window: \texttt{ai\_oids} (commits attributed to a known agent via the author or trailer channel) and \texttt{human\_oids} (all other non-bot commits). PR propagation then adjusts these sets: for each PR that produced a hit, commits by the PR author within that PR that were originally in \texttt{human\_oids} are moved to \texttt{ai\_oids}.
 
-\[
-\text{commit\_ratio} = \frac{\text{agent-attributed commits}}{\text{agent-attributed commits} + \text{human commits}}
-\]
-
-Agent-attributed commits are those with at least one hit from the commit trailer, author, or PR metadata channels. The file and branch channels contribute to the evidence record but don't directly increase the ratio. Noise commits are excluded from the denominator: merge commits, reverts, version bumps, and CI-skip commits are filtered by a fixed set of message prefix patterns before the ratio is calculated.
-
-The binary adoption label is assigned as:
-
+Five noise patterns are applied before the sets are finalised. Commits matching any of the following are excluded from both sets:
 \begin{itemize}
-  \item \textbf{agentic}: commit\_ratio $> 0$ (at least one agent-attributed commit in the detection window)
-  \item \textbf{none}: commit\_ratio $= 0$ (no agent-attributed commits detected)
+  \item Messages starting with \texttt{Merge }
+  \item Messages starting with \texttt{Revert }
+  \item Messages matching \texttt{chore(...): bump|release|version} (case-insensitive)
+  \item Messages matching a bare version string (\texttt{v?X.Y.Z})
+  \item Messages containing \texttt{[skip ci]} (case-insensitive)
 \end{itemize}
 
-Repositories where the file channel found a configuration file but the commit ratio is zero receive the \emph{none} label. This case is discussed as a limitation in Chapter~\ref{chap:discussion}.
+The commit ratio is then:
+
+\[
+\text{commit\_ratio} = \frac{|\texttt{ai\_oids}|}{|\texttt{ai\_oids}| + |\texttt{human\_oids}|}
+\]
+
+rounded to four decimal places. The ratio is \texttt{None} if both sets are empty.
+
+The adoption level is computed from the ratio using five thresholds:
+
+\begin{itemize}
+  \item \textbf{none}: ratio $= 0$ or \texttt{None}
+  \item \textbf{experimental}: $0 < \text{ratio} < 0.01$ (under 1\%)
+  \item \textbf{limited}: $0.01 \leq \text{ratio} < 0.05$ (1--5\%)
+  \item \textbf{consistent}: $0.05 \leq \text{ratio} < 0.20$ (5--20\%)
+  \item \textbf{pervasive}: $\text{ratio} \geq 0.20$ (20\% or more)
+\end{itemize}
+
+For the binary adoption label used throughout this study, any adoption level other than \texttt{none} maps to \textbf{agentic}; \texttt{none} maps to \textbf{none}. Repositories where the file channel found a configuration file but the commit ratio is zero receive the \textit{none} label. This case is discussed as a limitation in Chapter~\ref{chap:discussion}.
 
 \subsection{Output}
 
-Stage~3 produces \texttt{corpus\_detected\_full.csv}, appending to the Stage~1 corpus: \texttt{adoption\_label}, \texttt{agents\_found}, \texttt{commit\_ratio}, \texttt{first\_signal\_at}.
+Stage~3 produces \texttt{corpus\_detected\_full.csv}, appending to the Stage~1 corpus: \texttt{adoption\_label}, \texttt{adoption\_level}, \texttt{agents\_found} (pipe-separated list of detected agent names), \texttt{commit\_ratio}, \texttt{trailer\_count}, \texttt{first\_signal\_at}.
 
 % ------------------------------------------------------------
 \section{Stage 4: Statistical Analysis}
 \label{sec:impl:statistics}
 % ------------------------------------------------------------
 
-Stage~4 joins the Stage~3 detection output with the Stage~2 location output on \texttt{owner\_login} to produce a per-repository dataset with both \texttt{adoption\_label} and \texttt{inferred\_country}. Statistical analysis is performed entirely in Python using the \texttt{scipy} and \texttt{statsmodels} libraries.
+Stage~4 joins the Stage~3 detection output with the Stage~2 location output on \texttt{owner\_login} to produce \texttt{corpus\_with\_country.csv}: the full 60,129-repository dataset with both \texttt{adoption\_label} and \texttt{inferred\_country}. This file is the shared input for all Stage~4 and Stage~5 scripts. Statistical analysis is performed entirely in Python using \texttt{scipy} and \texttt{statsmodels}.
 
 \subsection{Wilson Confidence Intervals}
 
-Wilson 95\% confidence intervals are computed using \texttt{statsmodels.stats.proportion.proportion\_confint(count, nobs, alpha=0.05, method='wilson')}.
+Wilson 95\% confidence intervals are computed for every adoption rate in the study. Given $k$ adopted repositories out of $n$ total and $z = 1.96$ (the 97.5th percentile of the standard normal):
+
+\[
+\hat{p}_c = \frac{k/n + z^2/(2n)}{1 + z^2/n}, \qquad
+m = \frac{z\sqrt{k/n \cdot (1 - k/n)/n + z^2/(4n^2)}}{1 + z^2/n}
+\]
+
+The interval is $[\hat{p}_c - m,\ \hat{p}_c + m]$, clamped to $[0, 1]$. The Wilson interval is preferred over the Wald interval because it remains accurate when proportions are near 0 or 1 and when sample sizes are small, both of which arise in the country-level analysis~\cite{barke2023}.
 
 \subsection{RQ1: Binomial Test}
 
-The one-sample binomial test is computed using \texttt{scipy.stats.binomtest(k, n, p=0.05, alternative='greater')}, where \texttt{k} is the number of agentic repositories and \texttt{n} is the total corpus size.
+The one-sample binomial test is computed using \texttt{scipy.stats.binomtest(k, n, p=0.05, alternative='greater')}, where $k$ is the number of agentic repositories and $n$ is the total corpus size. The null hypothesis is $p \leq 0.05$; the alternative is $p > 0.05$. A 5\% threshold represents negligible uptake: fewer than 1 in 20 repositories.
 
 \subsection{RQ2: McNemar's Test}
 
-A per-repository paired label is constructed: \texttt{single\_detected} (1 if the repository had any configuration file detected in the file channel, 0 otherwise) and \texttt{multi\_detected} (1 if the repository is classified as agentic by the full pipeline). The McNemar contingency table ($b$ = multi+ \& single$-$; $c$ = multi$-$ \& single+) is computed directly from these paired columns with continuity correction.
+A per-repository paired label is constructed: \texttt{single\_detected} (1 if the file channel found any configuration file, 0 otherwise) and \texttt{multi\_detected} (1 if the full pipeline classifies the repository as agentic). The McNemar contingency table counts $b$ (multi-positive and single-negative: repositories the multi-channel pipeline caught that the file-only detector missed) and $c$ (multi-negative and single-positive: repositories flagged by config file alone but not by the full pipeline). The continuity-corrected statistic is:
+
+\[
+\chi^2 = \frac{(|b - c| - 1)^2}{b + c}
+\]
+
+A large $b$ relative to $c$ means the multi-channel pipeline systematically detects more adoption than the single-signal approach.
 
 \subsection{RQ3: Geographic Tests}
 
-The omnibus chi-squared test uses \texttt{scipy.stats.chi2\_contingency} on a $C \times 2$ contingency table (countries $\times$ agentic/none). Pairwise Fisher's exact tests use \texttt{scipy.stats.fisher\_exact} for each country's $2 \times 2$ table. Multiple-testing correction uses \texttt{statsmodels.stats.multitest.multipletests} with \texttt{method='fdr\_bh'} and \texttt{alpha=0.05}.
+The omnibus chi-squared test uses \texttt{scipy.stats.chi2\_contingency} on a $C \times 2$ contingency table (countries $\times$ agentic/none), including all countries with at least 30 repositories. Pairwise Fisher's exact tests compute each country against rest-of-world using a $2 \times 2$ table. Multiple-testing correction applies the Benjamini--Hochberg FDR procedure (\texttt{statsmodels.stats.multitest.multipletests} with \texttt{method='fdr\_bh'}, $\alpha = 0.05$), which ranks all $n$ raw $p$-values and adjusts the $i$-th smallest as $\min(1,\ p_i \times n / i)$, applied monotonically from largest to smallest.
+
+\subsection{Ecosystem and Size Breakdowns}
+
+\texttt{stage4c\_breakdowns.py} computes adoption rates with Wilson 95\% CIs for seven ecosystem groups (npm, yarn, pnpm, bun, npm\_no\_lock, deno, vanilla) and two language groups (JavaScript, TypeScript). It also computes per-tool and per-repository co-adoption metrics: the number of distinct agents detected per repository, pairwise co-occurrence counts (all 2-combinations of agents for multi-tool repositories), and the fraction of adopters using exactly one tool (tool loyalty).
+
+\texttt{stage4d\_size\_analysis.py} applies three parallel size stratifications. \textbf{Approach A} uses fixed star-count thresholds: small ($\leq 50$), medium (51--500), large ($> 500$), matching the strata assigned in Stage~1. \textbf{Approach B} splits repositories by commits into corpus tertiles: the 33rd and 66th percentiles of the full corpus commit distribution ($P_{33}$ and $P_{66}$) define the stratum boundaries. \textbf{Approach C} applies the same tertile approach to language-byte counts as reported by GitHub Linguist (which excludes \texttt{node\_modules/}, \texttt{dist/}, vendor directories, and auto-generated files). All three approaches produce the same column schema: stratum, total repositories, adoption rate, agentic rate, and Wilson CI.
+
+\subsection{MENA Regional Analysis}
+
+\texttt{stage4e\_mena\_analysis.py} restricts the corpus to 19 Middle East and North Africa countries: United Arab Emirates, Saudi Arabia, Kuwait, Qatar, Bahrain, Oman (Gulf); Israel, Jordan, Lebanon, Syria, Iraq (Levant); Egypt, Morocco, Algeria, Tunisia, Libya (North Africa); Turkey; and Iran and Yemen. These 19 countries are grouped into five sub-regions following UN ESCWA boundaries. The script computes adoption rates and Wilson CIs for each country (threshold: $\geq 30$ repositories), runs an omnibus chi-squared test across eligible MENA countries, then pairwise Fisher's exact tests (each country vs.\ rest of MENA) with BH FDR correction. It also computes size tertiles specifically on the MENA subset rather than the global corpus, since the MENA distribution may differ from the global one.
+
+\subsection{Pricing and Income Analysis}
+
+\texttt{stage4f\_pricing\_analysis.py} classifies each detected agent into one of three pricing tiers. \textbf{Paid} tools are those where substantive use requires a paid subscription or significant per-token cost: Claude Code, Junie, Devin, Roo Code, Codegen, Factory, Greptile, Ellipsis, and Amp. \textbf{Free-accessible} tools offer a usable free tier or are entirely open-source: GitHub Copilot, Cursor, Windsurf, Codeium, Aider, Continue, Gemini CLI, OpenCode, OpenHands, SWE-agent, Amazon Q, Kiro, CodeRabbit, Sweep, Jules, Replit, DeepSource, PR-Agent, and Sourcery. Tools with insufficient pricing data or multi-vendor files (\texttt{AGENTS.md}) are classified as \textbf{ambiguous}. For each agentic repository, the script computes whether its detected agents include any paid tool and any free-accessible tool, and reports the share of each tier per country and per World Bank income group.
+
+The World Bank 2024 income group thresholds are applied: high-income (HIC, GNI $> \$13,845$), upper-middle-income (UMIC, \$4,466--13,845), lower-middle-income (LMIC, \$1,136--4,465), and low-income (LIC, $< \$1,136$). Countries in the corpus are assigned to these groups using the 2024 World Bank classification.
 
 \subsection{Output}
 
-Stage~4 produces: \texttt{country\_adoption.csv} (per-country counts, rates, and CIs), \texttt{pairwise\_fisher.csv} (per-country Fisher results and BH-adjusted p-values), \texttt{statistical\_tests.txt} (formatted summary of all three RQ tests), \texttt{pricing\_income\_groups.csv}, and \texttt{breakdown\_ecosystem.csv}.
+Stage~4 produces: \texttt{corpus\_with\_country.csv} (60,129 repositories with country column), \texttt{country\_adoption.csv} (per-country counts, rates, and CIs), \texttt{pairwise\_fisher.csv} (per-country Fisher results and BH-adjusted $p$-values), \texttt{statistical\_tests.txt} (all three RQ test summaries), \texttt{breakdown\_ecosystem.csv}, \texttt{breakdown\_language.csv}, \texttt{breakdown\_size.csv}, \texttt{coadoption\_tool\_counts.csv}, \texttt{coadoption\_tool\_pairs.csv}, \texttt{size\_stars.csv}, \texttt{size\_commits.csv}, \texttt{size\_langbytes.csv}, \texttt{mena\_country\_ranking.csv}, \texttt{mena\_subregion.csv}, \texttt{mena\_pairwise\_fisher.csv}, \texttt{pricing\_analysis.csv}, and \texttt{pricing\_income\_groups.csv}.
 
 % ------------------------------------------------------------
 \section{Stage 5: Extended Analyses}
 \label{sec:impl:extended}
 % ------------------------------------------------------------
 
-Stage~5 applies five independent analyses to the Stage~3 output.
+Stage~5 applies eight independent analyses to the Stage~3 and Stage~4 outputs.
 
 \subsection{Time Series}
 
-Monthly adoption rates are computed by grouping repositories by their \texttt{created\_at} month and calculating the adoption rate within each cohort. Each repository's adoption status is fixed at its final Stage~3 label; the monthly rate therefore represents the fraction of repositories \emph{created} in that month classified as agentic, not the cumulative rate up to that month.
+\texttt{stage5a\_time\_series.py} groups repositories by their \texttt{created\_at} month and computes the adoption rate within each cohort. Each repository's label is fixed at its Stage~3 binary classification; the monthly rate therefore represents the fraction of repositories \emph{created} in that month that are agentic, not a cumulative rate. Alongside the adoption rate, the script tracks agent market share over time by parsing the pipe-separated \texttt{agents\_found} column and normalising raw agent names to eight canonical labels: Claude Code, GitHub Copilot, Cursor, OpenAI Codex, Gemini CLI, Devin, Aider, and Windsurf. The normalisation maps any name containing ``claude'' to Claude Code, any containing ``copilot'' to GitHub Copilot, and so on. The share of each of these eight tools is computed as a percentage of all detections that month. Three tool-release dates are annotated on the time-series figure: Claude Code (24 February 2025), OpenAI Codex CLI (16 April 2025), and Gemini CLI (25 June 2025).
+
+\subsection{Repository Size Comparison}
+
+\texttt{stage5b\_size\_comparison.py} compares repository characteristics across the two adoption groups (agentic vs.\ none) on four metrics: commit count, language-byte count (divided by 1,024 to convert to KB), star count, and fork count. Because all four distributions are heavily right-skewed, the script uses non-parametric tests: Kruskal-Wallis H for the two-group omnibus comparison and Mann-Whitney U for the agentic-vs-none pairwise comparison (two-sided). Effect size is reported as rank-biserial correlation: $r_{rb} = 1 - 2U / (n_1 n_2)$. Figures use violin plots capped at the 99th percentile to prevent extreme outliers from dominating the y-axis.
 
 \subsection{Commit Density}
 
-For repositories classified as agentic via commit trailers, the commit density metric is $\text{ai\_density} = \text{trailer\_count} / \text{total\_commits}$. Density buckets (experimental $<$1\%, limited 1--5\%, consistent 5--20\%, pervasive $>$20\%) are computed by applying fixed thresholds to the density column.
+\texttt{stage5h\_commit\_density.py} computes an AI density metric for every agentic repository: $\text{ai\_density} = \text{trailer\_count} / \text{commits}$, clamped to $[0, 1]$. The \texttt{trailer\_count} column counts commits in the detection window that carried a matching trailer line (commit trailer channel only). Five density buckets are applied: \textbf{config-only} (density $= 0$ or \texttt{NaN}; config file detected but no trailers), \textbf{low} ($0 < \text{density} \leq 0.25$), \textbf{medium} ($0.25 < \text{density} \leq 0.75$), \textbf{high} ($0.75 < \text{density} < 1.0$), and \textbf{full} (density $= 1.0$, every commit in the window is AI-attributed). A per-agent breakdown is also computed: for each of the top 15 agents by sample size (minimum 5 repositories with trailer data), the median AI density and IQR are reported.
 
 \subsection{Tool Diversity and Loyalty}
 
-The \texttt{agents\_found} column is a pipe-separated string of agent names (\eg\ \texttt{Claude Code|Cursor}). Tool diversity is computed by splitting this string, counting unique agents per repository, and grouping by count (single-agent, dual, three, four or more). Tool loyalty is the fraction of adopters using exactly one tool. Tool co-occurrence pairs are extracted by generating all 2-combinations of agents for multi-tool repositories.
+\texttt{stage5f\_tool\_loyalty.py} loads all agentic repositories and splits each \texttt{agents\_found} string on the pipe delimiter to get the list of distinct agents per repository. Repositories are grouped into three diversity categories: single-agent (exactly one tool detected), two agents, and three-or-more agents. If the multi-agent rate across the corpus exceeds 5\% of adopters, the script also generates a co-occurrence heatmap for the top 12 agents: a symmetric matrix where the diagonal shows how many repositories used each agent, and off-diagonal cells show how many repositories used both agents $i$ and $j$ simultaneously. Tool loyalty is defined as the fraction of adopters using exactly one tool.
 
 \subsection{Adoption Timing}
 
-For agentic repositories, the first detected AI signal date is compared with the repository creation date to compute days-to-first-signal. The first signal date is taken as the earliest of: the date of the first commit trailer, the first PR with an agent-style branch, or the repository creation date if the first signal was a configuration file (assumed created at or near project inception). Repositories are then grouped into immediate ($\leq$7 days), early (8--30 days), and late ($>$30 days) adoption categories.
+Two Stage~5 scripts compute adoption timing from two separate signals. \texttt{stage5i\_config\_timestamps.py} finds the earliest commit to any Claude Code configuration file (\texttt{CLAUDE.md}, \texttt{.claude/settings.json}, \texttt{.claude/CLAUDE.md}) via a GraphQL history query on each file path, taking the last node (oldest commit) across all checked paths. \texttt{stage5j\_trailer\_timestamps.py} finds the earliest commit carrying a matching trailer by paginating backward through commit history using successive \texttt{before: cursor} pages (100 commits per page) until the entire commit graph is scanned.
+
+\texttt{stage5k\_adoption\_timeline.py} merges both signals and computes \texttt{days\_to\_adoption} as the difference in days between the repository creation date and the earliest of the two signals. Repositories are categorised as:
+
+\begin{itemize}
+  \item \textbf{AI-native} ($\leq 7$ days): the first agent signal appears within one week of repository creation.
+  \item \textbf{Early} (8--30 days): the first signal appears between one week and one month after creation.
+  \item \textbf{Late} ($> 30$ days): adoption is retrofitted into an already-active repository.
+\end{itemize}
+
+A second classification captures the \emph{adoption pattern} at the repository level: \textbf{ai\_native} when both config file and trailer are within 7 days of creation; \textbf{config\_first} when the config file date precedes the first trailer; \textbf{trailer\_first} when the trailer precedes the config; and \textbf{trailer\_only} when a trailer is found but no config file date was recovered.
+
+\texttt{stage5d\_first\_agent\_commit.py} performs a targeted deep-dive on the React+Next.js subset: it fetches the first Claude Code commit via REST-based full commit history pagination and records the commit index, the fraction of commits that were human before the first AI commit, and the adoption timing category.
+
+\subsection{Country Timeline}
+
+\texttt{stage5e\_country\_timeline.py} selects the 15 countries with the most total repositories in the located corpus (minimum: 30 repositories across the entire observation period). For each country and each calendar month from February 2025 onward, it computes \texttt{total\_repos} (created that month) and \texttt{adoption\_rate} (agentic fraction). Cells with fewer than 5 repositories in a given month are masked and not annotated. Three figures are produced: a heatmap (countries $\times$ months, adoption rate as cell colour), a bump chart showing each country's rank by adoption rate over time, and a cumulative agentic repository count per country.
+
+\subsection{World Regions}
+
+\texttt{stage5g\_world\_regions.py} assigns each located country to one of ten macro-regions: North America, Latin America and Caribbean, Western Europe, Eastern Europe and Central Asia, Middle East and North Africa, Sub-Saharan Africa, South Asia, East Asia, Southeast Asia, and Oceania. For each region, the script computes total repositories, adoption rate, Wilson CI, the number of distinct countries represented, and the percentage of adopted repositories using a single agent (tool loyalty). It then runs a chi-squared test across all ten regions and pairwise Fisher's exact tests (each region vs.\ rest of world) with BH FDR correction. An agent breakdown is also computed for each region, reporting the top agents as a percentage of that region's agentic repositories.
 
 \subsection{China and Framework Analyses}
 
-The China analysis joins the Chinese repository subset from Stage~3 with the \texttt{agents\_found} column and classifies tools as Western or Chinese domestic based on a manually curated provenance list. Framework detection uses \texttt{package.json} dependency lists to check for known framework packages (\texttt{react}, \texttt{astro}, \texttt{hono}, \texttt{solid-js}, \texttt{@tanstack/start}, \texttt{express}, \texttt{@nestjs/core}, and others).
+\texttt{stage5n\_china\_analysis.py} joins the Chinese repository subset with the \texttt{agents\_found} column and classifies each detected tool as Chinese domestic (Trae/MarsCode, Qwen Code, Kimi Code) or Western (Claude Code, Cursor, GitHub Copilot, OpenAI Codex, Gemini CLI, Amp, OpenCode, Kiro, Aider, Windsurf, Cline, Roo Code, Devin, Replit, Junie, Amazon Q, CodeRabbit, PR-Agent, Sourcery, Codeium, Continue, Augment Code, Goose). Repositories using both categories are marked as mixed. The script computes, for each tool category, the fraction of Chinese agentic repositories using it, and compares this to global averages. It also reports the geographic spread of Chinese domestic tools: how many repositories from each non-Chinese country detected a Chinese domestic tool.
+
+Framework detection (\texttt{stage5c\_framework\_subset.py}) uses \texttt{package.json} dependency lists: a repository is classified as React+Next.js if its \texttt{dependencies} or \texttt{devDependencies} include both \texttt{react} and \texttt{next}, but not \texttt{express} (to separate frontend-only Next.js apps from full-stack applications). This produces a 9,799-repository subset for which all Stage~4 analyses (adoption rate, country ranking, agent breakdown) are repeated.
 
 \subsection{Output}
 
-Stage~5 produces: \texttt{monthly\_adoption.csv}, \texttt{commit\_density.csv}, \texttt{tool\_loyalty.csv}, \texttt{first\_agent\_commit.csv}, \texttt{china\_analysis.csv}, \texttt{repo\_frameworks.csv}.
+Stage~5 produces: \texttt{monthly\_adoption.csv}, \texttt{monthly\_agent\_share.csv}, \texttt{size\_by\_adoption.csv}, \texttt{size\_statistical\_tests.csv}, \texttt{commit\_density.csv}, \texttt{tool\_loyalty.csv}, \texttt{first\_agent\_commit.csv}, \texttt{adoption\_timeline.csv}, \texttt{country\_timeline.csv}, \texttt{world\_regions.csv}, \texttt{world\_regions\_agents.csv}, \texttt{world\_regions\_pairwise.csv}, \texttt{china\_analysis.csv}, \texttt{china\_country\_stats.csv}, \texttt{rn\_corpus.csv}, \texttt{rn\_country\_ranking.csv}, and \texttt{rn\_agent\_breakdown.csv}.
 
 % ------------------------------------------------------------
 \section{Reproducibility}
@@ -240,7 +420,7 @@ Library & Version & Purpose \\
 \texttt{gql}           & 3.5   & GitHub GraphQL API calls \\
 \texttt{pandas}        & 2.2   & Data manipulation and CSV I/O \\
 \texttt{pyarrow}       & 15.0  & Parquet caching of API responses \\
-\texttt{scipy}         & 1.13  & Chi-squared, Fisher, binomial tests \\
+\texttt{scipy}         & 1.13  & Chi-squared, Fisher, binomial, Mann-Whitney tests \\
 \texttt{statsmodels}   & 0.14  & Wilson CI, BH FDR correction \\
 \texttt{tqdm}          & 4.66  & Progress bars for long API loops \\
 \texttt{pycountry}     & 23.12 & ISO 3166 country code lookup \\
@@ -248,4 +428,4 @@ Library & Version & Purpose \\
 \end{tabular}
 \end{table}
 
-Each stage has a \texttt{README.md} documenting its inputs, outputs, expected runtime, and API credit consumption. From a cold start with an empty cache, Stages~1--3 combined take approximately 48 hours, dominated by the per-repository REST calls in the commit history channel. With the Parquet cache populated, all five stages complete in under 10 minutes.
+Each stage has a \texttt{README.md} documenting its inputs, outputs, expected runtime, and API credit consumption. From a cold start with an empty cache, Stages~1--3 combined take approximately 48 hours, dominated by the per-repository REST and GraphQL calls in Stage~3. With the Parquet cache populated, all five stages complete in under 10 minutes.

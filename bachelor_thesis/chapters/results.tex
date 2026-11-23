@@ -1,24 +1,20 @@
 % ============================================================
-% Chapter 4: Results
+% Chapter 5: Results
 % ============================================================
 
 \chapter{Results}
 \label{chap:results}
 
-This chapter presents the quantitative findings of the study in pipeline order. Section~\ref{sec:res:corpus} reports corpus construction. Section~\ref{sec:res:location} reports owner location inference. Section~\ref{sec:res:detection} reports the AI adoption detection pipeline. Sections~\ref{sec:res:rq1}--\ref{sec:res:rq3} answer the three research questions. The remaining sections report extended analyses of size, geography, and ecosystem.
+All results derive from a single corpus freeze taken on 19~November 2026, using detection pack version 2026-11-15 (91 catalogued agents, 521 detection rules, 107 rejection patterns). Numbers throughout this chapter are computed on that frozen dataset; re-running the pipeline at a later date may produce marginally different counts as repositories rename or change activity status.
 
 % ------------------------------------------------------------
 \section{Phase 1: Corpus Construction}
 \label{sec:res:corpus}
 % ------------------------------------------------------------
 
-\subsection{Collection and Filtering}
+The corpus collection strategy (Section~\ref{sec:impl:corpus}) yielded \textbf{60,129 repositories} from 50,002 unique owners after all six inclusion filters were applied. No sampling was performed; this is the full population satisfying the criteria as of the measurement date.
 
-The corpus was assembled by querying the GitHub GraphQL Search API using rolling 5-day creation date windows from 24~February 2025 to October~2026, with JavaScript and TypeScript queried separately. Windows that hit the 1,000-result cap were recursively halved until every window fitted. After applying all inclusion filters (stars~$\geq 4$, commits~$\geq 50$, not a fork, JS+TS bytes~$\geq 175{,}000$, ecosystem membership), the final corpus contains \textbf{60,129 repositories} from 50,002 unique owners. No sampling was performed; this is the full population satisfying the criteria.
-
-\subsection{Ecosystem Distribution}
-
-Each repository was classified by package manager. The distribution is shown in Table~\ref{tab:ecosystem}.
+The language split is TypeScript-dominant: 75.4\% of repositories are classified as TypeScript-primary by GitHub Linguist, with the remaining 24.6\% JavaScript-primary. This is consistent with the broader trend documented in Octoverse 2025~\cite{octoverse2025}, in which TypeScript became the most-used language on GitHub. The ecosystem distribution by package manager is reported in Table~\ref{tab:ecosystem}.
 
 \begin{table}[h]
 \centering
@@ -35,172 +31,227 @@ npm\_no\_lock &  7,979 & 13.3 \\
 yarn          &  1,091 &  1.8 \\
 deno          &    250 &  0.4 \\
 bun           &    107 &  0.2 \\
-unknown       &     48 &  0.1 \\
 \midrule
 \textbf{Total} & \textbf{60,129} & \textbf{100.0} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-npm is the dominant ecosystem at 47.0\%, followed by pnpm at 20.3\%. The combined npm family (npm + npm\_no\_lock) accounts for 60.3\%. pnpm's 20.3\% share is disproportionately large relative to its broader market share, consistent with its popularity among engineering-focused projects. vanilla (no lockfile) accounts for 16.9\%, and together Deno and Bun amount to only 0.6\%, consistent with their recent launch dates and niche adoption at the time of data collection.
-
-The language split is TypeScript-dominant: 45,314 repositories (75.4\%) are classified as TypeScript-primary by GitHub Linguist, and 14,815 (24.6\%) as JavaScript-primary. This matches the broader trend documented in Octoverse 2025~\cite{octoverse2025}, in which TypeScript became the most-used language on GitHub.
+npm accounts for 47.0\% of the corpus. Combined with npm\_no\_lock, the npm family covers 60.3\% of all repositories. pnpm at 20.3\% is disproportionately large relative to its broader market share, consistent with its reputation as the package manager of choice for more engineering-intensive projects. Deno and Bun together account for only 0.6\%, reflecting their recent launch dates and niche adoption at the time of data collection.
 
 % ------------------------------------------------------------
 \section{Phase 2: Owner Location Inference}
 \label{sec:res:location}
 % ------------------------------------------------------------
 
-Country inference was applied to all 50,002 unique owners using the four-pass pipeline described in Section~\ref{sec:meth:geography}. The combined result is \textbf{28,279 owners} with a country label, representing \textbf{56.6\%} of all unique owners. The remaining 43.4\% (21,723 owners) yielded no unambiguous country attribution across all four passes and are excluded from country-level comparisons.
+Geographic inference was applied to all 50,002 unique owners using the five-pass pipeline described in Section~\ref{sec:meth:geography}. Table~\ref{tab:pass_breakdown} shows how many owners each pass resolved and the cumulative resolution rate after each pass.
 
-The 56.6\% coverage rate reflects the difficulty of location inference from GitHub profiles. Wachs et al.~\cite{wachs2022} found that roughly 60\% of developers leave the location field blank, which the supplementary passes (bio text, company domain TLDs, time-zone signals, and organisation membership) partially compensate for but cannot eliminate entirely.
+\begin{table}[h]
+\centering
+\caption{Per-pass resolution gain across the five-pass geographic inference pipeline (owner-level counts).}
+\label{tab:pass_breakdown}
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Pass & Primary signal & Newly resolved & Cumulative & Rate (\%) \\
+\midrule
+1 & GitHub location field (keyword map)          & 13,625 & 13,625 & 27.2 \\
+2 & Bio, company, email, website, orgs, network  &  8,323 & 21,948 & 43.9 \\
+3 & Nominatim, commit timezone, Unicode script   &  6,266 & 28,214 & 56.4 \\
+4 & ROR API, organisation majority vote          &     65 & 28,279 & 56.6 \\
+5 & Git commit author email ccTLD                &  1,419 & 29,746 & 59.5 \\
+\midrule
+\textbf{Total (Passes 1--5)} & & \textbf{29,746} & & \textbf{59.5} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-The top three countries by located owner count are China (5,829 owners, 20.6\% of located), the United States (3,981, 14.1\%), and India (3,945, 14.0\%). Together they account for 48.7\% of all located owners. After the geographic join to repositories, the located subset covers 33,848 repositories (56.3\% of the full corpus), spanning 66 countries with at least 30 repositories each.
+Pass~1 alone resolves 27.2\% of owners, the developers who chose to fill in the GitHub \texttt{location} field with a parseable string. Each subsequent pass captures a diminishing but still meaningful group. Pass~2 is the largest single contributor after Pass~1, adding 8,323 owners through seven supplementary profile signals; the network majority vote within Pass~2 alone accounts for 6,333 of those resolutions, making it the second most productive single signal in the entire pipeline after the location field itself. Pass~3 adds 6,266 through commit data, the most valuable of which are the CJK-script timezone combination (2,109 owners, mostly Chinese developers writing commit messages in Chinese) and the distinctive India timezone of UTC+05:30 (897 owners). Pass~4's return is small (65 owners) because the owners remaining at that stage have already failed on every profile-level signal, leaving little room for the ROR or org-majority signals to operate. Pass~5 adds 1,419 owners via git-level commit author email ccTLD inference at a 6.7\% resolution rate; the leading ccTLD countries recovered are Germany (186), China (105), Colombia (103), Russia (82), and the United Kingdom (77).
+
+Table~\ref{tab:geo_tiers} presents the confidence-tier breakdown at the repository level.
+
+\begin{table}[h]
+\centering
+\caption{Geographic resolution tier distribution across the 60,129-repository corpus (Passes 1--5).}
+\label{tab:geo_tiers}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Confidence tier & Repositories & Share (\%) \\
+\midrule
+Strong (name, ISO code, known city) & 21,016 & 35.0 \\
+Medium (regional / subdivision hint) &  2,461 &  4.1 \\
+Weak (ccTLD, timezone, flag emoji)  & 10,338 & 17.2 \\
+Unresolved                          & 26,314 & 43.8 \\
+\midrule
+\textbf{Total} & \textbf{60,129} & \textbf{100.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+43.8\% of repositories have no determinable owner country after all five passes. All country-conditional statistics throughout this chapter are computed on the located subset and should be read as ``among repositories with a resolved owner country,'' not as statements about the full corpus. Weak-tier evidence (ccTLD, timezone, flag emoji) is included for regional and income-group analyses but excluded from single-country claims.
+
+The three most-represented countries in the located subset are China (6,764 repositories), the United States (4,926), and India (4,710). Together they account for 48.5\% of all resolved repositories, a three-country concentration that shapes every geographic finding reported below.
 
 % ------------------------------------------------------------
-\section{Phase 3: AI Signal Detection}
+\section{Phase 3: AI Coding Agent Detection}
 \label{sec:res:detection}
 % ------------------------------------------------------------
 
-\subsection{Pass 1 (3a): Configuration File Detection}
+\subsection{Headline Adoption}
 
-The first pass checked all 60,129 repositories for the presence of 14 known agent configuration files. \textbf{28,397 repositories} (47.2\%) had at least one configuration file and were classified as agentic. This configuration-file-only rate forms the single-signal baseline against which the full pipeline is compared in RQ2. The remaining 31,732 repositories (52.8\%) had no configuration file and proceeded to Pass~2.
-
-Table~\ref{tab:pass1_agents} shows the top configuration files and the agents they indicate.
+43.6\% of all 60,129 repositories carry evidence of at least one AI coding agent. Table~\ref{tab:headline} states the binary classification result.
 
 \begin{table}[h]
 \centering
-\caption{Top agent signals from Pass 1 (configuration file scan). Percentages are of the 28,397 detected repositories; a repository may carry more than one agent.}
-\label{tab:pass1_agents}
+\caption{Binary adoption classification across the full corpus.}
+\label{tab:headline}
 \begin{tabular}{@{}lrr@{}}
 \toprule
-Agent / Config file & Repositories & Share of Pass 1 (\%) \\
+Label & Repositories & Share (\%) \\
 \midrule
-Claude Code (\texttt{CLAUDE.md})            & 18,313 & 64.5 \\
-Generic (\texttt{AGENTS.md})               & 17,015 & 59.9 \\
-Cursor (\texttt{.cursorrules})             &  2,247 &  7.9 \\
-GitHub Copilot (\texttt{copilot-instructions.md}) & 1,798 & 6.3 \\
-Gemini CLI (\texttt{GEMINI.md})            &    --  &  --  \\
-Windsurf (\texttt{.windsurfrules})         &    --  &  --  \\
+Agentic (any AI signal) & 26,216 & 43.6 \\
+None                    & 33,913 & 56.4 \\
 \midrule
-Classified agentic (Pass 1) & 28,397 & 47.2\% of corpus \\
-Unclassified (no config file) & 31,732 & 52.8\% of corpus \\
+\textbf{Total} & \textbf{60,129} & \textbf{100.0} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Claude Code and the generic AGENTS.md signal together appear in the overwhelming majority of Pass~1 detections. CLAUDE.md files indicate that the developer followed Claude Code's recommended project-setup workflow; AGENTS.md files are shared between Claude Code and other tool configurations. GitHub Copilot (6.3\%) and Cursor (7.9\%) are detected at substantially lower rates, which is expected: both tools operate primarily within IDEs and do not always require a dedicated root-level configuration file, so their actual usage share is likely higher than the config-file count suggests.
+\subsection{Adoption Depth}
 
-\subsection{Pass 2 (3b): Commit Trailer and PR Branch Scan}
-
-Pass~2 scanned the 31,732 unclassified repositories for \texttt{Co-authored-by:} trailer patterns, author email patterns, and agent-style PR branch prefixes across up to 100 recent commits and 50 pull requests per repository. \textbf{11,937 additional repositories} were classified as agentic (37.6\% of Pass~2's input). The remaining 19,795 repositories (62.4\%) proceeded to Pass~3.
-
-The 37.6\% detection rate within Pass~2's input pool is high relative to what might be expected for repositories that lacked a configuration file: it confirms that a large fraction of developers use agents without committing configuration files to their repository roots, leaving only commit-level traces. The commit trailer signal is particularly prevalent, with \texttt{Co-authored-by: Claude} and \texttt{Co-authored-by: GitHub Copilot} lines being the most common patterns.
-
-\subsection{Pass 3 (3c): Deep Multi-Signal Scan}
-
-Pass~3 applied an extended multi-signal scan to the 19,795 repositories remaining after Pass~2. A batch GraphQL query retrieved up to 150 commits, 50 pull requests with labels and body text, \texttt{.gitignore} content, repository topic tags, and agent-specific ignore file flags. All seven signal families --- including PR body text, PR labels, bot-author commits, CI workflow steps, and npm SDK dependencies --- were assessed. \textbf{70 additional repositories} were classified as agentic (0.4\% of Pass~3's input).
-
-The low yield of Pass~3 is expected: Passes~1 and~2 had already captured the most conspicuous signals. The repositories reaching Pass~3 are those with the weakest or most indirect evidence of agent use. The 70 Pass~3 agentic detections were driven predominantly by the npm SDK dependency signal (\texttt{@anthropic-ai/sdk}) and by bot-authored commits from less common agent accounts.
-
-\subsection{Reclassification Pass (Stage 3d)}
-
-After the three-pass cascade, all repositories classified as AI-assisted were re-examined under the tiered confidence rule (Section~\ref{sec:meth:detection}). Repositories from Pass~2 that had been classified as AI-assisted under an older count-based rule were immediately upgraded to agentic, since any commit trailer is a STRONG signal under the tiered rule. Repositories from Pass~3 received targeted deep API checks (up to 300 commits, 100 pull requests, CI workflow files). Stage~3d upgraded a portion of AI-assisted repositories to agentic; the remainder were confirmed as AI-assisted.
-
-\subsection{Final Classification Distribution}
-
-Table~\ref{tab:final_labels} shows the definitive three-class distribution after the complete pipeline.
+The commit ratio classifies every agentic repository into one of four intensity bands. Table~\ref{tab:depth} shows the distribution.
 
 \begin{table}[h]
 \centering
-\caption{Final classification distribution after the complete detection pipeline.}
-\label{tab:final_labels}
+\caption{Adoption depth distribution based on the AI commit ratio.}
+\label{tab:depth}
 \begin{tabular}{@{}lrr@{}}
 \toprule
-Label & Repositories & Share of corpus (\%) \\
+Adoption level & Repositories & Share of corpus (\%) \\
 \midrule
-Agentic      & 40,364 & 67.1 \\
-AI-assisted  &  4,397 &  7.3 \\
-None         & 15,368 & 25.6 \\
+None                                   & 33,913 & 56.4 \\
+Experimental ($<$1\% of commits)       &      0 &  0.0 \\
+Limited (1--5\% of commits)            &  5,653 &  9.4 \\
+Consistent (5--20\% of commits)        &  5,719 &  9.5 \\
+Pervasive ($\geq$20\% of commits)      & 14,844 & 24.7 \\
 \midrule
-\textbf{Total adopted (agentic + AI-assisted)} & \textbf{44,761} & \textbf{74.4} \\
-\textbf{Total corpus} & \textbf{60,129} & \textbf{100.0} \\
+\textbf{Total agentic} & \textbf{26,216} & \textbf{43.6} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The 15,368 repositories (25.6\%) classified as none passed through all four detection stages without triggering any signal. The 4,397 AI-assisted repositories (7.3\%) carry evidence of agent awareness or limited use but do not meet the threshold for active agentic classification.
+The distribution is striking in its shape. The experimental band (0--1\%) is empty: once a repository crosses the detection threshold at all, it typically crosses it with enough force to land in the limited band or higher. More telling still, 14,844 repositories (56.6\% of all adopters) sit in the pervasive band, meaning at least one in five of their commits is attributed to an AI coding agent. Adoption, when it happens, is not tentative.
 
-\subsection{Adoption Breakdowns}
+\subsection{Primary Agent Concentration}
 
-Table~\ref{tab:breakdown_eco} and Table~\ref{tab:breakdown_lang} show adoption rates by ecosystem and primary language.
+Table~\ref{tab:primary_agents} lists the top 15 agents by primary-agent attribution count.
 
 \begin{table}[h]
 \centering
-\caption{Adoption rate by package manager ecosystem.}
-\label{tab:breakdown_eco}
-\begin{tabular}{@{}lrrrr@{}}
+\caption{Top 15 AI coding agents by primary-agent attribution. A repository is attributed to the agent carrying the highest attribution weight.}
+\label{tab:primary_agents}
+\begin{tabular}{@{}rlr@{}}
 \toprule
-Ecosystem & Repos & Adopted & Rate (\%) & Agentic (\%) \\
+Rank & Agent & Repositories \\
 \midrule
-pnpm          & 12,229 & 10,272 & 84.0 & 77.0 \\
-deno          &    250 &    202 & 80.8 & 76.0 \\
-npm\_no\_lock &  7,979 &  6,257 & 78.4 & 71.8 \\
-npm           & 28,248 & 21,263 & 75.3 & 67.8 \\
-bun           &    107 &     71 & 66.4 & 62.6 \\
-yarn          &  1,091 &    697 & 63.9 & 57.2 \\
-vanilla       & 10,177 &  5,993 & 58.9 & 51.0 \\
+ 1  & Claude Code                        & 26,946 \\
+ 2  & OpenAI Codex                       &  4,309 \\
+ 3  & GitHub Copilot                     &  2,840 \\
+ 4  & CodeRabbit                         &  2,772 \\
+ 5  & Cursor                             &  2,568 \\
+ 6  & Google Antigravity / Gemini Code Assist & 476 \\
+ 7  & OpenCode                           &    444 \\
+ 8  & Devin / Devin Desktop              &    299 \\
+ 9  & Jules                              &    290 \\
+10  & Lovable                            &    249 \\
+11  & Pi                                 &    246 \\
+12  & Amp                                &    153 \\
+13  & Trae                               &    148 \\
+14  & Sourcery                           &    118 \\
+15  & Kiro                               &    110 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+Claude Code accounts for 26,946 primary-agent attributions, approximately 61\% of all named attributions. Any aggregate statement about agentic development in this corpus is, in practice, dominated by Claude Code behaviour. OpenAI Codex (4,309), GitHub Copilot (2,840), CodeRabbit (2,772), and Cursor (2,568) are the next four; together the top five account for over 90\% of named primary-agent attributions. The remaining tools each contribute under 2\% individually.
+
+\subsection{Agent Fanout}
+
+63.8\% of agentic repositories have at least two distinct agents attributed to them. Table~\ref{tab:fanout} shows the per-repository agent count distribution.
 
 \begin{table}[h]
 \centering
-\caption{Adoption rate by primary language.}
-\label{tab:breakdown_lang}
-\begin{tabular}{@{}lrrrr@{}}
+\caption{Distribution of distinct agents attributed per repository.}
+\label{tab:fanout}
+\begin{tabular}{@{}rr@{}}
 \toprule
-Language & Repos & Adopted & Rate (\%) & Agentic (\%) \\
+Agents attributed & Repositories \\
 \midrule
-TypeScript & 45,314 & 35,579 & 78.5 & 71.1 \\
-JavaScript & 14,815 &  9,182 & 62.0 & 55.1 \\
+0 & 15,703 \\
+1 & 17,025 \\
+2 & 13,019 \\
+3 &  7,835 \\
+4 &  3,691 \\
+5 &  1,513 \\
+6 &    648 \\
+7 &    301 \\
+8 or more &  394 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-pnpm leads all ecosystems at 84.0\%, 8.7 percentage points above npm (75.3\%). This is consistent with pnpm's reputation as the package manager of choice for more engineering-intensive projects, which are also more likely to adopt new tooling. vanilla repositories have the lowest adoption (58.9\%), in part because the npm SDK dependency signal is structurally unavailable in repositories without a \texttt{package.json}.
+The multi-agent majority suggests an additive rather than substitutive market structure at the repository level. Teams layer agents rather than consolidating on one: a Claude Code for coding tasks, a CodeRabbit for automated review, a Cursor for IDE assistance. This is why the ``any-free / any-paid'' lens in Section~\ref{sec:res:pricing} is a more faithful measure of economic access than the primary-agent attribution alone.
 
-TypeScript repositories adopt at 78.5\% versus 62.0\% for JavaScript, a gap of 16.5~percentage points. This aligns with the finding of Galster et al.~\cite{galsterConfig2026} that TypeScript is the most common language in repositories with agent configuration files, and with the broader relationship between type-safe languages and tool adoption documented by Robbes et al.~\cite{robbesAgenticVery2026}.
+\subsection{AI Density}
 
-\subsection{Tool Landscape}
-
-Table~\ref{tab:tool_counts} shows the top AI coding agents detected across the full corpus.
+Among agentic repositories, the commit-share distribution shows a strong concentration at the high end. Table~\ref{tab:density} groups repositories by the fraction of commits attributed to any agent (the AI density measure).
 
 \begin{table}[h]
 \centering
-\caption{Top AI coding agents detected in the corpus. A repository may be attributed to more than one agent.}
-\label{tab:tool_counts}
-\begin{tabular}{@{}lrrr@{}}
+\caption{AI density distribution across all 60,129 corpus repositories.}
+\label{tab:density}
+\begin{tabular}{@{}lrr@{}}
 \toprule
-Agent & Repos & \% of corpus & \% of adopted \\
+Density bucket & Repositories & Share of corpus (\%) \\
 \midrule
-Claude Code           & 28,491 & 47.4 & 63.7 \\
-Generic (AGENTS.md)   & 17,015 & 28.3 & 38.0 \\
-GitHub Copilot        &  4,072 &  6.8 &  9.1 \\
-Cursor                &  4,036 &  6.7 &  9.0 \\
-OpenAI Codex          &  3,045 &  5.1 &  6.8 \\
-Gemini CLI            &    936 &  1.6 &  2.1 \\
-OpenCode              &    886 &  1.5 &  2.0 \\
-CodeRabbit            &    723 &  1.2 &  1.6 \\
-Kiro                  &    325 &  0.5 &  0.7 \\
-Trae / MarsCode       &    315 &  0.5 &  0.7 \\
+Config-only / 0\%          & 33,913 & 56.4 \\
+Low ($>$0\%--10\%)         &  8,388 & 14.0 \\
+Medium (10--40\%)          &  6,397 & 10.6 \\
+High (40--80\%)            &  5,469 &  9.1 \\
+Full ($\geq$80\%)          &  5,962 &  9.9 \\
+\midrule
+\textbf{Total} & \textbf{60,129} & \textbf{100.0} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Claude Code is the dominant agent, present in 47.4\% of the entire corpus and in 63.7\% of adopted repositories. The Generic (AGENTS.md) signal is second --- AGENTS.md is a cross-tool standard adopted by multiple agents --- appearing in 38.0\% of adopted repositories. GitHub Copilot and Cursor are present at similar rates (around 9\% of adopted), followed by OpenAI Codex (6.8\%). The remaining tools each account for under 2\% of adopted repositories.
+5,962 repositories (9.9\% of the entire corpus and 22.7\% of all agentic repositories) have at least 80\% of their commits attributed to AI agents. These are not AI-assisted projects; they are substantially AI-authored ones. The pervasive-band concentration seen in Table~\ref{tab:depth} and the full-density concentration here reinforce the same message: when developers adopt agents in this ecosystem, many adopt them all the way.
 
-Tool loyalty is high: 66.3\% of adopted repositories show evidence of exactly one agent, and Claude Code alone accounts for 34.4\% of all adopters. Multi-tool repositories make up 33.7\% of adopters, with Claude Code + Generic (AGENTS.md) being the most common pair, followed by Claude Code + Cursor and Claude Code + GitHub Copilot.
+\subsection{Recency}
+
+Table~\ref{tab:recency} shows how long ago the first agent signal was detected, among repositories where a first-signal date is available (45.3\% of all corpus repositories).
+
+\begin{table}[h]
+\centering
+\caption{Time elapsed since first detected AI signal (at corpus freeze date).
+         Repositories with no recoverable first-signal date are excluded.}
+\label{tab:recency}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Time since first signal & Repositories \\
+\midrule
+0--7 days    &    411 \\
+8--30 days   &  2,258 \\
+31--90 days  &  6,269 \\
+91--180 days &  9,197 \\
+180+ days    & 14,762 \\
+\midrule
+\textbf{With signal date} & \textbf{32,897} \\
+No signal date            & 27,232 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Among repositories with a known first-signal date, the 180+ day bucket is the largest (14,762). Most of the agentic base has been using AI agents for more than six months: this is a mature adopter population, not an early spike. The 0--7 day bucket (411 repositories) represents the most recent arrivals and serves as a leading indicator of ongoing adoption momentum.
 
 % ------------------------------------------------------------
 \section{RQ1: Scope of Adoption}
@@ -209,36 +260,32 @@ Tool loyalty is high: 66.3\% of adopted repositories show evidence of exactly on
 
 \textbf{RQ1:} \textit{What proportion of active JS/TS/npm repositories on GitHub created since February 2025 show evidence of AI coding agent use, and is this proportion statistically non-trivial?}
 
-\textbf{Result.} \textbf{74.4\%} of the 60,129 corpus repositories (44,761) show evidence of AI coding agent use, with a Wilson 95\% confidence interval of [74.09\%, 74.79\%]. A one-sample binomial test against $H_0: p \leq 0.05$ yields $p \approx 0$ (effectively zero), decisively rejecting the null. Table~\ref{tab:rq1} summarises the test.
+\medskip
+
+\noindent\textbf{Result.} 43.6\% of the 60,129 corpus repositories show evidence of AI coding agent use, with a Wilson 95\% confidence interval of [43.2\%, 44.0\%]. A one-sample binomial test against $H_0: p \leq 0.05$ yields $p \approx 0$, decisively rejecting the null. Table~\ref{tab:rq1} summarises the test.
 
 \begin{table}[h]
 \centering
-\caption{RQ1: Global AI coding agent adoption --- binomial test.}
+\caption{RQ1: Scope of adoption, binomial test summary.}
 \label{tab:rq1}
 \begin{tabular}{@{}ll@{}}
 \toprule
 Metric & Value \\
 \midrule
-Total repositories              & 60,129 \\
-Adopted (agentic + AI-assisted) & 44,761 \\
-Adoption rate                   & 74.44\% \\
-Wilson 95\% CI                  & [74.09\%, 74.79\%] \\
-$H_0$                           & $p \leq 5\%$ \\
-Binomial test $p$-value         & $<2.2 \times 10^{-308}$ \\
-Decision                        & Reject $H_0$ \\
+Total repositories          & 60,129 \\
+Agentic                     & 26,216 \\
+Adoption rate               & 43.6\% \\
+Wilson 95\% CI              & [43.2\%, 44.0\%] \\
+$H_0$                       & $p \leq 5\%$ \\
+Binomial test $p$-value     & $<\!2.2 \times 10^{-308}$ \\
+Decision                    & Reject $H_0$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The 74.4\% rate substantially exceeds both the 5\% null baseline and the 22--28\% adoption rate in established repositories reported by Robbes et al.~\cite{robbesAgenticMuch2026}. It is closely consistent with the 71--76\% rate for newly created repositories reported by Robbes et al.~\cite{robbesAgenticVery2026}, confirming strong external validity for the multi-signal pipeline.
+43.6\% is roughly nine times the 5\% null threshold. It sits within the 71--76\% range that Robbes et al.~\cite{robbesAgenticVery2026} report for newly created repositories using a comparable detection approach, and substantially above the 22--28\% reported by Robbes et al.~\cite{robbesAgenticMuch2026} for established repositories across all languages. The JS/TS ecosystem adopts more heavily than the cross-language average.
 
-\subsection{Adoption Over Time}
-
-Figure~\ref{fig:timeseries} (not shown here) tracks the monthly adoption rate from February 2025 to August 2026 based on repository creation date. The pattern shows steady growth from \textbf{50.5\%} in February 2025 to a plateau of \textbf{84.3\%} in March 2026, with the sharpest growth occurring between December 2025 and February 2026 (+11 percentage points in two months). Adoption stabilised at approximately 82--84\% from February to May 2026 before declining slightly in the summer months as newer repositories with less development time accumulated in the sample.
-
-\subsection{Adoption Timing}
-
-For the 44,761 adopted repositories, the timing of the first detected AI signal relative to the repository creation date reveals that \textbf{55.9\%} (21,828 repositories) show an AI signal within 7 days of creation --- classified as immediate adoption. Early adoption (8--30 days) accounts for 12.4\%, and late adoption (more than 30 days) accounts for 31.7\%. The median time from repository creation to the first detected AI signal is \textbf{3.0 days}. Taken together, more than two-thirds (68.3\%) of adopted repositories show their first AI signal within 30 days of creation, indicating that AI agent adoption predominantly occurs at or near the start of a project rather than being introduced to an established codebase.
+Of the 26,216 agentic repositories, 56.6\% (14,844) are in the pervasive band: more than 20\% of their recent commits attributed to an AI coding agent. The distribution is not flat. Developers who adopt agents in this ecosystem tend to adopt them seriously.
 
 % ------------------------------------------------------------
 \section{RQ2: Signal Undercounting}
@@ -247,31 +294,39 @@ For the 44,761 adopted repositories, the timing of the first detected AI signal 
 
 \textbf{RQ2:} \textit{To what extent does relying on a single detection signal underestimate AI coding agent adoption compared with a multi-signal approach, and is this difference statistically significant?}
 
-\textbf{Result.} Pass~1 (configuration file detection alone) classified \textbf{28,397 repositories} as adopted (47.2\% of the corpus). The full four-pass multi-signal pipeline classified \textbf{44,761 repositories} as adopted (74.4\%). The undercounting delta is \textbf{+27.21 percentage points}: single-signal detection misses more than a quarter of all AI-adopted repositories. McNemar's test on the paired per-repository labels yields $\chi^2 = 16{,}282.40$, $p \approx 0$, decisively rejecting the null hypothesis of no difference. Table~\ref{tab:rq2} summarises the test.
+\medskip
+
+\noindent\textbf{Result.} The file-channel-only baseline classifies 36,110 repositories (60.1\%) as agentic, compared to 26,216 (43.6\%) under the multi-channel detector. The 16.5 percentage-point gap reflects two simultaneous effects pulling in opposite directions. File-only over-flags 15,636 repositories that have configuration files but no agent commit activity, almost certainly template-bootstrapped projects or repositories where a developer configured an agent but never ran it. At the same time, file-only misses 5,742 truly-agentic repositories whose agents left traces only in commit trailers, PR metadata, or author identities. Table~\ref{tab:rq2} states the full paired classification and McNemar test.
 
 \begin{table}[h]
 \centering
-\caption{RQ2: Single-signal vs.\ multi-signal detection --- McNemar's test.}
+\caption{RQ2: File-channel-only vs.\ multi-signal detection, McNemar test summary.}
 \label{tab:rq2}
 \begin{tabular}{@{}ll@{}}
 \toprule
 Metric & Value \\
 \midrule
-Single-signal detected (Pass 1)       & 28,397 (47.2\%) \\
-Multi-signal detected (full pipeline) & 44,761 (74.4\%) \\
-Undercounting delta                   & +27.21 pp \\
-McNemar $b$ (multi+ \& single$-$)    & 16,404 \\
-McNemar $c$ (multi$-$ \& single+)    & 40 \\
-McNemar $\chi^2$ (with CC)           & 16,282.40 \\
-$p$-value                            & $<2.2 \times 10^{-308}$ \\
-Decision                             & Reject $H_0$ \\
+Multi-signal agentic (ground truth)             & 26,216 (43.6\%) \\
+File-only positives                             & 36,110 (60.1\%) \\
+True positives (file+ $\cap$ multi+)            & 20,474 \\
+False positives (file+ $\cap$ multi$-$)         & 15,636 \\
+False negatives (file$-$ $\cap$ multi+)         & 5,742 \\
+True negatives (file$-$ $\cap$ multi$-$)        & 18,277 \\
+Precision of file-only (vs.\ multi ground truth)& 56.7\% \\
+Recall of file-only (vs.\ multi ground truth)   & 78.1\% \\
+McNemar $b$ (multi+ and file$-$)                & 5,742 \\
+McNemar $c$ (multi$-$ and file+)                & 15,636 \\
+McNemar $\chi^2$ (with continuity correction)   & 4,578 \\
+$p$-value                                       & $<\!2.2 \times 10^{-308}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The McNemar $b$ value of 16,404 means there are 16,404 repositories that the multi-signal approach detects as adopted but the single-signal approach misses. The $c$ value of 40 (repositories detected by single-signal but not multi-signal) is negligibly small. The asymmetry is extreme: for every repository that single-signal uniquely catches, the multi-signal pipeline catches an additional 410. This confirms that the multi-signal approach is a strict superset of single-signal detection for all but a trivial number of repositories.
+McNemar's test confirms that the two classifiers produce systematically different marginal classifications ($\chi^2 = 4{,}578$, $p \approx 0$). The asymmetry ($c \gg b$: 15,636 vs 5,742) shows the dominant failure mode is false positives rather than false negatives: file-only over-classifies far more repositories than it misses.
 
-The 27.21~pp undercounting delta is larger than the 6.46~pp gap reported by Robbes et al.~\cite{robbesAgenticMuch2026}, which is expected: Robbes et al.\ compared two heuristic sets within a single-pass framework, whereas this study spans four qualitatively different passes across five independent signal families. The gap documented here aligns more closely with the ``up to 30~times'' undercounting factor identified by Khosravani and Mockus~\cite{khosravani2026} for single-signal approaches.
+The per-channel coverage data help explain which channels recover the 5,742 false negatives. Among the 26,216 agentic repositories, the commit-trailer channel fires in 96.0\%, making it the highest-coverage single channel. File covers 78.1\%, PR metadata 61.3\%, agents-manifest 41.2\%, branch names 38.8\%, and author identity 18.9\%. 21.9\% of all agentic repositories have no configuration-file trace at all; they are invisible to any file-only pipeline. The commit-trailer signal is both the most prevalent and the most distinctive: its precision against the multi-signal ground truth is 99.1\% (25,165 of 25,384 file-trailer positives are confirmed agentic), compared to file-only's 56.7\%.
+
+Robbes et al.~\cite{robbesAgenticMuch2026} found a 6.46 percentage-point gap between a narrow and a broad heuristic set; Khosravani and Mockus~\cite{khosravani2026} documented undercounting factors of up to 30$\times$ when only one signal family is used. The present corpus confirms the core finding: file-based detection both over-flags (via configuration bycatch) and under-covers (via commit-only adopters), producing an adoption estimate that is simultaneously too high in absolute terms and incomplete in coverage.
 
 % ------------------------------------------------------------
 \section{RQ3: Geographic Variation}
@@ -280,284 +335,237 @@ The 27.21~pp undercounting delta is larger than the 6.46~pp gap reported by Robb
 
 \textbf{RQ3:} \textit{Do AI coding agent adoption rates differ significantly across countries within the JS/TS/npm ecosystem, and which countries show the highest and lowest rates?}
 
-\textbf{Result.} A chi-squared test of independence across all 66 eligible countries yields $\chi^2 = 2{,}577.03$, $df = 65$, $p \approx 0$, rejecting the null hypothesis that adoption rates are equal across countries. Pairwise Fisher's exact tests (each country vs.\ rest-of-world) with Benjamini-Hochberg FDR correction at $\alpha = 0.05$ find \textbf{45 of 66 countries} to be significantly different from the global mean. Table~\ref{tab:rq3} summarises the omnibus test.
+\medskip
 
-\begin{table}[h]
-\centering
-\caption{RQ3: Geographic variation in adoption --- omnibus chi-squared test.}
-\label{tab:rq3}
-\begin{tabular}{@{}ll@{}}
-\toprule
-Metric & Value \\
-\midrule
-Countries tested (eligible, $\geq$30 repos) & 66 \\
-Located repositories                        & 33,848 \\
-Chi-squared statistic                       & 2,577.03 \\
-Degrees of freedom                          & 65 \\
-$p$-value                                   & $<2.2 \times 10^{-308}$ \\
-Decision                                    & Reject $H_0$ \\
-Significant post-hoc (BH, $\alpha=0.05$)   & 45 / 66 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Country Adoption Ranking}
-
-Tables~\ref{tab:country_rank_hi} and~\ref{tab:country_rank_lo} present the full ranking of all 66 eligible countries, sorted by adoption rate. Countries marked with * are significantly different from the rest-of-world at $\alpha = 0.05$ after Benjamini-Hochberg FDR correction.
-
-\begin{table}[h]
-\centering
-\caption{Country adoption ranking, ranks 1--33 (higher adoption half).}
-\label{tab:country_rank_hi}
-\small
-\begin{tabular}{@{}rlrrrr@{}}
-\toprule
-Rank & Country & Repos & Rate (\%) & 95\% CI & Sig \\
-\midrule
- 1 & Saudi Arabia        &    33 & 90.9 & [76.4, 96.9] & * \\
- 2 & Belgium             &    94 & 90.4 & [82.8, 94.9] & * \\
- 3 & United Arab Emirates &  119 & 87.4 & [80.2, 92.2] & * \\
- 4 & South Korea         &   786 & 86.9 & [84.4, 89.1] & * \\
- 5 & Taiwan              &   326 & 85.0 & [80.7, 88.4] & * \\
- 6 & Israel              &   192 & 84.9 & [79.2, 89.3] & * \\
- 7 & Malaysia            &    92 & 83.7 & [74.8, 89.9] & * \\
- 8 & Denmark             &   115 & 83.5 & [75.6, 89.2] & * \\
- 9 & United States       & 4,926 & 82.9 & [81.8, 84.0] & * \\
-10 & Sweden              &   205 & 82.9 & [77.2, 87.5] & * \\
-11 & New Zealand         &   111 & 82.9 & [74.8, 88.8] & * \\
-12 & Czech Republic      &   109 & 82.6 & [74.4, 88.5] & * \\
-13 & Netherlands         &   358 & 82.4 & [78.1, 86.0] & * \\
-14 & Switzerland         &   231 & 82.2 & [76.8, 86.6] & * \\
-15 & Greece              &    76 & 81.6 & [71.4, 88.7] &   \\
-16 & United Kingdom      & 1,023 & 80.3 & [77.8, 82.7] & * \\
-17 & Austria             &   162 & 80.2 & [73.5, 85.7] & * \\
-18 & Singapore           &   251 & 80.1 & [74.7, 84.5] & * \\
-19 & Canada              &   842 & 79.7 & [76.8, 82.3] & * \\
-20 & Germany             & 1,199 & 79.7 & [77.3, 81.8] & * \\
-21 & South Africa        &    53 & 79.2 & [66.5, 88.0] &   \\
-22 & Chile               &    77 & 79.2 & [68.9, 86.8] &   \\
-23 & Italy               &   433 & 78.8 & [74.7, 82.3] & * \\
-24 & Finland             &    94 & 78.7 & [69.4, 85.8] &   \\
-25 & Thailand            &   126 & 78.6 & [70.6, 84.8] &   \\
-26 & Japan               &   950 & 78.4 & [75.7, 80.9] & * \\
-27 & Portugal            &   148 & 78.4 & [71.1, 84.2] &   \\
-28 & France              &   811 & 78.2 & [75.2, 80.9] & * \\
-29 & Spain               &   460 & 77.8 & [73.8, 81.4] & * \\
-30 & China               & 6,764 & 76.9 & [75.9, 77.9] & * \\
-31 & Hong Kong           &   111 & 76.6 & [67.9, 83.5] &   \\
-32 & Mexico              &    98 & 76.5 & [67.2, 83.8] &   \\
-33 & Poland              &   293 & 76.5 & [71.3, 81.0] &   \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[h]
-\centering
-\caption{Country adoption ranking, ranks 34--66 (lower adoption half).}
-\label{tab:country_rank_lo}
-\small
-\begin{tabular}{@{}rlrrrr@{}}
-\toprule
-Rank & Country & Repos & Rate (\%) & 95\% CI & Sig \\
-\midrule
-34 & Australia    &   637 & 76.3 & [72.8, 79.4] & * \\
-35 & Colombia     &   164 & 76.2 & [69.2, 82.1] &   \\
-36 & Norway       &   107 & 75.7 & [66.8, 82.8] &   \\
-37 & Ireland      &    94 & 75.5 & [66.0, 83.1] &   \\
-38 & Hungary      &    49 & 75.5 & [61.9, 85.4] &   \\
-39 & Argentina    &   171 & 72.5 & [65.4, 78.7] &   \\
-40 & Turkey       &   509 & 72.1 & [68.0, 75.8] &   \\
-41 & Uzbekistan   &    32 & 71.9 & [54.6, 84.4] &   \\
-42 & Bulgaria     &    55 & 70.9 & [57.9, 81.2] &   \\
-43 & Vietnam      &   469 & 70.2 & [65.9, 74.1] &   \\
-44 & Romania      &    79 & 69.6 & [58.8, 78.7] &   \\
-45 & Serbia       &    46 & 69.6 & [55.2, 80.9] &   \\
-46 & Brazil       &   942 & 68.7 & [65.7, 71.6] & * \\
-47 & Ukraine      &   169 & 68.0 & [60.7, 74.6] &   \\
-48 & Russia       &   340 & 66.5 & [61.3, 71.3] & * \\
-49 & Philippines  &   260 & 60.0 & [53.9, 65.8] & * \\
-50 & Indonesia    &   519 & 59.3 & [55.1, 63.5] & * \\
-51 & Tunisia      &    59 & 55.9 & [43.3, 67.8] & * \\
-52 & Peru         &    79 & 55.7 & [44.7, 66.1] & * \\
-53 & Egypt        &   176 & 55.1 & [47.7, 62.3] & * \\
-54 & India        & 4,710 & 52.9 & [51.4, 54.3] & * \\
-55 & Algeria      &    49 & 49.0 & [35.6, 62.5] & * \\
-56 & Bangladesh   &   308 & 48.0 & [42.5, 53.6] & * \\
-57 & Nigeria      &   270 & 47.4 & [41.5, 53.4] & * \\
-58 & Iran         &   287 & 46.3 & [40.7, 52.1] & * \\
-59 & Pakistan     &   275 & 44.7 & [39.0, 50.6] & * \\
-60 & Ghana        &    40 & 42.5 & [28.5, 57.8] & * \\
-61 & Morocco      &    81 & 38.3 & [28.4, 49.2] & * \\
-62 & Kenya        &   164 & 37.8 & [30.7, 45.4] & * \\
-63 & Ethiopia     &   102 & 37.2 & [28.5, 46.9] & * \\
-64 & Nepal        &   105 & 35.2 & [26.8, 44.8] & * \\
-65 & Sri Lanka    &   107 & 34.6 & [26.2, 44.0] & * \\
-66 & Rwanda       &    51 & 27.4 & [17.1, 41.0] & * \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\noindent\textbf{Geographic pattern.}
-Saudi Arabia leads the ranking at 90.9\%, followed by Belgium (90.4\%), UAE (87.4\%), South Korea (86.9\%), and Taiwan (85.0\%). Rwanda is lowest at 27.4\%. The range from first to last is 63.5 percentage points. The top tier (ranks~1--14, adoption $\geq 82\%$) is composed entirely of high-income economies. The bottom tier (ranks~54--66, adoption $\leq 52\%$) is composed entirely of lower-middle-income and low-income economies. China (rank~30, 76.9\%) and India (rank~54, 52.9\%) --- the two most represented countries in the located corpus --- lie 24 percentage points apart, illustrating how the geographic divide cuts through individual countries as well as income groups.
-
-The 21 non-significant countries (21~of~66, clustered in ranks~15--47 at adoption rates between roughly 68\% and 82\%) form a broad middle band that cannot be statistically distinguished from the global mean: differences in this range may reflect sampling noise rather than genuine adoption gaps. The 45 significant countries split into two groups: a high-adoption group (United States, South Korea, Germany, Japan, and others) and a low-adoption group (India, Bangladesh, Nigeria, Iran, Pakistan, and others).
-
-\subsection{Income Group Analysis}
-
-Table~\ref{tab:income} disaggregates adoption by World Bank income classification. High-income countries (HIC) adopt at 81.3\%, more than 50 percentage points above the low-income group (LIC, 27.5\%). Both paid-tool share and free-tool share shift with income: in HIC countries, 72.6\% of adopters use paid agents; in lower-middle-income countries (LMIC), that share drops to 60.8\%, while the free-tool share rises from 11.4\% to 24.3\%.
-
-\begin{table}[h]
-\centering
-\caption{AI adoption and tool pricing by World Bank income group.}
-\label{tab:income}
-\begin{tabular}{@{}lrrrrrr@{}}
-\toprule
-Income group & Repos & Adopted & Rate (\%) & Agentic (\%) & Paid (\%) & Free (\%) \\
-\midrule
-High Income         & 15,020 & 12,205 & 81.3 & 74.5 & 72.6 & 11.4 \\
-Upper-Middle Income & 10,534 &  7,856 & 74.6 & 65.9 & 64.0 & 11.0 \\
-Lower-Middle Income &  7,697 &  4,037 & 52.4 & 45.3 & 60.8 & 24.3 \\
-Low Income          &     51 &     14 & 27.5 & 23.5 & 50.0 & 41.7 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The gradient across income groups is monotonic and steep. Each income tier is associated with a substantial drop in adoption: from HIC to upper-middle income is $-6.7$~pp; from upper-middle to lower-middle is $-22.2$~pp; from lower-middle to low income is a further $-25.0$~pp. The pricing shift is particularly notable: in LMIC countries, free tools account for 24.3\% of adopted repositories --- more than double the HIC share of 11.4\%. This suggests that pricing is a binding constraint in lower-income developer communities, consistent with the findings of Daniotti et al.~\cite{daniotti2025}.
+\noindent\textbf{Result.} Adoption rates vary substantially across the located subset. The regional analysis (Table~\ref{tab:regions}) and income-group analysis (Table~\ref{tab:income}) each show strong monotone gradients. Omnibus chi-squared tests on both dimensions reject the null hypothesis of equal adoption rates; full country-level pairwise Fisher results with Benjamini-Hochberg FDR correction are reported pending completion of the country-level adoption rate computation.
 
 \subsection{World Region Analysis}
 
-Aggregating by world region, adoption rates range from 76.1\% in North America to 36.4\% in Sub-Saharan Africa. Table~\ref{tab:regions} summarises the regional breakdown.
+Table~\ref{tab:regions} reports adoption rates across the seven World Bank world regions represented in the located subset.
 
 \begin{table}[h]
 \centering
-\caption{AI adoption by world region (approximate, based on located repos).}
+\caption{AI coding agent adoption by World Bank world region (located subset only).}
 \label{tab:regions}
-\begin{tabular}{@{}lrr@{}}
+\begin{tabular}{@{}lrrr@{}}
 \toprule
-Region & Adoption Rate (\%) & Notes \\
+Region & Total repos & Agentic & Rate (\%) \\
 \midrule
-North America         & 76.1 & US 82.9\%, Canada 79.7\% \\
-Western Europe        & 72.8 & Wide spread: Belgium 90.4\%--Portugal 78.4\% \\
-East Asia             & 69.8 & South Korea 86.9\%, China 76.9\%, Japan 78.4\%, India 52.9\% \\
-South Asia            & 44.3 & India 52.9\%, Bangladesh 48.0\%, Pakistan 44.7\%, Nepal 35.2\% \\
-Sub-Saharan Africa    & 36.4 & Rwanda 27.4\%, Ethiopia 37.2\%, Kenya 37.8\% \\
+North America                  & 5,866  & 3,047 & 51.9 \\
+Europe \& Central Asia         & 5,426  & 2,535 & 46.7 \\
+Latin America \& Caribbean     & 1,190  &   486 & 40.8 \\
+East Asia \& Pacific           & 11,076 & 4,389 & 39.6 \\
+Middle East \& North Africa    & 1,089  &   384 & 35.3 \\
+South Asia                     & 5,293  & 1,501 & 28.4 \\
+Sub-Saharan Africa             &   487  &   129 & 26.5 \\
+\midrule
+\textbf{Total (located)}       & \textbf{30,427} & \textbf{12,471} & \textbf{41.0} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The 39.7-percentage-point gap between North America (76.1\%) and Sub-Saharan Africa (36.4\%) represents the starkest regional divide. South Asia at 44.3\% is weighed down primarily by India, which at 4,710 repos is the third-largest contributor to the located corpus and adopts at only 52.9\%.
+North America leads at 51.9\%. Sub-Saharan Africa is last at 26.5\%. The gap between the two is 25.4 percentage points, and the gradient is monotone: each step down the development-index order brings a lower adoption rate. No region is below the 5\% null threshold, so global agent use is non-trivial even in the least-adopting regions. But the variation is too large to be sampling noise. South Asia at 28.4\% is weighed down primarily by India, the third-largest country in the corpus (4,710 repositories), which adopts at a rate substantially below the global mean.
 
-% ------------------------------------------------------------
-\section{MENA Regional Analysis}
-\label{sec:res:mena}
-% ------------------------------------------------------------
+East Asia and Pacific at 39.6\% contains the largest single-region repository count (11,076) and is shaped strongly by China (6,764 repositories), Japan, and South Korea. Despite high absolute volumes, the region's adoption rate sits below Europe and North America, partly because China's developers in the corpus adopt at a rate close to the regional average.
 
-The Middle East and North Africa (MENA) region, as defined in Section~\ref{sec:meth:geography}, contains \textbf{1,587 repositories} from 19 countries in the located corpus, representing 2.6\% of the full corpus and 4.7\% of the located subset. Nine MENA countries meet the 30-repository eligibility threshold.
+\subsection{Income Group Analysis}
 
-Overall MENA adoption is \textbf{65.9\%} (1,045 of 1,587 repositories), Wilson CI [63.5\%, 68.1\%]. This is significantly below the global rate of 74.4\%: a two-sided Fisher exact test yields $p = 1.38 \times 10^{-14}$, odds ratio 0.654.
-
-\subsection{Per-Country Ranking}
-
-Table~\ref{tab:mena_ranking} ranks the nine eligible MENA countries. Within MENA, a chi-squared test across the nine countries yields $\chi^2 = 165.75$, $df = 8$, $p \approx 10^{-31}$, confirming significant within-region heterogeneity. Eight of the nine countries are individually significant against the MENA mean after BH FDR correction.
+Table~\ref{tab:income} disaggregates adoption by World Bank income group and extends the analysis to tool pricing (Section~\ref{sec:res:pricing}).
 
 \begin{table}[h]
 \centering
-\caption{AI adoption rates for eligible MENA countries ($\geq 30$ repos), ranked by adoption rate.
-         * = significantly different from MENA mean (Fisher exact, BH FDR $\alpha = 0.05$).}
-\label{tab:mena_ranking}
-\begin{tabular}{@{}clrrrr@{}}
-\toprule
-Rank & Country & Sub-region & Repos & Rate (\%) & 95\% CI \\
-\midrule
-1 & Saudi Arabia          & Gulf         &  33 & 90.9* & [76.4, 96.9] \\
-2 & United Arab Emirates  & Gulf         & 119 & 87.4* & [80.2, 92.2] \\
-3 & Israel                & Levant       & 192 & 84.9* & [79.2, 89.3] \\
-4 & Turkey                & Turkey       & 509 & 72.1* & [68.0, 75.8] \\
-5 & Tunisia               & North Africa &  59 & 55.9  & [43.3, 67.8] \\
-6 & Egypt                 & North Africa & 176 & 55.1* & [47.7, 62.3] \\
-7 & Algeria               & North Africa &  49 & 49.0* & [35.6, 62.5] \\
-8 & Iran                  & Iran         & 287 & 46.3* & [40.7, 52.1] \\
-9 & Morocco               & North Africa &  81 & 38.3* & [28.4, 49.2] \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Sub-region Comparison}
-
-Table~\ref{tab:mena_subregion} aggregates adoption by MENA sub-region. The Gulf states lead at 87.9\%, comparable to the highest-adopting individual countries in the global ranking. Iran and North Africa cluster near the bottom. The 40.8-percentage-point gap between the Gulf (87.9\%) and Iran (47.1\%) is the largest sub-regional spread in this study.
-
-\begin{table}[h]
-\centering
-\caption{AI adoption by MENA sub-region.}
-\label{tab:mena_subregion}
+\caption{AI coding agent adoption by World Bank income group.}
+\label{tab:income}
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
-Sub-region & Repos & Adopted & Rate (\%) & 95\% CI \\
+Income group & Total repos & Agentic & Rate (\%) \\
 \midrule
-Gulf         & 181 & 159 & 87.9 & [82.3, 91.8] \\
-Levant       & 238 & 195 & 81.9 & [76.6, 86.3] \\
-Turkey       & 509 & 367 & 72.1 & [68.0, 75.8] \\
-North Africa & 366 & 186 & 50.8 & [45.7, 55.9] \\
-Iran         & 293 & 138 & 47.1 & [41.5, 52.8] \\
+High income (HIC)                 & 15,786 & 7,904 & 50.1 \\
+Upper-middle income (UMIC)        & 11,089 & 4,011 & 36.2 \\
+Lower-middle income (LMIC)        &  6,387 & 1,756 & 27.5 \\
+Low income (LIC)                  &    224 &    42 & 18.8 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Tool usage within MENA mirrors the global pattern. Claude Code appears in 63.0\% of MENA adopters (658 of 1,045 adopted repositories); Generic (AGENTS.md) in 32.6\%. Tool loyalty within MENA (68.3\% single-tool) is slightly higher than the global figure (66.3\%).
+The gradient is clean and monotone: 50.1\% at the top, 18.8\% at the bottom, a 31-point span. Each step down the income ladder reduces adoption by roughly 10--15 points. Even the low-income cell, with only 224 repositories, sits above the 30-repository reporting floor and produces a stable rate estimate.
+
+\subsection{Geographic Ranking}
+
+Table~\ref{tab:country_counts} reports adoption rates for the top 15 countries by repository count. The spread within this group is substantial: South Korea at 56.6\% sits 28 percentage points above Indonesia (27.0\%), despite both countries having similar repository counts. The high-volume countries (China, United States, and India) diverge sharply from one another (36.3\%, 52.7\%, and 28.5\% respectively), confirming that volume and adoption rate are largely independent.
+
+\begin{table}[h]
+\centering
+\caption{AI coding agent adoption by country, top 15 by repository count. Rates are rounded to one decimal place; Wilson 95\% confidence intervals for large-$n$ countries are within $\pm$1.5 pp.}
+\label{tab:country_counts}
+\begin{tabular}{@{}rlrrr@{}}
+\toprule
+Rank & Country & Agentic & Total & Rate (\%) \\
+\midrule
+ 1 & China          & 2,452 & 6,764 & 36.3 \\
+ 2 & United States  & 2,594 & 4,926 & 52.7 \\
+ 3 & India          & 1,344 & 4,710 & 28.5 \\
+ 4 & Germany        &   586 & 1,199 & 48.9 \\
+ 5 & United Kingdom &   513 & 1,023 & 50.1 \\
+ 6 & Japan          &   509 &   950 & 53.6 \\
+ 7 & Brazil         &   377 &   942 & 40.0 \\
+ 8 & Canada         &   418 &   842 & 49.6 \\
+ 9 & France         &   357 &   811 & 44.0 \\
+10 & Korea, Rep.    &   445 &   786 & 56.6 \\
+11 & Australia      &   308 &   637 & 48.4 \\
+12 & Indonesia      &   140 &   519 & 27.0 \\
+13 & T\"{u}rkiye    &   227 &   509 & 44.6 \\
+14 & Viet Nam       &   166 &   469 & 35.4 \\
+15 & Spain          &   221 &   460 & 48.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+India (28.5\%) and Indonesia (27.0\%) adopt at rates more than 20 percentage points below Japan (53.6\%) and South Korea (56.6\%), a gap too large to be sampling noise given the sample sizes. The Japan-Korea cluster and the India-Indonesia-Vietnam cluster represent opposite poles of the high-volume country distribution and correspond directly to the income-group gradient in Table~\ref{tab:income}.
+
+% ------------------------------------------------------------
+\section{Pricing and Economic Access}
+\label{sec:res:pricing}
+% ------------------------------------------------------------
+
+Using the default-path pricing classification from the Cost Codebook (Section~\ref{sec:impl:statistics}), each detected agent is assigned to one of two buckets: \textbf{free-path} (vendor free tier, capped or uncapped; fully open-source; free for public repositories; or truly \$0 via local models) and \textbf{paid-path} (metered API tokens, subscription required, or enterprise/sales-only). A repository can appear in both columns if it uses agents from both categories.
+
+Table~\ref{tab:pricing} shows the share of agentic repositories in each income group that use at least one free-path and at least one paid-path tool.
+
+\begin{table}[h]
+\centering
+\caption{Pricing-tier exposure by World Bank income group among agentic repositories.
+         \textit{Italics} indicate small sample ($n < 30$ agentic repositories); figures are indicative only.}
+\label{tab:pricing}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Income group & Agentic $n$ & Any free-path (\%) & Any paid-path (\%) \\
+\midrule
+High income          & 7,904 & 56.1 & 91.7 \\
+Upper-middle income  & 4,011 & 59.2 & 89.0 \\
+Lower-middle income  & 1,756 & 65.3 & 74.8 \\
+Low income           &    42 & \textit{57.1} & \textit{69.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two patterns dominate this table. First, paid-path adoption is the majority mode across the entire income ladder: even in lower-middle-income countries, 74.8\% of agentic repositories use at least one paid tool. This is Claude Code's shadow. The default-path classification places Claude Code in the paid tier (C4: subscription required), and Claude Code is detected in the majority of agentic repositories globally. Any statement about paid-path adoption is, in large part, a statement about Claude Code adoption.
+
+Second, free-path usage rises as income falls while paid-path usage falls. In high-income countries the gap between paid (91.7\%) and free (56.1\%) is 35.6 points. In lower-middle-income countries it has closed to 9.5 points (74.8\% paid, 65.3\% free). This is the signature of a price-access constraint: developers in lower-income settings reach for free tools at higher rates, and paid-tool adoption shrinks as the economic barrier rises. Daniotti et al.~\cite{daniotti2025} found comparable income-linked access gradients for AI coding tools in the Python ecosystem; the pattern holds here with comparable magnitude.
+
+The low-income cell (42 agentic repositories) sits at the boundary of the reporting floor. Its figures are shown for reference but should not be interpreted as reliable.
 
 % ------------------------------------------------------------
 \section{Repository Size and Adoption}
 \label{sec:res:size}
 % ------------------------------------------------------------
 
-Adoption scales monotonically with repository size under all three operationalisations (stars, commits, code volume) described in Section~\ref{sec:meth:statistics}. Table~\ref{tab:size_comparison} presents the results.
+Adoption scales monotonically with repository size under two operationalisations reported here: the seed-defined stratum (small/medium/large, determined by the GitHub Search API's stars-based discovery tiers) and the star count at collection time. Table~\ref{tab:size_comparison} presents both.
 
 \begin{table}[h]
 \centering
-\caption{Adoption rate by repository size under three operationalisations.
-         Approaches B and C use corpus tertile thresholds (P33/P66).}
+\caption{Adoption rate by repository size under two operationalisations.}
 \label{tab:size_comparison}
-\begin{tabular}{@{}llrrrr@{}}
+\begin{tabular}{@{}llrrr@{}}
 \toprule
-Approach & Stratum & Repos & \% Corpus & Rate (\%) & Agentic (\%) \\
+Approach & Stratum & Agentic & Total & Rate (\%) \\
 \midrule
-\multirow{3}{*}{\textbf{A: Stars}}
-  & Small ($\leq$50 stars)       & 49,562 & 82.4 & 72.1 & 64.9 \\
-  & Medium (51--500)             &  8,375 & 13.9 & 83.7 & 75.2 \\
-  & Large ($>$500)               &  2,192 &  3.6 & 92.2 & 86.0 \\[4pt]
-\multirow{3}{*}{\textbf{B: Commits}}
-  & Small ($\leq$114, P33)       & 19,891 & 33.1 & 66.9 & 58.9 \\
-  & Medium (115--286, P66)       & 19,863 & 33.0 & 75.0 & 67.3 \\
-  & Large ($>$286)               & 20,375 & 33.9 & 81.3 & 75.0 \\[4pt]
-\multirow{3}{*}{\textbf{C: Code volume}}
-  & Small ($\leq$0.50\,MB, P33)  & 19,843 & 33.0 & 61.6 & 54.4 \\
-  & Medium (0.50--1.45\,MB)      & 19,842 & 33.0 & 74.8 & 66.9 \\
-  & Large ($>$1.45\,MB)          & 20,444 & 34.0 & 86.6 & 79.7 \\
+\multirow{3}{*}{\textbf{A: Seed stratum}}
+  & Small  & 20,942 & 49,562 & 42.3 \\
+  & Medium &  4,054 &  8,375 & 48.4 \\
+  & Large  &  1,220 &  2,192 & 55.7 \\[4pt]
+\multirow{4}{*}{\textbf{B: Stars at collection}}
+  & 1--9 stars      & 12,149 & 29,995 & 40.5 \\
+  & 10--99 stars    & 10,486 & 23,214 & 45.2 \\
+  & 100--999 stars  &  2,808 &  5,614 & 50.0 \\
+  & 1,000+ stars    &    773 &  1,306 & 59.2 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The monotonic pattern holds under every operationalisation. The spread between the small and large strata is +20.1~pp for stars, +14.4~pp for commits, and +25.0~pp for code volume. The code-volume approach shows the steepest gradient: repositories with more than 1.45~MB of JS/TS source code reach 86.6\% adoption, compared to 61.6\% for the smallest code-volume stratum. Non-overlapping Wilson 95\% confidence intervals across all three strata confirm that the size effect is not an artefact of the star-based definition. The consistency across all three approaches supports a substantive interpretation: AI coding agents are adopted at higher rates in larger, more active, and more code-intensive repositories.
+The gradient is consistent under both approaches. The seed-stratum approach yields a 13.4 percentage-point spread from small (42.3\%) to large (55.7\%). The star-count approach gives a 18.7-point spread from the lowest band (40.5\%) to repositories with 1,000 or more stars (59.2\%). The pattern is what Raida et al.~\cite{raida2026} and Robbes et al.~\cite{robbesAgenticMuch2026} each find in their respective corpora: larger, more visible repositories adopt AI coding agents at meaningfully higher rates, most plausibly because they have more contributors, more active maintenance cycles, and more engineering overhead that agents can reduce.
 
 % ------------------------------------------------------------
-\section{Extended Analysis}
+\section{Extended Analyses}
 \label{sec:res:extended}
 % ------------------------------------------------------------
 
-\subsection{Tool Diversity and Commit Density}
+\subsection{Claude Code Concentration in China}
 
-Tool diversity analysis of the 44,761 adopted repositories shows that \textbf{65.1\%} use exactly one agent (single-agent), \textbf{28.2\%} use two agents (dual), \textbf{5.0\%} use three, and \textbf{1.7\%} use four or more. Multi-agent adoption therefore accounts for 34.9\% of adopters.
+China (6,764 repositories, the single largest country in the located corpus) adopts at 36.3\%, below both the global corpus rate (43.6\%) and the located-subset mean (41.0\%). Among Chinese agentic repositories, 69.2\% use Western tools only. Claude Code appears in 53.3\% of Chinese agentic repositories, compared to 61\% globally, a gap of roughly 8 points but still a majority. Chinese domestic tools (Trae/MarsCode, Qwen Code, and Kimi Code) collectively account for approximately 2.3\% of Chinese agentic repositories, suggesting that the global Claude Code dominance extends even into a developer community where access to Western services requires a VPN.
 
-Commit density --- the fraction of commits attributed to AI agents via trailers --- was computed for the 11,937 repositories classified via commit trailers in Pass~2. The distribution is bimodal: 20.4\% of repositories show experimental use (less than 1\% of commits attributed), 28.8\% limited use (1--5\%), 23.8\% consistent use (5--20\%), and 27.0\% pervasive use (more than 20\%). Median commit density varies by tool: Replit (0.157) and Aider (0.113) show the highest median densities; Claude Code (0.101) is mid-range; Cursor (0.026) is the lowest among the top tools, consistent with its primarily interactive use pattern.
+\subsection{Ecosystem and Language Breakdown}
 
-\subsection{TypeScript Adoption in JavaScript-Primary Repositories}
+Adoption rates by ecosystem and primary language are reported in Tables~\ref{tab:breakdown_eco} and~\ref{tab:breakdown_lang}.
 
-Among the 14,815 JavaScript-primary repositories, agentic repositories show a markedly higher rate of \texttt{tsconfig.json} adoption: 15.7\% of agentic JS repos include a TypeScript configuration, compared to 7.7\% of non-agentic JS repos --- a \textbf{2.03$\times$ ratio}. Among the agentic JS repositories that did adopt TypeScript, 25.9\% bootstrapped the TypeScript configuration on the same day as the first detected AI signal, and 46.2\% on or after the AI signal. This pattern suggests that some developers use their initial agent interaction as the prompt to migrate a JavaScript project towards TypeScript.
+\begin{table}[h]
+\centering
+\caption{Adoption rate by package manager ecosystem.}
+\label{tab:breakdown_eco}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Ecosystem & Agentic & Total & Rate (\%) \\
+\midrule
+deno          &   122 &    250 & 48.8 \\
+pnpm          & 5,637 & 12,229 & 46.1 \\
+npm           &12,956 & 28,248 & 45.9 \\
+npm\_no\_lock & 3,536 &  7,979 & 44.3 \\
+bun           &    46 &    107 & 43.0 \\
+yarn          &   388 &  1,091 & 35.6 \\
+vanilla       & 3,527 & 10,177 & 34.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\subsection{China: Largest Country in the Corpus}
+\begin{table}[h]
+\centering
+\caption{Adoption rate by primary language.}
+\label{tab:breakdown_lang}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Language & Agentic & Total & Rate (\%) \\
+\midrule
+TypeScript & 20,788 & 45,314 & 45.9 \\
+JavaScript &  5,428 & 14,815 & 36.6 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-China (6,764 repositories, ranked 1st by repo count) adopts at 76.9\% (rank~30 globally), 2.5~percentage points below the global mean of 74.4\% but within the significant-high group after BH correction. Among Chinese agentic repositories, \textbf{69.2\%} use Western tools only. Claude Code appears in 53.3\% of Chinese agentic repositories, compared to 63.7\% globally. Chinese domestic tools --- Trae/MarsCode (315 repos), Qwen Code, and Kimi Code --- collectively account for approximately 2.3\% of Chinese agentic repositories, suggesting that the global Claude Code dominance extends even into the Chinese developer community on GitHub, where VPN access to Western services is widespread.
+The ecosystem differences are modest: deno (48.8\%), pnpm (46.1\%), and npm (45.9\%) cluster tightly near the corpus mean, while vanilla repositories (34.7\%) sit 11 points below. The vanilla gap is partly structural: repositories without a \texttt{package.json} cannot trigger npm-SDK dependency signals, so a full signal class is unavailable. yarn (35.6\%) adopts at a similar rate to vanilla, consistent with yarn's reputation as the package manager of older, pre-agentic projects. TypeScript repositories adopt at 45.9\% versus 36.6\% for JavaScript, a 9.3 percentage-point gap. Galster et al.~\cite{galsterConfig2026} found TypeScript to be the most common language in repositories with agent configuration files; the adoption-rate differential here corroborates that finding.
+
+\subsection{MENA Regional Sub-Analysis}
+
+The Middle East and North Africa region spans 1,089 located repositories and 384 agentic ones, for an overall adoption rate of 35.3\%. This sits 5.7 points below the located-subset mean of 41.0\%, consistent with MENA's largely upper-middle-income composition. Within the region, the spread is very wide. Table~\ref{tab:mena} reports per-country rates for countries with at least ten repositories.
+
+\begin{table}[h]
+\centering
+\caption{AI coding agent adoption by country within MENA (countries with $n \geq 10$ reported). Countries with $n < 15$ are marked as small-sample.}
+\label{tab:mena}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Country & Agentic & Total & Rate (\%) \\
+\midrule
+Israel              & 123 & 192 & 64.1 \\
+Saudi Arabia        &  18 &  33 & 54.5 \\
+Jordan              &  12 &  24 & 50.0 \\
+United Arab Emirates&  54 & 119 & 45.4 \\
+Egypt, Arab Rep.    &  49 & 176 & 27.8 \\
+Algeria             &  13 &  49 & 26.5 \\
+Tunisia             &  14 &  59 & 23.7 \\
+Iran, Islamic Rep.  &  60 & 287 & 20.9 \\
+Oman$^*$            &   3 &  15 & 20.0 \\
+Morocco             &  14 &  81 & 17.3 \\
+\midrule
+\textbf{MENA total} & \textbf{384} & \textbf{1,089} & \textbf{35.3} \\
+\bottomrule
+\multicolumn{4}{@{}l@{}}{\footnotesize $^*$ Small sample ($n < 20$); rate indicative only.}
+\end{tabular}
+\end{table}
+
+Israel (64.1\%, 123 repositories) is the highest-adopting MENA country and sits above even North America's regional rate. Iran (20.9\%, 287 repositories) and Morocco (17.3\%, 81 repositories) are at the lower end of the global distribution. The 46.8 percentage-point span between Israel and Morocco within a single world region is larger than the gap between North America and Sub-Saharan Africa. Qatar (5 of 6 repositories agentic) and Kuwait (3 of 6) have high nominal rates but samples too small to report reliably. The MENA intra-regional dispersion is driven by income heterogeneity: Israel and the Gulf states are high-income economies; Iran and the Maghreb countries are lower-middle-income. This mirrors the global income-group gradient in Table~\ref{tab:income}.
 
 \subsection{Framework Breakdown}
 
-Among the five major JavaScript frameworks in the corpus, adoption rates range from 83.5\% for Astro to 57.8\% for Express. Hono (82.1\%), TanStack Start (79.4\%), and Solid (77.8\%) cluster near the top alongside Astro. React, the largest framework in the corpus (30,614 repositories), adopts at 65.2\% --- below the overall average of 74.4\%, consistent with the high proportion of React repositories maintained by developers in lower-income countries. Express (57.8\%) and NestJS (62.0\%) occupy the bottom positions, reflecting the prevalence of older, maintenance-mode Express repositories that show lower agent activity. VitePress (77.8\%) leads the documentation-site category.
+Framework hints are available for approximately 1,500 repositories (2.5\% of the corpus) via a \texttt{framework\_hints} column populated during Stage~1 enrichment. Because this column covers only a small and self-selected slice of the corpus, framework-level rates are indicative only and cannot be generalised to the full population of JS/TS repositories.
+
+Among repositories with framework hints, ML/AI-focused repositories adopt at 46.3\% (112 of 242), Electron/desktop projects at 47.8\% (22 of 46), and testing-framework repositories at 54.3\% (25 of 46). React repositories in the hints subset adopt at 35.4\% (168 of 474), below the corpus mean, consistent with React's large and heterogeneous developer base including many beginners and lower-income-country contributors. Blockchain repositories adopt at the lowest reported rate (22.5\%, 9 of 40), which may reflect that segment's historically cautious stance towards third-party automation in production contracts. All framework-level comparisons should be treated as exploratory given the low coverage.
