@@ -1,6 +1,8 @@
 .env
 /venv
 /.claude
+/local_docs
+/local_workspace
 
 # PDFs are large and may contain copyrighted material — keep local only
 docs/pdfs/
